@@ -1,0 +1,127 @@
+import sys
+import os
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3 import SAC
+from stable_baselines3.common.callbacks import EvalCallback
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+
+# project src import
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from src.car_env import CarEnv
+
+# ---------- konfiguráció ----------
+num_envs = 8
+base_path = "learn/"
+verbose = 1
+total_timesteps = 10_000_000
+eval_freq = 50_000
+log_interval = 1
+learning_rate_initial_value = 1e-3
+learning_rate_final_value = 1e-4
+stats_window_size = 25
+model_name = "sac_simple"
+
+log_dir = f"./{base_path}logs/{model_name}"
+checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
+tensorboard_log = f"./{base_path}tensorboard/{model_name}"
+os.makedirs(log_dir, exist_ok=True)
+os.makedirs(checkpoint_dir, exist_ok=True)
+os.makedirs(tensorboard_log, exist_ok=True)
+
+
+# ---------- environment létrehozása ----------
+def make_env(rank):
+    """
+    Függvény, ami visszaadja a CarEnv-et Monitorral,
+    a SubprocVecEnv-hez szükséges formátumban.
+    """
+    def _init():
+        env = CarEnv(
+            render_mode=None,
+            track_file="tracks/nascar.track",
+            discrete_action_space=False,
+            enable_fps_limit=False,
+            reset_on_lap=True,
+            disable_cars_on_high_impact=False,
+        )
+        return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
+    return _init
+
+
+# ---------- lineáris tanulási ráta ----------
+def linear_schedule(initial_value=1e-3, final_value=1e-4):
+    initial_value = float(initial_value)
+    final_value = float(final_value)
+
+    def schedule(progress_remaining: float) -> float:
+        return final_value + (initial_value - final_value) * progress_remaining
+
+    return schedule
+
+
+# ---------- fő futtatás ----------
+if __name__ == "__main__":
+    # párhuzamos környezetek
+    env = SubprocVecEnv([make_env(i) for i in range(num_envs)])
+    eval_env = DummyVecEnv([make_env("eval")])  # egyszemélyes eval környezet
+
+    # callback
+    eval_callback = EvalCallback(
+        eval_env,
+        best_model_save_path=checkpoint_dir,
+        log_path=log_dir,
+        eval_freq=eval_freq,
+        deterministic=True,
+        render=False,
+        n_eval_episodes=5,
+        verbose=verbose,
+    )
+
+    # SAC modell
+    model = SAC(
+        "MlpPolicy",
+        env,
+        tensorboard_log=tensorboard_log,
+        learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
+        stats_window_size=stats_window_size,
+        verbose=verbose,
+    )
+
+    # tanulás
+    model.learn(
+        total_timesteps=total_timesteps,
+        log_interval=log_interval,
+        progress_bar=True,
+        callback=eval_callback,
+    )
+
+    # mentés
+    model.save(f"{checkpoint_dir}{model_name}_final")
+
+'''
+CarRacing-v3:
+  env_wrapper:
+    - rl_zoo3.wrappers.FrameSkip:
+        skip: 2
+    # wrapper from https://github.com/araffin/aae-train-donkeycar
+    - ae.wrapper.AutoencoderWrapper:
+        ae_path: "logs/car_racing_rgb_160.pkl"
+    - rl_zoo3.wrappers.HistoryWrapper:
+        horizon: 2
+  # frame_stack: 4
+  normalize: True
+  n_envs: 2
+  n_timesteps: !!float 1e6
+  policy: 'MlpPolicy'
+  learning_rate: !!float 7.3e-4
+  buffer_size: 300000
+  batch_size: 256
+  ent_coef: 'auto'
+  gamma: 0.99
+  tau: 0.02
+  train_freq: 8
+  gradient_steps: 10
+  learning_starts: 1000
+  use_sde: True
+  use_sde_at_warmup: True
+'''

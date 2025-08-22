@@ -2,4 +2,12 @@
 .pytest_cache
 __pycache__
 CLAUDE.md
-learn
+learn/tensorboard
+learn/a2c_simple/logs
+learn/ddpg_simple/logs
+learn/sac_simple/logs
+learn/td3_simple/logs
+learn/ppo_simple/logs
+*.monitor.csv
+learn/logs
+evaluations.npz
