@@ -13,7 +13,7 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 10_000_000
+total_timesteps = 25_000_000
 eval_freq = 50_000
 log_interval = 1
 learning_rate_initial_value = 1e-3
@@ -85,6 +85,16 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
+        buffer_size = 250_000,
+        batch_size = 256,
+        ent_coef = 'auto',
+        gamma = 0.99,
+        tau = 0.02,
+        train_freq = 8,
+        gradient_steps = 10,
+        learning_starts=3_600,
+        use_sde = True,
+        use_sde_at_warmup = True,
     )
 
     # tanulás
