@@ -73,43 +73,7 @@ class PPOController(BaseController):
             print(f"[{self.name}] Falling back to rule-based control")
             self.use_fallback = True
             return False
-    
-    def _discrete_to_continuous(self, discrete_action):
-        """
-        Convert discrete action to continuous action format.
-        
-        Args:
-            discrete_action: integer (0-4) representing discrete action
-                - 0: Do nothing (coast)
-                - 1: Accelerate  
-                - 2: Brake
-                - 3: Turn left
-                - 4: Turn right
-        
-        Returns:
-            numpy array of shape (3,) containing [throttle, brake, steering]
-        """
-        # Ensure we have a scalar integer
-        if isinstance(discrete_action, np.ndarray):
-            discrete_action = int(discrete_action.item())
-        else:
-            discrete_action = int(discrete_action)
-        
-        # Map discrete actions to continuous values
-        if discrete_action == 0:  # Do nothing (coast)
-            return np.array([0.0, 0.0, 0.0], dtype=np.float32)
-        elif discrete_action == 1:  # Accelerate
-            return np.array([1.0, 0.0, 0.0], dtype=np.float32)
-        elif discrete_action == 2:  # Brake
-            return np.array([0.0, 1.0, 0.0], dtype=np.float32)
-        elif discrete_action == 3:  # Turn left
-            return np.array([0.0, 0.0, -1.0], dtype=np.float32)
-        elif discrete_action == 4:  # Turn right
-            return np.array([0.0, 0.0, 1.0], dtype=np.float32)
-        else:
-            # Invalid action, default to coast
-            return np.array([0.0, 0.0, 0.0], dtype=np.float32)
-    
+
     def control(self, observation):
         """
         Calculate control actions based on observation.
@@ -139,9 +103,9 @@ class PPOController(BaseController):
         if self.model_loaded and self.model is not None:
             try:
                 # Use PPO model for prediction (deterministic=True for consistent racing)
-                discrete_action, _ = self.model.predict(observation, deterministic=True)
+                action, _ = self.model.predict(observation, deterministic=True)
                 # Convert discrete action to continuous format
-                return self._discrete_to_continuous(discrete_action)
+                return action.astype(np.float32)
             except Exception as e:
                 print(f"[{self.name}] Error using PPO model: {e}")
                 print(f"[{self.name}] Switching to fallback control")
