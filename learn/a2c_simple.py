@@ -13,9 +13,9 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 10_000_000
+total_timesteps = 50_000_000
 eval_freq = 50_000
-log_interval = 1
+log_interval = 1_000
 learning_rate_initial_value = 1e-3
 learning_rate_final_value = 1e-4
 stats_window_size = 25

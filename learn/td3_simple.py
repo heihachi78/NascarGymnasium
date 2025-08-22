@@ -18,8 +18,8 @@ verbose = 1
 total_timesteps = 10_000_000
 eval_freq = 50_000
 log_interval = 1
-learning_rate_initial_value = 1e-3
-learning_rate_final_value = 1e-4
+learning_rate_initial_value = 1e-4
+learning_rate_final_value = 3e-5
 stats_window_size = 25
 model_name = "td3_simple"
 
@@ -99,6 +99,9 @@ if __name__ == "__main__":
         action_noise=action_noise,
         stats_window_size=stats_window_size,
         verbose=verbose,
+        policy_delay=4,
+        tau=0.0025,
+        batch_size=512,
     )
 
     # tanulás
