@@ -80,14 +80,14 @@ def calculate_finishing_order(num_cars, car_names, total_laps, best_lap_time, ca
 
 def main():
     print("=" * 60)
-    print("🏎️  TD3 MODEL COMPETITION")
+    print("🏎️  COMPETITION MODE")
     print("=" * 60)
     
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/ppo_model.zip", "PPO"),
-        ("game/control/models/td3_model.zip", "TRD3"),
+        ("game/control/models/td3_model.zip", "TD3"),
         ("game/control/models/sac_model.zip", "SAC"),
         ("game/control/models/a2c_model.zip", "A2C"),
         (None, "Rule-Based"),  # Use None for rule-based control
@@ -157,7 +157,7 @@ def main():
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode="human",
-        enable_fps_limit=True,
+        enable_fps_limit=False,
         disable_cars_on_high_impact=True,
         discrete_action_space=False,
         car_names=car_names
