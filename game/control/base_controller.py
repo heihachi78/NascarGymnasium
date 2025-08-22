@@ -1,0 +1,137 @@
+"""
+Base controller class that provides common functionality for all controllers.
+
+This module provides a base class with fallback control logic that can be
+shared by TD3, PPO, and other controller implementations.
+"""
+
+import numpy as np
+
+
+class BaseController:
+    """
+    Base controller class with common fallback control logic.
+    
+    This class provides:
+    - Per-instance control state management
+    - Fallback control logic using the default rule-based algorithm
+    - Common initialization for derived controllers
+    """
+    
+    def __init__(self, name=None):
+        """
+        Initialize the base controller.
+        
+        Args:
+            name: Optional name for this controller (for logging)
+        """
+        self.name = name or "BaseController"
+        self.use_fallback = False
+        
+        # Per-instance control state (avoids global state issues)
+        self.control_state = {
+            'throttle': 0.0,
+            'brake': 0.0,
+            'steering': 0.0
+        }
+    
+    def _fallback_control(self, observation):
+        """
+        Rule-based fallback control logic.
+        
+        This is the fallback control algorithm used when
+        the model is not available or fails. It maintains
+        per-instance state for multi-car scenarios.
+        
+        Args:
+            observation: numpy array of shape (29,) containing:
+                - Position (x, y): indices 0-1
+                - Velocity (x, y, magnitude): indices 2-4
+                - Orientation and angular velocity: indices 5-6
+                - Tire loads (4): indices 7-10
+                - Tire temperatures (4): indices 11-14
+                - Tire wear (4): indices 15-18
+                - Collision data (impulse, angle): indices 19-20
+                - Distance sensor readings (8 directions): indices 21-28
+        
+        Returns:
+            numpy array of shape (3,) containing [throttle, brake, steering]
+            - throttle: 0.0 to 1.0
+            - brake: 0.0 to 1.0
+            - steering: -1.0 to 1.0
+        """
+        # Extract sensor data
+        sensors = observation[21:29]  # All 8 sensor distances
+        forward = sensors[0]          # Forward sensor
+        front_left = sensors[1]       # Front-left sensor  
+        front_right = sensors[7]      # Front-right sensor
+        current_speed = observation[4]  # Speed from observation
+        
+        # Calculate speed limit based on forward distance
+        speed_limit = forward * 500 / 3.6
+        
+        # Throttle control - accumulate changes
+        if current_speed * 200 < speed_limit:
+            self.control_state['throttle'] += 0.1
+        if current_speed * 200 > speed_limit:
+            self.control_state['throttle'] -= 0.1
+        
+        # Brake control - accumulate changes
+        if current_speed * 200 < speed_limit:
+            self.control_state['brake'] -= 0.01
+        if current_speed * 200 > speed_limit:
+            self.control_state['brake'] += 0.01
+        
+        # Steering control based on sensor readings
+        if front_right > front_left:
+            self.control_state['steering'] = front_right / front_left - forward
+        elif front_right < front_left:
+            self.control_state['steering'] = front_left / front_right - forward
+            self.control_state['steering'] *= -1
+        else:
+            self.control_state['steering'] = 0
+        
+        # Apply limits and adjustments
+        self.control_state['brake'] = max(min(self.control_state['brake'], 1), 0)
+        self.control_state['steering'] = max(min(self.control_state['steering'], 1), -1)
+        
+        # Reduce throttle when steering hard
+        if abs(self.control_state['steering']) > 0.1:
+            self.control_state['throttle'] -= 0.05
+        
+        self.control_state['throttle'] = max(min(self.control_state['throttle'], 1), 0)
+        
+        return np.array([
+            self.control_state['throttle'], 
+            self.control_state['brake'], 
+            self.control_state['steering']
+        ], dtype=np.float32)
+    
+    def control(self, observation):
+        """
+        Default control method that uses fallback control.
+        
+        Derived classes should override this method to implement
+        their specific control logic and fall back to this when needed.
+        
+        Args:
+            observation: numpy array of shape (29,) containing car state
+        
+        Returns:
+            numpy array of shape (3,) containing [throttle, brake, steering]
+        """
+        return self._fallback_control(observation)
+    
+    def get_info(self):
+        """
+        Get information about this controller.
+        
+        Derived classes should override this to add model-specific info.
+        
+        Returns:
+            dict: Controller information
+        """
+        return {
+            'name': self.name,
+            'using_fallback': self.use_fallback
+        }
