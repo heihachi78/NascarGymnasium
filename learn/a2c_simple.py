@@ -16,8 +16,8 @@ verbose = 1
 total_timesteps = 50_000_000
 eval_freq = 50_000
 log_interval = 1_000
-learning_rate_initial_value = 1e-3
-learning_rate_final_value = 1e-4
+learning_rate_initial_value = 1e-4
+learning_rate_final_value = 1e-5
 stats_window_size = 25
 model_name = "a2c_simple"
 

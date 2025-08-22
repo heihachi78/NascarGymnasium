@@ -15,7 +15,7 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 10_000_000
+total_timesteps = 25_000_000
 eval_freq = 50_000
 log_interval = 1
 learning_rate_initial_value = 1e-3
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # single-env noise
     base_action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.1 * np.ones(n_actions)
+        sigma=0.2 * np.ones(n_actions)
     )
 
     # vectorized noise (applies one copy per environment)
