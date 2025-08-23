@@ -140,3 +140,25 @@
       Laps: 0, Reward: 80.0
    8. SAC - DISABLED
       Laps: 0, Reward: 76.9
+
+🏆 FINISHING ORDER:
+   🥇 A2C - 11 laps completed
+      Best lap: 0:44.367, Reward: 7444.6
+   🥈 A2C-COMP - DISABLED
+      Laps: 9, Reward: 6152.4
+   🥉 Rule-Based - 9 laps completed
+      Best lap: 0:44.683, Reward: 5042.0
+   4. TD3 - DISABLED
+      Laps: 3, Reward: 1884.1
+   5. PPO - DISABLED
+      Laps: 2, Reward: 1345.3
+   6. TD3-TT - DISABLED
+      Laps: 1, Reward: 886.4
+   7. A2C-2 - DISABLED
+      Laps: 1, Reward: 793.7
+   8. A2C-TT - DISABLED
+      Laps: 1, Reward: 760.3
+   9. SAC - DISABLED
+      Laps: 0, Reward: 67.0
+   10. A2C-3 - DISABLED
+      Laps: 0, Reward: 36.1
