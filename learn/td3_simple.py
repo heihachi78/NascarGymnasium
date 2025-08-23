@@ -103,6 +103,8 @@ if __name__ == "__main__":
         action_noise=action_noise,
         stats_window_size=stats_window_size,
         verbose=verbose,
+        train_freq=1,
+        gradient_steps=4,
         policy_delay=4,
         tau=0.002,
         batch_size=512,

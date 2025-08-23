@@ -86,12 +86,11 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/td3_model_time_trial.zip", "TD3-TT"),
-        ("game/control/models/ppo_model_time_trial.zip", "PPO-TT"),
         ("game/control/models/td3_model.zip", "TD3"),
+        ("game/control/models/ppo_model.zip", "PPO"),
         ("game/control/models/sac_model.zip", "SAC"),
         ("game/control/models/a2c_model_time_trial.zip", "A2C-TT"),
         ("game/control/models/a2c_model_competition.zip", "A2C-COMP"),
-        ("game/control/models/a2c_model.zip", "A2C"),
         (None, "Rule-Based"),  # Use None for rule-based control
     ]
     
