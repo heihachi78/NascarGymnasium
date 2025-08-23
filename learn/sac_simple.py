@@ -77,6 +77,10 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
+    policy_kwargs = dict(
+        net_arch=[512, 512, 512]
+    )
+
     # SAC modell
     model = SAC(
         "MlpPolicy",
@@ -85,16 +89,13 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
-        buffer_size = 250_000,
-        batch_size = 256,
-        ent_coef = 'auto',
-        gamma = 0.99,
-        tau = 0.02,
-        train_freq = 8,
-        gradient_steps = 10,
+        tau = 0.0025,
+        train_freq = 1,
+        gradient_steps = 4,
         learning_starts=3_600,
         use_sde = True,
         use_sde_at_warmup = True,
+        policy_kwargs=policy_kwargs,
     )
 
     # tanulás

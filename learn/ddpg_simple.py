@@ -85,11 +85,15 @@ if __name__ == "__main__":
     # single-env noise
     base_action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.2 * np.ones(n_actions)
+        sigma=0.3 * np.ones(n_actions)
     )
 
     # vectorized noise (applies one copy per environment)
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
+
+    policy_kwargs = dict(
+        net_arch=[1024, 1024]
+    )
 
     model = DDPG(
         "MlpPolicy",
@@ -98,6 +102,7 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=action_noise,
         verbose=verbose,
+        policy_kwargs=policy_kwargs,
     )
 
     # tanulás
