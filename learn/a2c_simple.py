@@ -1,5 +1,6 @@
 import sys
 import os
+import torch
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import A2C
 from stable_baselines3.common.callbacks import EvalCallback
@@ -16,7 +17,7 @@ verbose = 1
 total_timesteps = 50_000_000
 eval_freq = 50_000
 log_interval = 1_000
-learning_rate_initial_value = 1e-4
+learning_rate_initial_value = 3e-4
 learning_rate_final_value = 1e-5
 stats_window_size = 25
 model_name = "a2c_simple"
@@ -77,6 +78,11 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
+    policy_kwargs = dict(
+        net_arch=[256, 256],          # two hidden layers with 256 units each
+        activation_fn=torch.nn.ReLU   # use ReLU instead of Tanh
+    )
+
     # A2C modell
     model = A2C(
         "MlpPolicy",
@@ -86,6 +92,7 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device="cpu",
+        policy_kwargs=policy_kwargs,
     )
 
     # tanulás
