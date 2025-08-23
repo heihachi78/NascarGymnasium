@@ -50,7 +50,7 @@ def make_env(rank):
 
 
 # ---------- lineáris tanulási ráta ----------
-def linear_schedule(initial_value=1e-3, final_value=1e-4):
+def linear_schedule(initial_value=9e-4, final_value=3e-4):
     initial_value = float(initial_value)
     final_value = float(final_value)
 
@@ -78,9 +78,14 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
+    #policy_kwargs = dict(
+    #    net_arch=[256, 256],          # two hidden layers with 256 units each
+    #    activation_fn=torch.nn.ReLU   # use ReLU instead of Tanh
+    #)
+
     policy_kwargs = dict(
-        net_arch=[256, 256],          # two hidden layers with 256 units each
-        activation_fn=torch.nn.ReLU   # use ReLU instead of Tanh
+        net_arch=[128, 128],  # shared layers
+        activation_fn=torch.nn.Tanh
     )
 
     # A2C modell
