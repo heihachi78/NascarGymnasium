@@ -230,9 +230,13 @@ class Renderer:
     
     def init_pygame(self):
         if not self._initialized_pygame:
-            pygame.init()
-            pygame.display.init()
-            pygame.font.init()
+            # Only initialize if not already initialized
+            if not pygame.get_init():
+                pygame.init()
+            if not pygame.display.get_init():
+                pygame.display.init()
+            if not pygame.font.get_init():
+                pygame.font.init()
             self._initialized_pygame = True
             
     def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None):
@@ -362,10 +366,7 @@ class Renderer:
         """Clean up renderer resources safely"""
         try:
             if self.window is not None:
-                # Close display first
-                pygame.display.quit()
-                
-                # Clear references
+                # Clear references first
                 self.window = None
                 self.clock = None
                 self.font = None
@@ -374,8 +375,14 @@ class Renderer:
                 self.frame_times = []
                 self.last_frame_time = None
                 
-                # Note: pygame.quit() is called by the demo scripts for final cleanup
-                # Don't call it here to avoid double-quit issues
+                # Close display only if it's initialized
+                if pygame.display.get_init():
+                    pygame.display.quit()
+                
+                # Mark as not initialized
+                self._initialized_pygame = False
+                
+                # Note: pygame.quit() is now handled by car_env.py close method
         except Exception as e:
             print(f"Warning: Error during renderer cleanup: {e}")
             # Clear references anyway to prevent further issues
@@ -384,6 +391,7 @@ class Renderer:
             self.font = None
             self.frame_times = []
             self.last_frame_time = None
+            self._initialized_pygame = False
     
     def _handle_events(self):
         """Handle pygame events, particularly fullscreen toggle"""

@@ -9,6 +9,7 @@ Environment resets between attempts for fair conditions.
 import sys
 import os
 import numpy as np
+import signal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.car_env import CarEnv
 from game.control.base_controller import BaseController
@@ -71,7 +72,15 @@ def calculate_time_trial_results(num_cars, car_names, all_lap_times, best_lap_ti
     return results
 
 
+def signal_handler(signum, frame):
+    """Immediately exit on interrupt to avoid segfault"""
+    print("\n⚠️  Interrupt received...")
+    os._exit(0)
+
 def main():
+    # Install signal handler for immediate exit
+    signal.signal(signal.SIGINT, signal_handler)
+    
     print("=" * 60)
     print("🏁 TIME TRIAL MODE")
     print("=" * 60)
@@ -390,23 +399,19 @@ def main():
         
     except KeyboardInterrupt:
         print(f"\n⚠️  Time trial interrupted by user (Ctrl+C)")
-        print("🔄 Performing cleanup...")
+        print("🔄 Skipping...")
+        # Don't call env.close() during KeyboardInterrupt as it causes segfaults
+        # Use os._exit to avoid any cleanup that might cause segfaults
+        import os
+        os._exit(0)
     except Exception as e:
         print(f"❌ Error during time trial: {e}")
         import traceback
         traceback.print_exc()
         
-    finally:
-        # Safe environment cleanup
-        try:
-            env.close()
-            print("🔒 Environment closed")
-        except Exception as cleanup_error:
-            print(f"⚠️ Warning during cleanup: {cleanup_error}")
-        
-        # Note: We intentionally don't call pygame.quit() here to avoid segfaults
-        # The renderer and environment cleanup handle pygame display shutdown
-        # pygame.quit() can cause segfaults when called after signal interrupts
+    # Skip env.close() to prevent segfaults - let Python handle cleanup
+    print("=" * 60)
+    print("🔒 Done.")
 
 
 if __name__ == "__main__":

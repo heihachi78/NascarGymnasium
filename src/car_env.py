@@ -69,6 +69,38 @@ from .constants import (
 logger = logging.getLogger(__name__)
 
 
+class PythonClock:
+    """
+    A pure Python implementation of pygame.time.Clock functionality.
+    Used in headless mode to avoid pygame initialization in subprocesses.
+    """
+    def __init__(self):
+        self.last_tick = time.perf_counter()
+        
+    def tick(self, fps):
+        """
+        Control the frame rate by sleeping if necessary.
+        
+        Args:
+            fps: Target frames per second
+            
+        Returns:
+            Time elapsed since last tick in milliseconds
+        """
+        current_time = time.perf_counter()
+        elapsed = current_time - self.last_tick
+        
+        if fps > 0:
+            target_time = 1.0 / fps
+            if elapsed < target_time:
+                time.sleep(target_time - elapsed)
+                current_time = time.perf_counter()
+                elapsed = current_time - self.last_tick
+        
+        self.last_tick = current_time
+        return elapsed * 1000  # Return milliseconds like pygame
+
+
 class CarEnv(BaseEnv):
     """Complete car racing environment with realistic physics"""
     
@@ -160,11 +192,9 @@ class CarEnv(BaseEnv):
                 enable_fps_limit=enable_fps_limit  # Use the parameter from constructor
             )
         else:
-            # Initialize pygame clock for headless mode to maintain proper physics timing
-            import pygame
-            if not pygame.get_init():
-                pygame.init()
-            self.headless_clock = pygame.time.Clock()
+            # Use Python-based clock for headless mode to avoid pygame in subprocesses
+            # This is crucial for macOS compatibility with multiprocessing
+            self.headless_clock = PythonClock()
             self.headless_enable_fps_limit = enable_fps_limit
             
         # Environment state
@@ -1718,6 +1748,10 @@ class CarEnv(BaseEnv):
                     self.distance_sensor = None
         except Exception as e:
             logger.warning(f"Error clearing references: {e}")
+        
+        # Step 4: Don't call pygame.quit() here during interrupt cleanup
+        # pygame.quit() during signal handling can cause segfaults
+        # Instead, let Python's cleanup handle it or use atexit
         
         try:
             logger.info("CarEnv closed successfully")
