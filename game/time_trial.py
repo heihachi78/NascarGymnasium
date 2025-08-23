@@ -91,6 +91,7 @@ def main():
         ("game/control/models/sac_model.zip", "SAC"),
         ("game/control/models/a2c_model_time_trial.zip", "A2C-TT"),
         ("game/control/models/a2c_model_competition.zip", "A2C-COMP"),
+        ("game/control/models/a2c_model.zip", "A2C"),
         (None, "Rule-Based"),  # Use None for rule-based control
     ]
     
