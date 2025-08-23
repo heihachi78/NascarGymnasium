@@ -17,10 +17,10 @@ verbose = 1
 total_timesteps = 50_000_000
 eval_freq = 50_000
 log_interval = 1_000
-learning_rate_initial_value = 3e-4
-learning_rate_final_value = 1e-5
+learning_rate_initial_value = 9e-4
+learning_rate_final_value = 3e-4
 stats_window_size = 25
-model_name = "a2c_simple_relu_512"
+model_name = "a2c_simple"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -79,7 +79,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[512, 512],  # shared layers
+        net_arch=[128, 128],
         activation_fn=torch.nn.ReLU
     )
 
