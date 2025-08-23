@@ -1,5 +1,6 @@
 import sys
 import os
+import torch
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import SAC
 from stable_baselines3.common.callbacks import EvalCallback
@@ -14,7 +15,7 @@ num_envs = 8
 base_path = "learn/"
 verbose = 1
 total_timesteps = 25_000_000
-eval_freq = 50_000
+eval_freq = 10_000
 log_interval = 1
 learning_rate_initial_value = 1e-3
 learning_rate_final_value = 1e-4
@@ -78,7 +79,8 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[512, 512, 512]
+        net_arch=[512, 512],
+        activation_fn=torch.nn.ReLU
     )
 
     # SAC modell
@@ -93,8 +95,6 @@ if __name__ == "__main__":
         train_freq = 1,
         gradient_steps = 4,
         learning_starts=3_600,
-        use_sde = True,
-        use_sde_at_warmup = True,
         policy_kwargs=policy_kwargs,
     )
 

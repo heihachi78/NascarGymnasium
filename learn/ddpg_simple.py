@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import torch
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import DDPG
 from stable_baselines3.common.noise import NormalActionNoise, VectorizedActionNoise
@@ -18,8 +19,8 @@ verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 50_000
 log_interval = 1
-learning_rate_initial_value = 1e-3
-learning_rate_final_value = 1e-4
+learning_rate_initial_value = 3e-4
+learning_rate_final_value = 1e-5
 stats_window_size = 25
 model_name = "ddpg_simple"
 
@@ -85,14 +86,15 @@ if __name__ == "__main__":
     # single-env noise
     base_action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.3 * np.ones(n_actions)
+        sigma=0.5 * np.ones(n_actions)
     )
 
     # vectorized noise (applies one copy per environment)
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
     policy_kwargs = dict(
-        net_arch=[1024, 1024]
+        net_arch=[512, 256],
+        activation_fn=torch.nn.ReLU
     )
 
     model = DDPG(
@@ -103,6 +105,7 @@ if __name__ == "__main__":
         action_noise=action_noise,
         verbose=verbose,
         policy_kwargs=policy_kwargs,
+        batch_size=512,
     )
 
     # tanulás
