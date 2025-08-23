@@ -79,8 +79,8 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[128, 128],
-        activation_fn=torch.nn.Tanh
+        net_arch=[64, 64],
+        activation_fn=torch.nn.ReLU
     )
 
     # A2C modell
