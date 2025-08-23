@@ -40,6 +40,16 @@
    7. PPO-TT: 0:50.917 - DISABLED
    8. SAC: No valid lap - DISABLED
 
+🥇 LEADERBOARD (by fastest lap):
+   🥇 TD3-TT: 0:39.783 - DISABLED
+   🥈 TD3: 0:39.783 - 6 laps completed
+   🥉 A2C-TT: 0:42.383 - 5 laps completed
+   4. A2C: 0:44.517 - DISABLED
+   5. Rule-Based: 0:44.717 - 6 laps completed
+   6. A2C-COMP: 0:44.750 - 6 laps completed
+   7. PPO: 0:50.400 - 4 laps completed
+   8. SAC: No valid lap - DISABLED
+
 ---------------------------------------------------------
 
 🏆 FINISHING ORDER:
@@ -101,3 +111,21 @@
       Laps: 1, Reward: 796.7
    9. SAC - DISABLED
       Laps: 0, Reward: 74.2
+
+ FINISHING ORDER:
+   🥇 A2C - 11 laps completed
+      Best lap: 0:44.500, Reward: 7446.2
+   🥈 Rule-Based - 9 laps completed
+      Best lap: 0:44.983, Reward: 5079.5
+   🥉 TD3-TT - DISABLED
+      Laps: 3, Reward: 1870.3
+   4. TD3 - DISABLED
+      Laps: 2, Reward: 1492.4
+   5. A2C-COMP - DISABLED
+      Laps: 1, Reward: 770.1
+   6. PPO - DISABLED
+      Laps: 1, Reward: 745.9
+   7. A2C-TT - DISABLED
+      Laps: 0, Reward: 80.0
+   8. SAC - DISABLED
+      Laps: 0, Reward: 76.9
