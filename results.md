@@ -50,6 +50,17 @@
    7. PPO: 0:50.400 - 4 laps completed
    8. SAC: No valid lap - DISABLED
 
+🥇 LEADERBOARD (by fastest lap):
+   🥇 TD3: 0:39.767 - DISABLED
+   🥈 TD3-TT: 0:39.783 - DISABLED
+   🥉 A2C-COMP: 0:42.200 - 6 laps completed
+   4. A2C-TT: 0:42.483 - 6 laps completed
+   5. Rule-Based: 0:43.283 - 6 laps completed
+   6. A2C-2: 0:44.033 - 4 laps completed
+   7. A2C: 0:44.417 - 6 laps completed
+   8. PPO: 0:50.333 - DISABLED
+   9. SAC: No valid lap - DISABLED
+
 ---------------------------------------------------------
 
 🏆 FINISHING ORDER:
