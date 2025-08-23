@@ -20,7 +20,7 @@ log_interval = 1_000
 learning_rate_initial_value = 3e-4
 learning_rate_final_value = 1e-5
 stats_window_size = 25
-model_name = "a2c_simple"
+model_name = "a2c_simple_relu_512"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -78,14 +78,9 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
-    #policy_kwargs = dict(
-    #    net_arch=[256, 256],          # two hidden layers with 256 units each
-    #    activation_fn=torch.nn.ReLU   # use ReLU instead of Tanh
-    #)
-
     policy_kwargs = dict(
-        net_arch=[128, 128],  # shared layers
-        activation_fn=torch.nn.Tanh
+        net_arch=[512, 512],  # shared layers
+        activation_fn=torch.nn.ReLU
     )
 
     # A2C modell
