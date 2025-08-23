@@ -77,6 +77,10 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
+    policy_kwargs = dict(
+        net_arch=[512, 512]
+    )
+
     # PPO modell
     model = PPO(
         "MlpPolicy",
@@ -86,16 +90,9 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         batch_size = 128,
-        n_steps = 512,
-        gamma = 0.99,
-        gae_lambda = 0.95,
-        n_epochs = 10,
-        ent_coef = 0.0,
         sde_sample_freq = 4,
-        max_grad_norm = 0.5,
-        vf_coef = 0.5,
         use_sde = True,
-        clip_range = 0.2,
+        policy_kwargs=policy_kwargs,
     )
 
     # tanulás
@@ -107,7 +104,7 @@ if __name__ == "__main__":
     )
 
     # mentés
-    model.save(f"{checkpoint_dir}{model_name}_final")
+    model.save(f"{checkpoint_dir}/{model_name}_final")
 
 '''
 CarRacing-v3:

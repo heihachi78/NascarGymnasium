@@ -91,6 +91,10 @@ if __name__ == "__main__":
     # vectorized noise (applies one copy per environment)
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
+    policy_kwargs = dict(
+        net_arch=[512, 512, 512]
+    )
+
     model = TD3(
         "MlpPolicy",
         env,
@@ -100,8 +104,9 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         policy_delay=4,
-        tau=0.0025,
+        tau=0.002,
         batch_size=512,
+        policy_kwargs=policy_kwargs,
     )
 
     # tanulás
@@ -113,4 +118,4 @@ if __name__ == "__main__":
     )
 
     # mentés
-    model.save(f"{checkpoint_dir}{model_name}_final")
+    model.save(f"{checkpoint_dir}/{model_name}_final")
