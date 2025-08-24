@@ -42,7 +42,6 @@ def make_env(rank):
             discrete_action_space=False,
             enable_fps_limit=False,
             reset_on_lap=True,
-            disable_cars_on_high_impact=False,
         )
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
     return _init

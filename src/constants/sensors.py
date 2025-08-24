@@ -3,7 +3,6 @@
 import numpy as np
 from .control import MAX_TYRE_LOAD
 from .tyre import TYRE_MAX_WEAR
-from .collision import COLLISION_MAX_FORCE
 
 # Distance Sensor Constants
 SENSOR_NUM_DIRECTIONS = 8  # Number of sensor directions around the car
@@ -23,7 +22,7 @@ CAR_OBSERVATION_SHAPE = (29,)  # 29 total observation elements (21 + 8 sensor di
 MAX_POSITION_VALUE = 10000.0  # maximum world position coordinate
 MAX_VELOCITY_VALUE = 200.0    # maximum velocity (m/s, well above max car speed)  
 MAX_ANGULAR_VELOCITY = 10.0   # maximum angular velocity (rad/s)
-MAX_COLLISION_FORCE = 100000.0  # maximum collision force (N)
+MAX_COLLISION_IMPULSE_FOR_NORMALIZATION = 100000.0  # maximum collision impulse for observation normalization
 
 # Normalization factors for observation space
 # These values are used to normalize observations to [-1, 1] or [0, 1] ranges
@@ -32,7 +31,7 @@ NORM_MAX_VELOCITY = MAX_VELOCITY_VALUE  # Use same as max velocity
 NORM_MAX_ANGULAR_VEL = MAX_ANGULAR_VELOCITY  # Use same as max angular velocity
 NORM_MAX_TYRE_TEMP = 200.0  # Maximum realistic tyre temperature in Celsius
 NORM_MAX_TYRE_WEAR = TYRE_MAX_WEAR  # 100.0 - maximum wear percentage
-NORM_MAX_COLLISION_IMPULSE = MAX_COLLISION_FORCE  # Use same as max collision force
+NORM_MAX_COLLISION_IMPULSE = MAX_COLLISION_IMPULSE_FOR_NORMALIZATION  # Use same as max collision impulse
 NORM_MAX_TYRE_LOAD = MAX_TYRE_LOAD  # Use same as max tyre load
 
 # Normalized Observation Space Arrays

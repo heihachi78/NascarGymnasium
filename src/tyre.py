@@ -81,7 +81,7 @@ class Tyre:
         self.load = load
         self._update_temperature(dt, friction_force, speed)
         self._update_wear(dt, friction_force, speed, lateral_accel, slip_angle_degrees)
-        self._update_pressure()
+        self._update_pressure(dt)
     
     def _update_temperature(self, dt: float, friction_force: float, speed: float) -> None:
         """Update tyre temperature based on friction work and ambient cooling"""
@@ -172,7 +172,7 @@ class Tyre:
         # Clamp wear to maximum
         self.wear = min(TYRE_MAX_WEAR, self.wear)
     
-    def _update_pressure(self) -> None:
+    def _update_pressure(self, dt) -> None:
         """Update tyre pressure based on temperature and load"""
         # Base pressure starts at optimal
         base_pressure = TYRE_OPTIMAL_PRESSURE_PSI
@@ -186,7 +186,7 @@ class Tyre:
         load_pressure_change = load_delta * TYRE_PRESSURE_LOAD_FACTOR
         
         # Calculate new pressure with cap on increase
-        total_pressure_increase = temperature_pressure_change + load_pressure_change
+        total_pressure_increase = (temperature_pressure_change + load_pressure_change)
         # Cap the total increase
         total_pressure_increase = min(total_pressure_increase, MAX_TYRE_PRESSURE_INCREASE)
         

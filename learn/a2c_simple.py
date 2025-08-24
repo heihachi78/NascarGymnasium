@@ -43,7 +43,6 @@ def make_env(rank):
             discrete_action_space=False,
             enable_fps_limit=False,
             reset_on_lap=True,
-            disable_cars_on_high_impact=False,
         )
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
     return _init
@@ -79,7 +78,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[64, 64],
+        net_arch=[128, 128],
         activation_fn=torch.nn.ReLU
     )
 
@@ -91,6 +90,7 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
+        n_steps=4,
         device="cpu",
         policy_kwargs=policy_kwargs,
     )

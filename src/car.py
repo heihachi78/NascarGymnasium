@@ -95,7 +95,6 @@ from .constants import (
     MAX_FRICTION_FORCE_CAP,
     REAR_WHEEL_COUNT,
     # Performance validation constants
-    VELOCITY_HISTORY_SECONDS,
     VELOCITY_HISTORY_SIZE,
     PERFORMANCE_VALIDATION_MIN_SAMPLES,
     PERFORMANCE_SPEED_TOLERANCE,
@@ -157,6 +156,9 @@ class Car:
         self.throttle_input = 0.0
         self.brake_input = 0.0
         self.steering_input = 0.0
+        
+        # Store current timestep for physics calculations
+        self.current_dt = 1.0/60.0  # Default timestep, updated each physics step
         
         # Performance tracking
         self.velocity_history = deque(maxlen=VELOCITY_HISTORY_SIZE)  # For acceleration validation
@@ -285,6 +287,9 @@ class Car:
         Args:
             dt: Time step in seconds
         """
+        # Store current timestep for use in other methods
+        self.current_dt = dt
+        
         # Update control values
         self.throttle = self.throttle_input
         self.brake = self.brake_input  
@@ -751,7 +756,7 @@ class Car:
     def get_acceleration_vector(self) -> Tuple[float, float]:
         """Get current acceleration vector in m/s² (world coordinates)"""
         # Get car-relative acceleration (longitudinal, lateral)
-        longitudinal, lateral = self._get_acceleration(1.0/60.0)
+        longitudinal, lateral = self._get_acceleration(self.current_dt)
         
         # Get car orientation vectors in world space
         car_forward = self.body.GetWorldVector(WORLD_FORWARD_VECTOR)

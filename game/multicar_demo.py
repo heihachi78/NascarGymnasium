@@ -39,7 +39,6 @@ def main():
                  reset_on_lap=False, 
                  render_mode="human",
                  enable_fps_limit=True,
-                 disable_cars_on_high_impact=True,
                  car_names=car_names)
     
     print(f"🎮 CONTROLS:")

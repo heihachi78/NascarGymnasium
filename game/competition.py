@@ -168,9 +168,8 @@ def main():
         track_file="tracks/nascar.track", 
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode="human",
-        enable_fps_limit=False,
-        disable_cars_on_high_impact=True,
+        render_mode='human',  # Test without rendering
+        enable_fps_limit=True,  # Test without fps limit
         discrete_action_space=False,
         car_names=car_names
     )
@@ -197,6 +196,15 @@ def main():
     lap_start_rewards = {}
     lap_timing_started = {}
     
+    # Collision force tracking (per car)
+    collision_forces = {}
+    
+    # Raw physics collision tracking (per car)
+    physics_collision_counts = {}  # Total collision events from physics
+    physics_max_impulses = {}      # Maximum collision impulse seen
+    physics_total_impulses = {}    # Sum of all collision impulses
+    physics_collision_events = {}  # List to track all collision events for statistics
+    
     # Overall best lap tracking
     overall_best_lap_time = None
     
@@ -210,6 +218,12 @@ def main():
         car_rewards[i] = 0.0
         lap_start_rewards[i] = 0.0
         lap_timing_started[i] = False
+        collision_forces[i] = 0.0
+        # Initialize physics collision tracking
+        physics_collision_counts[i] = 0
+        physics_max_impulses[i] = 0.0
+        physics_total_impulses[i] = 0.0
+        physics_collision_events[i] = []
     
     current_followed_car = 0
     
@@ -248,6 +262,26 @@ def main():
                 action = np.array(car_actions, dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
+            
+            # Collect raw physics collision data each timestep
+            for car_idx in range(num_cars):
+                # Get current collision impulse directly from physics
+                collision_impulse = env.car_physics.get_continuous_collision_impulse(car_idx)
+                
+                if collision_impulse > 0:
+                    # Count this as a collision event
+                    physics_collision_counts[car_idx] += 1
+                    
+                    # Update maximum impulse seen
+                    physics_max_impulses[car_idx] = max(physics_max_impulses[car_idx], collision_impulse)
+                    
+                    # Add to total impulse sum
+                    physics_total_impulses[car_idx] += collision_impulse
+                    
+                    # Store event for detailed statistics (keep last 1000 events to prevent memory issues)
+                    physics_collision_events[car_idx].append(collision_impulse)
+                    if len(physics_collision_events[car_idx]) > 1000:
+                        physics_collision_events[car_idx].pop(0)
             
             # Handle multi-car rewards
             if isinstance(reward, np.ndarray):
@@ -309,6 +343,21 @@ def main():
                                 print(f"   🌟 NEW OVERALL BEST LAP by {car_name}!")
                         
                         previous_lap_count[car_idx] = current_lap_count
+                
+                # Update collision force tracking for all cars
+                for car_idx in range(min(num_cars, len(info))):
+                    car_info = info[car_idx]
+                    cumulative_impact = car_info.get('cumulative_impact_force', 0.0)
+                    collision_forces[car_idx] = cumulative_impact
+            else:
+                # Single car mode
+                followed_car_info = info
+                current_followed_car = followed_car_info.get('followed_car_index', current_followed_car)
+                
+                # Update collision force for single car
+                cumulative_impact = info.get('cumulative_impact_force', 0.0)
+                collision_forces[current_followed_car] = cumulative_impact
+            
             
             env.render()
             
@@ -344,6 +393,42 @@ def main():
                 print(f"   🏁 Total laps completed: {sum(total_laps.values())}")
                 print(f"   💰 Total rewards: {sum(car_rewards.values()):.2f}")
                 
+                # Display collision force summary using real physics data
+                print(f"\n💥 COLLISION FORCE SUMMARY:")
+                total_physics_collisions = sum(physics_collision_counts.values())
+                total_physics_impulse = sum(physics_total_impulses.values())
+                max_physics_impulse = max(physics_max_impulses.values()) if any(physics_max_impulses.values()) else 0
+                
+                print(f"   🏆 Total collision impulse (all cars): {total_physics_impulse:.2f} N⋅s")
+                print(f"   📊 Total collision events: {total_physics_collisions}")
+                
+                if total_physics_collisions > 0:
+                    print(f"   📋 Per-car collision breakdown:")
+                    for car_idx in range(num_cars):
+                        car_name = car_names[car_idx]
+                        car_collisions = physics_collision_counts[car_idx]
+                        car_max = physics_max_impulses[car_idx]
+                        car_total = physics_total_impulses[car_idx]
+                        if car_collisions > 0:
+                            car_avg = car_total / car_collisions
+                            percentage = (car_total / total_physics_impulse * 100) if total_physics_impulse > 0 else 0
+                            print(f"      🚗 {car_name}: {car_collisions} events, max: {car_max:.1f} N⋅s, avg: {car_avg:.1f} N⋅s, total: {car_total:.1f} N⋅s ({percentage:.1f}%)")
+                        else:
+                            print(f"      🚗 {car_name}: 0 collision events")
+                    
+                    # Calculate collision statistics
+                    avg_physics_impulse = total_physics_impulse / total_physics_collisions
+                    print(f"   📈 Average collision impulse: {avg_physics_impulse:.1f} N⋅s")
+                    print(f"   🔥 Maximum collision impulse: {max_physics_impulse:.1f} N⋅s")
+                    
+                    # Calculate collision rate based on simulation time
+                    sim_time = info.get("simulation_time", 0) if not isinstance(info, list) else info[0].get("simulation_time", 0)
+                    if sim_time > 0:
+                        collision_rate = (total_physics_collisions / sim_time) * 60  # per minute
+                        print(f"   ⏱️ Collision rate: {collision_rate:.1f}/min")
+                else:
+                    print(f"   ✅ No collision events detected - clean race!")
+
                 # Display model performance comparison
                 print(f"\n📈 MODEL PERFORMANCE:")
                 for car_idx, car_name in enumerate(car_names):
@@ -368,11 +453,13 @@ def main():
                     laps = total_laps[car_idx]
                     best = best_lap_time[car_idx]
                     reward = car_rewards[car_idx]
+                    collision_force = collision_forces[car_idx]
                     
                     print(f"   {car_name}:")
                     print(f"      Model: {model_info}")
                     best_str = f"{best:.3f}s" if best is not None else "N/A"
                     print(f"      Laps: {laps}, Best: {best_str}, Reward: {reward:.1f}")
+                    print(f"      Collision force: {collision_force:.2f} N⋅s")
                 
                 break
         

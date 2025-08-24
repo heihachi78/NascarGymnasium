@@ -1,0 +1,31 @@
+💥 COLLISION FORCE SUMMARY:
+   🏆 Total collision impulse (all cars): 73 859 839.75 N⋅s
+   📊 Total collision events: 91883
+   📋 Per-car collision breakdown:
+      🚗 PPO:        2205 events, max: 103417.7 N⋅s, avg:  814.7 N⋅s, total:  1796450.7 N⋅s (2.4%)
+      🚗 PPO-2:      2793 events, max:  93983.1 N⋅s, avg:  963.6 N⋅s, total:  2691394.4 N⋅s (3.6%)
+      🚗 TD3:        1442 events, max:  78198.8 N⋅s, avg: 1692.1 N⋅s, total:  2439961.8 N⋅s (3.3%)
+      🚗 TD3-TT:    10846 events, max:  98989.4 N⋅s, avg:  349.2 N⋅s, total:  3787167.2 N⋅s (5.1%)
+      🚗 SAC:       25111 events, max:   6565.0 N⋅s, avg:  151.7 N⋅s, total:  3809690.1 N⋅s (5.2%)
+      🚗 A2C-COMP:  15757 events, max:  68491.3 N⋅s, avg: 1040.5 N⋅s, total: 16394903.6 N⋅s (22.2%)
+      🚗 A2C-TT:    28799 events, max: 115461.9 N⋅s, avg: 1182.2 N⋅s, total: 34047523.3 N⋅s (46.1%)
+      🚗 Rule-Based: 4930 events, max:   8385.8 N⋅s, avg: 1803.8 N⋅s, total:  8892748.7 N⋅s (12.0%)
+   📈 Average collision impulse: 803.8 N⋅s
+   🔥 Maximum collision impulse: 115461.9 N⋅s
+   ⏱️ Collision rate: 9188.0/min
+
+💥 COLLISION FORCE SUMMARY:
+   🏆 Total collision impulse (all cars): 107 865 765.52 N⋅s
+   📊 Total collision events: 108917
+   📋 Per-car collision breakdown:
+      🚗 PPO:        4582 events, max: 107140.7 N⋅s, avg:  846.8 N⋅s, total:  3879970.8 N⋅s (3.6%)
+      🚗 PPO-2:      2717 events, max:  94512.0 N⋅s, avg:  873.2 N⋅s, total:  2372531.2 N⋅s (2.2%)
+      🚗 TD3:       25264 events, max:  79200.5 N⋅s, avg:  236.8 N⋅s, total:  5982719.6 N⋅s (5.5%)
+      🚗 TD3-TT:     2171 events, max:  74819.7 N⋅s, avg: 1286.0 N⋅s, total:  2791889.1 N⋅s (2.6%)
+      🚗 SAC:       21807 events, max:   6577.5 N⋅s, avg:  556.2 N⋅s, total: 12128974.0 N⋅s (11.2%)
+      🚗 A2C-COMP:  17503 events, max:  60878.5 N⋅s, avg: 1063.6 N⋅s, total: 18615699.2 N⋅s (17.3%)
+      🚗 A2C-TT:    29923 events, max:  82577.8 N⋅s, avg: 1821.1 N⋅s, total: 54493771.6 N⋅s (50.5%)
+      🚗 Rule-Based: 4950 events, max:   7051.8 N⋅s, avg: 1535.4 N⋅s, total:  7600210.0 N⋅s (7.0%)
+   📈 Average collision impulse: 990.3 N⋅s
+   🔥 Maximum collision impulse: 107140.7 N⋅s
+   ⏱️ Collision rate: 10891.4/min

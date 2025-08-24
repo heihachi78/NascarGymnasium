@@ -168,7 +168,6 @@ def main():
                  reset_on_lap=False,  # We manage resets manually
                  render_mode="human",
                  enable_fps_limit=False,
-                 disable_cars_on_high_impact=True,
                  discrete_action_space=False,
                  car_names=car_names)
     

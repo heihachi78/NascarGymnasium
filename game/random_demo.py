@@ -21,7 +21,6 @@ def main():
                  track_file="tracks/nascar.track", 
                  reset_on_lap=False,
                  discrete_action_space=discrete_action_space,
-                 disable_cars_on_high_impact=True,
                  enable_fps_limit=False)
     
     try:

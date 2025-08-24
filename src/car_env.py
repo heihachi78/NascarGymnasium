@@ -44,13 +44,10 @@ from .constants import (
     PENALTY_COLLISION,
     # Collision constants
     COLLISION_FORCE_THRESHOLD,
-    COLLISION_ACCUMULATED_DISABLE_THRESHOLD,
-    COLLISION_DAMAGE_DECAY_RATE,
     # Termination constants
     TERMINATION_MIN_REWARD,
     TERMINATION_MAX_TIME,
     TRUNCATION_MAX_TIME,
-    TERMINATION_COLLISION_WINDOW,
     # Normalization constants
     NORM_MAX_POSITION,
     NORM_MAX_VELOCITY,
@@ -114,7 +111,7 @@ class CarEnv(BaseEnv):
                  discrete_action_space: bool = False,
                  num_cars: int = 1,
                  car_names: Optional[list] = None,
-                 disable_cars_on_high_impact: bool = True):
+                ):
         """
         Initialize car racing environment.
         
@@ -128,7 +125,6 @@ class CarEnv(BaseEnv):
             discrete_action_space: If True, use discrete action space (5 actions) instead of continuous
             num_cars: Number of cars to create (1-10)
             car_names: List of names for each car (optional, defaults to "Car 0", "Car 1", etc.)
-            disable_cars_on_high_impact: If True, disable cars on high impact collisions (default: True)
         """
         super().__init__(discrete_action_space=discrete_action_space, num_cars=num_cars)
         
@@ -142,7 +138,6 @@ class CarEnv(BaseEnv):
         self.start_position = start_position or (0.0, 0.0)
         self.start_angle = start_angle
         self.reset_on_lap = reset_on_lap
-        self.disable_cars_on_high_impact = disable_cars_on_high_impact
         
         # Multi-car attributes
         self.num_cars = num_cars
@@ -216,7 +211,6 @@ class CarEnv(BaseEnv):
         self.disabled_cars = set()  # Set of car indices that are disabled due to collisions
         
         # Track cumulative impact force for each car during the entire run
-        self.cumulative_impact_force = []  # List of cumulative impact forces (one per car) - with decay for disabling
         self.total_impact_force_for_info = []  # List of total impact forces for info reporting - no decay
         
         # Lap reset control - prevent immediate reset on first lap
@@ -328,7 +322,6 @@ class CarEnv(BaseEnv):
         self.disabled_cars.clear()
         
         # Reset cumulative impact force tracking for all cars
-        self.cumulative_impact_force = [0.0] * self.num_cars
         # Reset cumulative impact force for info reporting (no decay)
         self.total_impact_force_for_info = [0.0] * self.num_cars
         
@@ -521,6 +514,7 @@ class CarEnv(BaseEnv):
         
         # Process collision events from car physics
         self._process_physics_collisions()
+        #print(f'self.actual_dt={self.actual_dt} self.simulation_time={self.simulation_time}')
         
         # Perform physics step with given timestep
         self.car_physics.step(physics_actions, dt)
@@ -621,19 +615,7 @@ class CarEnv(BaseEnv):
             
             # Accumulate impact force for the car (only when above threshold)
             if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.cumulative_impact_force[0] += collision_impulse * self.actual_dt
                 self.total_impact_force_for_info[0] += collision_impulse * self.actual_dt
-            
-            # Initialize collision duration if needed
-            if not hasattr(self, '_collision_duration_0'):
-                self._collision_duration_0 = 0.0
-            
-            if collision_impulse > COLLISION_ACCUMULATED_DISABLE_THRESHOLD:
-                # Accumulate collision duration for high-impact collisions
-                self._collision_duration_0 += self.actual_dt
-            else:
-                # Reset when not colliding with high impact
-                self._collision_duration_0 = 0.0
         
         # Check termination conditions
         terminated, truncated = self._check_termination()
@@ -726,21 +708,9 @@ class CarEnv(BaseEnv):
             # Check collision impulse for this car using continuous collision data
             collision_impulse = self.car_physics.get_continuous_collision_impulse(car_idx)
             
-            # Apply decay to cumulative impact force
-            self.cumulative_impact_force[car_idx] -= self.actual_dt * COLLISION_DAMAGE_DECAY_RATE
-            self.cumulative_impact_force[car_idx] = max(0.0, self.cumulative_impact_force[car_idx])
-            
             # Accumulate impact force for this car (only when above threshold)
             if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.cumulative_impact_force[car_idx] += collision_impulse * self.actual_dt
                 self.total_impact_force_for_info[car_idx] += collision_impulse * self.actual_dt
-            
-            # Check if accumulated damage exceeds threshold and disable car
-            if self.disable_cars_on_high_impact and self.cumulative_impact_force[car_idx] > COLLISION_ACCUMULATED_DISABLE_THRESHOLD:
-                self.disabled_cars.add(car_idx)
-                self._just_disabled_cars.add(car_idx)  # Track for final penalty
-                car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
-                print(f"🚫 {car_name} disabled due to accumulated collision damage ({self.cumulative_impact_force[car_idx]:.0f}N⋅s > {COLLISION_ACCUMULATED_DISABLE_THRESHOLD}N⋅s)")
             
             # Check for stuck conditions (independent of collisions)
             if car_idx < len(self.cars) and self.cars[car_idx]:
@@ -814,7 +784,7 @@ class CarEnv(BaseEnv):
                             disable_reason = f"stuck for {current_stuck_duration:.1f}s (override)"
                         
                         
-                        if should_disable and self.disable_cars_on_high_impact:
+                        if should_disable:
                             # Car is stuck - disable it
                             self.disabled_cars.add(car_idx)
                             self._just_disabled_cars.add(car_idx)  # Track for final penalty
@@ -1148,9 +1118,6 @@ class CarEnv(BaseEnv):
                 if hasattr(self, '_cumulative_rewards') and car_index < len(self._cumulative_rewards):
                     info["cumulative_reward"] = self._cumulative_rewards[car_index]
                 
-                # Add cumulative impact force for this car
-                if car_index < len(self.total_impact_force_for_info):
-                    info["cumulative_impact_force"] = self.total_impact_force_for_info[car_index]
             else:
                 # Car doesn't exist
                 info.update({
@@ -1161,7 +1128,6 @@ class CarEnv(BaseEnv):
                     "performance": {"performance_valid": False},
                     "lap_timing": {},
                     "cumulative_reward": 0.0,
-                    "cumulative_impact_force": 0.0
                 })
             
             infos.append(info)
@@ -1260,8 +1226,8 @@ class CarEnv(BaseEnv):
         # Normalize tyre wear to [0, 1] (already 0-100, so divide by 100)
         norm_tyre_wear = [np.clip(wear / NORM_MAX_TYRE_WEAR, 0.0, 1.0) for wear in tyre_wear]
         
-        # Get collision data (use main collision reporter for now)
-        collision_impulse, collision_angle = self.collision_reporter.get_collision_for_observation()
+        # Get collision data (use same method as multi-car environment)
+        collision_impulse, collision_angle = self.car_physics.get_collision_data(0)
         
         # Normalize collision impulse to [0, 1]
         norm_collision_impulse = np.clip(collision_impulse / NORM_MAX_COLLISION_IMPULSE, 0.0, 1.0)
@@ -1545,11 +1511,6 @@ class CarEnv(BaseEnv):
         lap_timing = followed_lap_timer.get_timing_info()
         info["lap_timing"] = lap_timing
         
-        # Add cumulative impact force for the followed car
-        if self.followed_car_index < len(self.total_impact_force_for_info):
-            info["cumulative_impact_force"] = self.total_impact_force_for_info[self.followed_car_index]
-        else:
-            info["cumulative_impact_force"] = 0.0
         
         return info
         

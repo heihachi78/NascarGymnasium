@@ -14,9 +14,6 @@ from .constants import (
     BOX2D_TIME_STEP,
     BOX2D_VELOCITY_ITERATIONS,
     BOX2D_POSITION_ITERATIONS,
-    COLLISION_FORCE_SCALE_FACTOR,
-    COLLISION_MIN_FORCE,
-    COLLISION_MAX_FORCE,
     MIN_REALISTIC_FPS,
     MAX_REALISTIC_FPS,
     TWO_PI,
@@ -802,25 +799,8 @@ class CarCollisionListener(Box2D.b2ContactListener):
                 # No car-wall collision, skip
                 return
             
-            # Calculate relative velocity at collision point
-            velA = bodyA.GetLinearVelocityFromWorldPoint(collision_point)
-            velB = bodyB.GetLinearVelocityFromWorldPoint(collision_point)
-            relative_velocity = (velA.x - velB.x, velA.y - velB.y)
-            
-            # Estimate collision force based on mass and relative velocity
-            massA = bodyA.mass if bodyA.mass > 0 else 1000.0
-            massB = bodyB.mass if bodyB.mass > 0 else 1000.0
-            reduced_mass = (massA * massB) / (massA + massB)
-            
-            # Calculate relative velocity component along collision normal
-            # This gives the actual closing speed in the direction of impact
-            normal_velocity = (relative_velocity[0] * collision_normal[0] + 
-                             relative_velocity[1] * collision_normal[1])
-            # Use absolute value of normal velocity for impulse magnitude
-            collision_impulse = reduced_mass * abs(normal_velocity) * COLLISION_FORCE_SCALE_FACTOR
-            
-            # Apply realistic bounds to collision force
-            collision_impulse = max(COLLISION_MIN_FORCE, min(collision_impulse, COLLISION_MAX_FORCE))
+            # No impulse estimation - will be provided by PostSolve with real Box2D data
+            collision_impulse = 0.0
             
             # Store collision data
             collision = CollisionData(
@@ -834,29 +814,10 @@ class CarCollisionListener(Box2D.b2ContactListener):
             collision_key = (car_id, wall_id)
             self.active_collisions[collision_key] = collision
             
-            # Initialize impulse tracking for this car if needed
+            # Initialize impulse tracking for this car if needed - will be updated by PostSolve
             if car_id not in self.car_collision_impulses:
                 self.car_collision_impulses[car_id] = 0.0
             
-            # Add initial impulse
-            self.car_collision_impulses[car_id] = collision_impulse
-            
-            # Debug print for collision force (only for active cars)
-            # Extract car index from car_id format "car_X"
-            if car_id and car_id.startswith("car_") and self.car_physics:
-                try:
-                    car_index = int(car_id.split("_")[1])
-                    if car_index not in self.car_physics.disabled_cars:
-                        #print(f"🔥 COLLISION: {car_id} force={collision_impulse:.1f} N⋅s")
-                        pass
-                except (ValueError, IndexError):
-                    # Fallback for malformed car_id
-                    #print(f"🔥 COLLISION: {car_id} force={collision_impulse:.1f} N⋅s")
-                    pass
-            elif not self.car_physics:
-                # No reference to CarPhysics, show all collisions
-                #print(f"🔥 COLLISION: {car_id} force={collision_impulse:.1f} N⋅s")
-                pass
             
             # Also add to one-time collision list for logging
             self.collisions.append(collision)
@@ -915,6 +876,11 @@ class CarCollisionListener(Box2D.b2ContactListener):
             if car_id and car_id in self.car_collision_impulses:
                 # Update with maximum impulse (to track strongest ongoing collision)
                 self.car_collision_impulses[car_id] = max(self.car_collision_impulses[car_id], total_impulse)
+                
+                # Also update any active CollisionData objects with real impulse
+                for collision_key, collision_data in self.active_collisions.items():
+                    if collision_key[0] == car_id:  # collision_key is (car_id, wall_id)
+                        collision_data.impulse = total_impulse
     
     def get_collisions(self) -> List[CollisionData]:
         """Get and clear one-time collision list"""
