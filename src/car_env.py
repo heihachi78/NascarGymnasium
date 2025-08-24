@@ -398,14 +398,12 @@ class CarEnv(BaseEnv):
         
     def update_physics(self, actions) -> None:
         """
-        Update physics simulation using fixed-rate accumulator approach.
+        Update physics simulation.
         
-        Physics always runs at exactly 60Hz regardless of frame rate.
-        - At 50fps: Some frames will run 2 physics steps, some 1 step
-        - At 60fps: Each frame runs exactly 1 physics step  
-        - At 120fps: Half the frames run 1 physics step, half run 0 steps
+        When render_mode == "human": Uses fixed-rate accumulator for smooth real-time rendering
+        When render_mode != "human": Runs at maximum speed with one physics step per frame
         
-        This ensures identical physics behavior regardless of rendering performance.
+        Physics always uses exactly 60Hz timestep regardless of timing mode.
         
         Args:
             actions: Multi-car actions array with shape (num_cars, 3)
@@ -419,7 +417,17 @@ class CarEnv(BaseEnv):
         # Actions should already be in multi-car format: (num_cars, 3)
         physics_actions = np.array(actions, dtype=np.float32)
 
-        # Get current time and calculate frame delta
+        # Fixed physics timestep (60Hz)
+        physics_dt = 1.0 / 60.0
+        
+        # Fast simulation mode when not rendering to humans
+        if self.render_mode != RENDER_MODE_HUMAN:
+            # Run exactly one physics step per frame for maximum speed
+            self._run_single_physics_step(physics_actions, physics_dt)
+            self.actual_dt = physics_dt
+            return
+
+        # Real-time mode for human rendering (original timing system)
         current_time = time.perf_counter()
         
         if self.last_frame_time is None:
@@ -436,9 +444,6 @@ class CarEnv(BaseEnv):
         
         # Add frame time to accumulator
         self.physics_accumulator += frame_dt
-        
-        # Fixed physics timestep (60Hz)
-        physics_dt = 1.0 / 60.0
         
         # Run physics steps while we have enough accumulated time
         physics_steps_run = 0
