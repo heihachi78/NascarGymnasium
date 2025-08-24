@@ -3,6 +3,7 @@
 __pycache__
 CLAUDE.md
 GEMINI.md
+.claude
 learn/tensorboard
 learn/a2c_simple/logs
 learn/ddpg_simple/logs
