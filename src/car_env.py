@@ -398,12 +398,13 @@ class CarEnv(BaseEnv):
         
     def update_physics(self, actions) -> None:
         """
-        Update physics simulation.
+        Update physics simulation with identical accumulator logic for both modes.
         
-        When render_mode == "human": Uses fixed-rate accumulator for smooth real-time rendering
-        When render_mode != "human": Runs at maximum speed with one physics step per frame
+        Both modes use the exact same accumulator system:
+        - Render mode: Accumulates real elapsed time from perf_counter()
+        - Non-render mode: Accumulates fake fixed 1/60 second per frame
         
-        Physics always uses exactly 60Hz timestep regardless of timing mode.
+        This ensures identical physics logic with different time sources.
         
         Args:
             actions: Multi-car actions array with shape (num_cars, 3)
@@ -417,32 +418,36 @@ class CarEnv(BaseEnv):
         # Actions should already be in multi-car format: (num_cars, 3)
         physics_actions = np.array(actions, dtype=np.float32)
 
-        # Fixed physics timestep (60Hz)
+        # Fixed physics timestep (60Hz) 
         physics_dt = 1.0 / 60.0
         
-        # Fast simulation mode when not rendering to humans
-        if self.render_mode != RENDER_MODE_HUMAN:
-            # Run exactly one physics step per frame for maximum speed
-            self._run_single_physics_step(physics_actions, physics_dt)
-            self.actual_dt = physics_dt
-            return
-
-        # Real-time mode for human rendering (original timing system)
-        current_time = time.perf_counter()
-        
-        if self.last_frame_time is None:
-            # First frame - no physics step, just initialize timing
+        # Calculate frame_dt based on mode (only difference between modes)
+        if self.render_mode == RENDER_MODE_HUMAN:
+            # Render mode: use real elapsed time
+            current_time = time.perf_counter()
+            
+            if self.last_frame_time is None:
+                # First frame - initialize timing, no physics
+                self.last_frame_time = current_time
+                return
+            
+            # Real elapsed time since last frame
+            frame_dt = current_time - self.last_frame_time
             self.last_frame_time = current_time
-            return
+            
+            # Clamp to prevent spiral of death
+            frame_dt = min(frame_dt, MAX_PHYSICS_TIMESTEP)
+        else:
+            # Non-render mode: fake that 1/60 second passed
+            if self.last_frame_time is None:
+                # First frame - initialize, no physics
+                self.last_frame_time = 0.0  # Dummy value
+                return
+            
+            # Always pretend exactly 1/60 second passed for maximum speed
+            frame_dt = physics_dt
         
-        # Calculate time elapsed since last frame
-        frame_dt = current_time - self.last_frame_time
-        self.last_frame_time = current_time
-        
-        # Clamp frame time to prevent spiral of death
-        frame_dt = min(frame_dt, MAX_PHYSICS_TIMESTEP)
-        
-        # Add frame time to accumulator
+        # IDENTICAL accumulator logic for both modes
         self.physics_accumulator += frame_dt
         
         # Run physics steps while we have enough accumulated time
@@ -463,9 +468,6 @@ class CarEnv(BaseEnv):
         
         # Update collision reporter time
         self.collision_reporter.update_time(self.simulation_time)
-        
-        # Process collision events from car physics
-        self._process_physics_collisions()
         #print(f'self.actual_dt={self.actual_dt} self.simulation_time={self.simulation_time}')
         
         # Perform physics step with given timestep
@@ -1033,28 +1035,6 @@ class CarEnv(BaseEnv):
         
     
         
-    def _process_physics_collisions(self) -> None:
-        """Process collision events from physics system"""
-        # Get all collision data from physics system directly
-        recent_collisions = self.car_physics.recent_collisions
-        
-        # Process each collision that hasn't been reported yet
-        for collision in recent_collisions:
-            if (hasattr(collision, 'car_id') and collision.car_id and 
-                hasattr(collision, 'reported_to_environment') and 
-                not collision.reported_to_environment):
-                
-                # Report collision with car identification
-                self.collision_reporter.report_collision(
-                    position=collision.position,
-                    impulse=collision.impulse,
-                    normal=collision.normal,
-                    car_angle=0.0,  # We don't need car angle for this reporting
-                    car_id=collision.car_id
-                )
-                
-                # Mark as reported to avoid re-processing
-                collision.reported_to_environment = True
                 
     def _update_episode_stats(self) -> None:
         """Update episode statistics (for followed car)"""

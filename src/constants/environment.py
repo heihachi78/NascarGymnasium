@@ -9,7 +9,7 @@ DEFAULT_TRUNCATED = False
 # Termination Condition Constants
 TERMINATION_MIN_REWARD = -1000.0  # Terminate if cumulative reward drops below this
 TERMINATION_MAX_TIME = 60.0  # Terminate after this many seconds
-TRUNCATION_MAX_TIME = 600.0  # Truncate (hard limit) after this many seconds
+TRUNCATION_MAX_TIME = 180.0  # Truncate (hard limit) after this many seconds
 
 # Logging Constants
 DEFAULT_LOG_LEVEL = "INFO"  # Default logging level

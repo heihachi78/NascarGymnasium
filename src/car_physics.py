@@ -32,15 +32,13 @@ from .constants import (
 
 
 class CollisionData:
-    """Data structure for collision events"""
+    """Simple data structure for active collision tracking in CarCollisionListener"""
     
     def __init__(self, position: Tuple[float, float], impulse: float, normal: Tuple[float, float], car_id: str = "unknown"):
         self.position = position  # World collision point
-        self.impulse = impulse  # Collision impulse magnitude (mass * delta_velocity)
+        self.impulse = impulse  # Collision impulse magnitude  
         self.normal = normal  # Collision normal vector
         self.car_id = car_id  # Identifier of the car involved in collision
-        self.timestamp = 0.0  # Will be set by collision system
-        self.reported_to_environment = False  # Flag to track if collision has been reported
 
 
 class CarPhysics:
@@ -73,7 +71,6 @@ class CarPhysics:
         # Collision tracking
         self.collision_listener = CarCollisionListener(self)
         self.world.contactListener = self.collision_listener
-        self.recent_collisions: List[CollisionData] = []
         self.simulation_time = 0.0
         
         # Performance tracking
@@ -400,9 +397,6 @@ class CarPhysics:
         # Step the physics world
         self.world.Step(dt, BOX2D_VELOCITY_ITERATIONS, BOX2D_POSITION_ITERATIONS)
         
-        # Process collisions
-        self._process_collisions()
-        
         # Update performance tracking
         self.physics_steps += 1
         # Update FPS calculation every second worth of steps
@@ -415,19 +409,6 @@ class CarPhysics:
                 self.average_fps = 60.0
             self.last_fps_update_time = self.simulation_time
     
-    def _process_collisions(self) -> None:
-        """Process collision events from the collision listener"""
-        # Get new collisions from listener
-        new_collisions = self.collision_listener.get_collisions()
-        
-        for collision in new_collisions:
-            collision.timestamp = self.simulation_time
-            self.recent_collisions.append(collision)
-            
-        # Keep only recent collisions (last 2 seconds)
-        cutoff_time = self.simulation_time - 2.0
-        self.recent_collisions = [c for c in self.recent_collisions if c.timestamp > cutoff_time]
-        
     def get_collision_data(self, car_index: int = 0) -> Tuple[float, float]:
         """
         Get current collision data for environment observation.
@@ -648,7 +629,6 @@ class CarPhysics:
             "physics_steps": self.physics_steps,
             "simulation_time": self.simulation_time,
             "average_fps": validated_fps,
-            "recent_collisions": len(self.recent_collisions),
             "bodies_in_world": len(self.world.bodies)
         }
         
@@ -744,7 +724,6 @@ class CarCollisionListener(Box2D.b2ContactListener):
     
     def __init__(self, car_physics=None):
         super().__init__()
-        self.collisions: List[CollisionData] = []
         # Track active collisions: key is (car_id, wall_id), value is CollisionData
         self.active_collisions: Dict[Tuple[str, str], CollisionData] = {}
         # Track collision impulses per car for continuous penalties
@@ -811,10 +790,6 @@ class CarCollisionListener(Box2D.b2ContactListener):
             if car_id not in self.car_collision_impulses:
                 self.car_collision_impulses[car_id] = 0.0
             
-            
-            # Also add to one-time collision list for logging
-            self.collisions.append(collision)
-            
     def EndContact(self, contact):
         """Called when collision ends"""
         # Identify which bodies were in contact
@@ -875,11 +850,6 @@ class CarCollisionListener(Box2D.b2ContactListener):
                     if collision_key[0] == car_id:  # collision_key is (car_id, wall_id)
                         collision_data.impulse = total_impulse
     
-    def get_collisions(self) -> List[CollisionData]:
-        """Get and clear one-time collision list"""
-        collisions = self.collisions.copy()
-        self.collisions.clear()
-        return collisions
     
     def get_car_collision_impulse(self, car_id: str) -> float:
         """Get current collision impulse for a specific car"""

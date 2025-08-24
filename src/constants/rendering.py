@@ -1,7 +1,7 @@
 # Rendering and Display System Constants
 
 # Rendering Constants
-DEFAULT_RENDER_FPS = 60
+DEFAULT_RENDER_FPS = 30
 DEFAULT_WINDOW_WIDTH = 1024
 DEFAULT_WINDOW_HEIGHT = 768
 DEFAULT_WINDOW_SIZE = (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)
@@ -13,7 +13,7 @@ FPS_COLOR_LOW = (255, 0, 0)     # Red
 FPS_COLOR_NORMAL = (0, 255, 0)  # Green
 
 # Window Configuration
-WINDOW_CAPTION = "Simple Environment"
+WINDOW_CAPTION = "Nascar Racing Environment"
 FPS_THRESHOLD = 60
 
 # Physics Constants (rendering related)

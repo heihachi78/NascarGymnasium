@@ -167,7 +167,7 @@ def main():
     
     # Create environment
     env = CarEnv(
-        track_file="tracks/nascar.track", 
+        track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode='human',
