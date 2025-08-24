@@ -125,12 +125,8 @@ class CarPhysics:
         # Create new cars
         self.cars = []
         for i in range(num_cars):
-            # Add small random offset to prevent cars from being exactly on top of each other
-            offset_x = (i % 3 - 1) * 0.1  # -0.1, 0, 0.1 pattern
-            offset_y = (i // 3) * 0.1     # Rows of 3 cars
-            car_position = (start_position[0] + offset_x, start_position[1] + offset_y)
-            
-            car = Car(self.world, car_position, start_angle, f"car_{i}")
+            # All cars start at exactly the same position
+            car = Car(self.world, start_position, start_angle, f"car_{i}")
             self.cars.append(car)
         
         # Set first car as legacy reference
@@ -627,13 +623,10 @@ class CarPhysics:
             position: Reset position (x, y) in meters for all cars
             angle: Reset orientation in radians for all cars
         """
-        for i, car in enumerate(self.cars):
+        for car in self.cars:
             if car:
-                # Add small offset like in create_cars
-                offset_x = (i % 3 - 1) * 0.1
-                offset_y = (i // 3) * 0.1
-                car_position = (position[0] + offset_x, position[1] + offset_y)
-                car.body.position = car_position
+                # All cars reset to exactly the same position
+                car.body.position = position
                 car.body.angle = angle
                 car.reset()
         
