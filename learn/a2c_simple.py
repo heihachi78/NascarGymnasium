@@ -20,7 +20,7 @@ log_interval = 1_000
 learning_rate_initial_value = 9e-4
 learning_rate_final_value = 5e-4
 stats_window_size = 25
-model_name = "a2c_simple"
+model_name = "a2c_128_relu_8_step_25m"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -103,4 +103,4 @@ if __name__ == "__main__":
     )
 
     # mentés
-    model.save(f"{checkpoint_dir}{model_name}_final")
+    model.save(f"{checkpoint_dir}/{model_name}_final")
