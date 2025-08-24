@@ -382,12 +382,11 @@ class CarEnv(BaseEnv):
         observations = self._get_multi_obs()
         infos = self._get_multi_info()
         
-        # Always return multi-car format
-        observation = observations
-        info = infos
-        
-        logger.debug("Environment reset complete")
-        return observation, info
+        # For single-car environments, return scalars to maintain Gymnasium compatibility
+        if self.num_cars == 1:
+            return observations[0], infos
+        else:
+            return observations, infos
         
     def update_physics(self, actions) -> None:
         """
@@ -554,6 +553,10 @@ class CarEnv(BaseEnv):
         if not self.cars:
             raise RuntimeError("Environment not properly initialized. Call reset() first.")
         
+        # Convert scalar actions to multi-car format for internal processing
+        if self.num_cars == 1 and action.ndim == 1:
+            action = action.reshape(1, -1)  # Convert (3,) to (1,3) or (1,) to (1,1)
+        
         # Convert discrete to continuous if needed
         if self.discrete_action_space:
             continuous_actions = [self._discrete_to_continuous(a) for a in action]
@@ -618,7 +621,11 @@ class CarEnv(BaseEnv):
             self._lap_reset_pending = False
             terminated = True
         
-        return observations, rewards, terminated, truncated, infos
+        # For single-car environments, return scalars to maintain Gymnasium compatibility
+        if self.num_cars == 1:
+            return observations[0], rewards[0], terminated, truncated, infos
+        else:
+            return observations, rewards, terminated, truncated, infos
     
     def _check_and_disable_cars(self):
         """Check for sustained severe collisions and disable cars"""
@@ -982,16 +989,12 @@ class CarEnv(BaseEnv):
         return False, False
     
     def _get_multi_info(self):
-        """Get info dictionaries for all cars"""
-        infos = []
+        """Get info dictionary for all cars following Gymnasium standard"""
+        car_infos = []
         
         for car_index in range(self.num_cars):
-            info = {
-                "simulation_time": self.simulation_time,
+            car_info = {
                 "car_index": car_index,
-                "num_cars": self.num_cars,
-                "followed_car_index": self.followed_car_index,
-                "termination_reason": self.termination_reason,
                 "disabled": car_index in self.disabled_cars,
             }
             
@@ -1000,7 +1003,7 @@ class CarEnv(BaseEnv):
                 car_state = self.car_physics.get_car_state(car_index)
                 
                 if car_state:
-                    info.update({
+                    car_info.update({
                         "car_position": (car_state[0], car_state[1]),
                         "car_speed_kmh": car.get_velocity_kmh(),
                         "car_speed_ms": car.get_velocity_magnitude(),
@@ -1009,25 +1012,25 @@ class CarEnv(BaseEnv):
                 
                 # Add performance info
                 performance = car.validate_performance()
-                info["performance"] = performance
+                car_info["performance"] = performance
                 
                 # Add lap timing info for this car
                 if car_index < len(self.car_lap_timers):
                     lap_timer = self.car_lap_timers[car_index]
                     lap_timing = lap_timer.get_timing_info()
-                    info["lap_timing"] = lap_timing
+                    car_info["lap_timing"] = lap_timing
                 
                 # Add cumulative reward for this car
                 if hasattr(self, '_cumulative_rewards') and car_index < len(self._cumulative_rewards):
-                    info["cumulative_reward"] = self._cumulative_rewards[car_index]
+                    car_info["cumulative_reward"] = self._cumulative_rewards[car_index]
                 
                 # Add cumulative collision force for this car
                 if hasattr(self, 'total_impact_force_for_info') and car_index < len(self.total_impact_force_for_info):
-                    info["cumulative_impact_force"] = self.total_impact_force_for_info[car_index]
+                    car_info["cumulative_impact_force"] = self.total_impact_force_for_info[car_index]
                 
             else:
                 # Car doesn't exist
-                info.update({
+                car_info.update({
                     "car_position": (0.0, 0.0),
                     "car_speed_kmh": 0.0,
                     "car_speed_ms": 0.0,
@@ -1038,17 +1041,23 @@ class CarEnv(BaseEnv):
                     "cumulative_impact_force": 0.0,
                 })
             
-            infos.append(info)
+            car_infos.append(car_info)
         
-        # Add shared collision and physics info to all infos
+        # Create single info dictionary following Gymnasium standard
         collision_stats = self.collision_reporter.get_collision_statistics()
         physics_stats = self.car_physics.get_performance_stats()
         
-        for info in infos:
-            info["collisions"] = collision_stats
-            info["physics"] = physics_stats
+        info = {
+            "simulation_time": self.simulation_time,
+            "num_cars": self.num_cars,
+            "followed_car_index": self.followed_car_index,
+            "termination_reason": self.termination_reason,
+            "cars": car_infos,  # All per-car info nested here
+            "collisions": collision_stats,
+            "physics": physics_stats,
+        }
         
-        return infos
+        return info
         
     
         
