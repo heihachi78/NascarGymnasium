@@ -157,6 +157,7 @@ class CarEnv(BaseEnv):
         # Physics timing tracking (fixed-rate physics independent of frame rate)
         self.last_frame_time = None  # Will be initialized on first step
         self.physics_accumulator = 0.0  # Accumulates time for fixed-rate physics
+        self.physics_steps_this_frame = 0  # Track how many physics steps ran in current frame
         
         # Store latest action for physics updates
         self._current_physics_action = None
@@ -451,11 +452,11 @@ class CarEnv(BaseEnv):
         self.physics_accumulator += frame_dt
         
         # Run physics steps while we have enough accumulated time
-        physics_steps_run = 0
-        while self.physics_accumulator >= physics_dt and physics_steps_run < 5:  # Max 5 steps per frame
+        self.physics_steps_this_frame = 0
+        while self.physics_accumulator >= physics_dt and self.physics_steps_this_frame < 5:  # Max 5 steps per frame
             self._run_single_physics_step(physics_actions, physics_dt)
             self.physics_accumulator -= physics_dt
-            physics_steps_run += 1
+            self.physics_steps_this_frame += 1
         
         # Store the actual timestep used for other calculations
         self.actual_dt = physics_dt
@@ -475,6 +476,65 @@ class CarEnv(BaseEnv):
         
         # Update simulation time
         self.simulation_time += dt
+        
+        # Accumulate collision impacts and stuck durations for each car during physics steps only
+        for car_idx in range(self.num_cars):
+            if car_idx not in self.disabled_cars:
+                # Check collision impulse for this car using continuous collision data
+                collision_impulse = self.car_physics.get_continuous_collision_impulse(car_idx)
+                
+                # Accumulate impact force for this car (only when above threshold)
+                if collision_impulse > COLLISION_FORCE_THRESHOLD:
+                    self.total_impact_force_for_info[car_idx] += collision_impulse * dt
+                
+                # Update stuck duration tracking during physics steps only
+                if car_idx < len(self.cars) and self.cars[car_idx]:
+                    car = self.cars[car_idx]
+                    speed = car.get_velocity_magnitude()
+                    
+                    # Initialize stuck duration tracking if needed
+                    stuck_duration_attr = f'_stuck_duration_{car_idx}'
+                    if not hasattr(self, stuck_duration_attr):
+                        setattr(self, stuck_duration_attr, 0.0)
+                    
+                    # Check if car is moving slowly and accumulate stuck duration
+                    if speed < STUCK_SPEED_THRESHOLD:
+                        prev_stuck_duration = getattr(self, stuck_duration_attr)
+                        current_stuck_duration = prev_stuck_duration + dt  # Use physics dt, not frame dt
+                        setattr(self, stuck_duration_attr, current_stuck_duration)
+                    else:
+                        # Reset stuck duration if car is moving fast enough
+                        setattr(self, stuck_duration_attr, 0.0)
+                        # Also reset the stuck start position and printed flag
+                        stuck_start_pos_attr = f'_stuck_start_position_{car_idx}'
+                        stuck_printed_attr = f'_stuck_printed_{car_idx}'
+                        if hasattr(self, stuck_start_pos_attr):
+                            setattr(self, stuck_start_pos_attr, None)
+                        if hasattr(self, stuck_printed_attr):
+                            setattr(self, stuck_printed_attr, False)
+        
+        # Update episode stats tracking during physics steps only (for followed car)
+        if hasattr(self, 'episode_stats') and self.followed_car_index < len(self.cars):
+            followed_car = self.cars[self.followed_car_index]
+            if followed_car:
+                speed = followed_car.get_velocity_magnitude()
+                
+                # Track distance traveled
+                self.episode_stats["distance_traveled"] += speed * dt
+                
+                # Track time on track
+                if self.car_physics.is_car_on_track(self.followed_car_index):
+                    self.episode_stats["time_on_track"] += dt
+                    
+                # Check for collisions using physics dt
+                if self.collision_reporter.has_recent_collision(dt):
+                    self.episode_stats["collisions"] += 1
+        
+        # Update survival time tracking during physics steps only
+        if hasattr(self, '_survival_time'):
+            for car_index in range(self.num_cars):
+                if car_index not in self.disabled_cars and car_index < len(self._survival_time):
+                    self._survival_time[car_index] += dt
         
         # Update lap timers for all cars
         for car_index in range(len(self.cars)):
@@ -594,15 +654,8 @@ class CarEnv(BaseEnv):
         for car_idx in range(self.num_cars):
             if car_idx in self.disabled_cars:
                 continue  # Car is already disabled
-                
-            # Check collision impulse for this car using continuous collision data
-            collision_impulse = self.car_physics.get_continuous_collision_impulse(car_idx)
             
-            # Accumulate impact force for this car (only when above threshold)
-            if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.total_impact_force_for_info[car_idx] += collision_impulse * self.actual_dt
-            
-            # Check for stuck conditions (independent of collisions)
+            # Check for stuck conditions (stuck duration is now accumulated in physics steps)
             if car_idx < len(self.cars) and self.cars[car_idx]:
                 car = self.cars[car_idx]
                 speed = car.get_velocity_magnitude()
@@ -618,22 +671,18 @@ class CarEnv(BaseEnv):
                 if not hasattr(self, stuck_start_pos_attr):
                     setattr(self, stuck_start_pos_attr, None)
                 
-                # Check if car is moving slowly
-                if speed < STUCK_SPEED_THRESHOLD:
-                    # Get previous stuck duration
-                    prev_stuck_duration = getattr(self, stuck_duration_attr)
-                    
-                    # Accumulate stuck duration
-                    current_stuck_duration = prev_stuck_duration + self.actual_dt
-                    setattr(self, stuck_duration_attr, current_stuck_duration)
-                    
+                # Get current stuck duration (updated in physics steps)
+                current_stuck_duration = getattr(self, stuck_duration_attr)
+                
+                # Track position when stuck detection starts (only for slow cars)
+                if speed < STUCK_SPEED_THRESHOLD and current_stuck_duration > 0:
                     # Get current car position
                     car_state = self.car_physics.get_car_state(car_idx)
                     current_position = (car_state[0], car_state[1]) if car_state else (0, 0)
                     
                     # Save starting position when stuck detection begins
                     stuck_start_pos = getattr(self, stuck_start_pos_attr)
-                    if prev_stuck_duration == 0.0:
+                    if stuck_start_pos is None:
                         setattr(self, stuck_start_pos_attr, current_position)
                         stuck_start_pos = current_position
                     
@@ -645,15 +694,10 @@ class CarEnv(BaseEnv):
                         distance_moved = (dx**2 + dy**2)**0.5
                     
                     # Print when stuck detection starts (only once)
-                    if prev_stuck_duration == 0.0 and not getattr(self, stuck_printed_attr):
+                    if not getattr(self, stuck_printed_attr):
                         car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
                         #print(f"⚠️  {car_name} stuck detection started (speed: {speed:.2f} m/s)")
                         setattr(self, stuck_printed_attr, True)
-                    
-                    # Print periodic updates every 2 seconds with distance moved
-                    if current_stuck_duration > 0 and int(current_stuck_duration) % 2 == 0 and int(current_stuck_duration) != int(prev_stuck_duration):
-                        car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
-                        #print(f"   {car_name} stuck for {current_stuck_duration:.1f}s (speed: {speed:.2f} m/s, moved: {distance_moved:.1f}m)")
                     
                     # Check if car has been stuck long enough
                     if current_stuck_duration > STUCK_TIME_THRESHOLD:
@@ -791,9 +835,8 @@ class CarEnv(BaseEnv):
                 
                 # Survival reward - only for active (non-disabled) cars
                 if car_index not in self.disabled_cars:
-                    # Update survival time tracking
-                    if hasattr(self, '_survival_time'):
-                        self._survival_time[car_index] += self.actual_dt
+                    # Survival time is now updated in physics steps
+                    pass
                 
                 # Get collision impulse for this car
                 collision_impulse = self.car_physics.get_continuous_collision_impulse(car_index)
@@ -1048,16 +1091,7 @@ class CarEnv(BaseEnv):
         speed = followed_car.get_velocity_magnitude()
         self.episode_stats["max_speed"] = max(self.episode_stats["max_speed"], speed)
         
-        # Simple distance approximation
-        self.episode_stats["distance_traveled"] += speed * self.actual_dt
-        
-        # Count collisions
-        if self.collision_reporter.has_recent_collision(self.actual_dt):
-            self.episode_stats["collisions"] += 1
-            
-        # Track time on track
-        if self.car_physics.is_car_on_track(self.followed_car_index):
-            self.episode_stats["time_on_track"] += self.actual_dt
+        # Episode stats are now updated in physics steps to be frame-rate independent
             
     def check_quit_requested(self) -> bool:
         """Check if user has requested to quit (e.g., by clicking window close button)"""
