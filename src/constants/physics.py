@@ -20,3 +20,7 @@ BOX2D_POSITION_ITERATIONS = 2  # Box2D position constraint solver iterations
 PHYSICS_CURVE_DEGREES_PER_SEGMENT = 1.0  # Degrees per physics wall segment (lower = more detail)
 PHYSICS_CURVE_MIN_SEGMENTS = 8  # Minimum segments per curved track section
 PHYSICS_CURVE_MAX_SEGMENTS = 180  # Maximum segments to prevent excessive detail
+
+# Physics Timing Constants
+MAX_PHYSICS_TIMESTEP = 1.0 / 30.0  # Maximum timestep to prevent instability (33.33ms)
+MIN_PHYSICS_TIMESTEP = 1.0 / 1000.0  # Minimum timestep to prevent division issues (1ms)

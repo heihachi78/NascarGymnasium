@@ -2,7 +2,6 @@
 
 # Rendering Constants
 DEFAULT_RENDER_FPS = 60
-UNLIMITED_FPS_CAP = 240  # FPS cap to use in headless mode (prevents physics timing issues)
 DEFAULT_WINDOW_WIDTH = 1024
 DEFAULT_WINDOW_HEIGHT = 768
 DEFAULT_WINDOW_SIZE = (DEFAULT_WINDOW_WIDTH, DEFAULT_WINDOW_HEIGHT)

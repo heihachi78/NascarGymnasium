@@ -170,7 +170,7 @@ def main():
         track_file="tracks/nascar.track", 
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None,#'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -197,8 +197,7 @@ def main():
     lap_start_rewards = {}
     lap_timing_started = {}
     
-    # Collision force tracking (per car)
-    collision_forces = {}
+    # Note: Using direct physics collision tracking below instead of info dict
     
     # Raw physics collision tracking (per car)
     physics_collision_counts = {}  # Total collision events from physics
@@ -219,7 +218,6 @@ def main():
         car_rewards[i] = 0.0
         lap_start_rewards[i] = 0.0
         lap_timing_started[i] = False
-        collision_forces[i] = 0.0
         # Initialize physics collision tracking
         physics_collision_counts[i] = 0
         physics_max_impulses[i] = 0.0
@@ -342,19 +340,7 @@ def main():
                         
                         previous_lap_count[car_idx] = current_lap_count
                 
-                # Update collision force tracking for all cars
-                for car_idx in range(min(num_cars, len(info))):
-                    car_info = info[car_idx]
-                    cumulative_impact = car_info.get('cumulative_impact_force', 0.0)
-                    collision_forces[car_idx] = cumulative_impact
-            else:
-                # Single car mode
-                followed_car_info = info
-                current_followed_car = followed_car_info.get('followed_car_index', current_followed_car)
-                
-                # Update collision force for single car
-                cumulative_impact = info.get('cumulative_impact_force', 0.0)
-                collision_forces[current_followed_car] = cumulative_impact
+                # Note: Collision forces tracked directly from physics above
             
             
             env.render()
@@ -451,7 +437,7 @@ def main():
                     laps = total_laps[car_idx]
                     best = best_lap_time[car_idx]
                     reward = car_rewards[car_idx]
-                    collision_force = collision_forces[car_idx]
+                    collision_force = physics_total_impulses[car_idx]  # Use actual physics collision data
                     
                     print(f"   {car_name}:")
                     print(f"      Model: {model_info}")

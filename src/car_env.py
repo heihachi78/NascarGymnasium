@@ -59,43 +59,15 @@ from .constants import (
     # Multi-car constants
     MAX_CARS,
     MULTI_CAR_COLORS,
-    CAR_SELECT_KEYS
+    CAR_SELECT_KEYS,
+    # Physics timing constants
+    MAX_PHYSICS_TIMESTEP,
+    MIN_PHYSICS_TIMESTEP
 )
 
 # Setup module logger
 logger = logging.getLogger(__name__)
 
-
-class PythonClock:
-    """
-    A pure Python implementation of pygame.time.Clock functionality.
-    Used in headless mode to avoid pygame initialization in subprocesses.
-    """
-    def __init__(self):
-        self.last_tick = time.perf_counter()
-        
-    def tick(self, fps):
-        """
-        Control the frame rate by sleeping if necessary.
-        
-        Args:
-            fps: Target frames per second
-            
-        Returns:
-            Time elapsed since last tick in milliseconds
-        """
-        current_time = time.perf_counter()
-        elapsed = current_time - self.last_tick
-        
-        if fps > 0:
-            target_time = 1.0 / fps
-            if elapsed < target_time:
-                time.sleep(target_time - elapsed)
-                current_time = time.perf_counter()
-                elapsed = current_time - self.last_tick
-        
-        self.last_tick = current_time
-        return elapsed * 1000  # Return milliseconds like pygame
 
 
 class CarEnv(BaseEnv):
@@ -170,7 +142,6 @@ class CarEnv(BaseEnv):
         
         # Rendering system
         self.renderer = None
-        self.headless_clock = None  # Clock for timing in headless mode
         
         if render_mode == RENDER_MODE_HUMAN:
             self.renderer = Renderer(
@@ -178,14 +149,14 @@ class CarEnv(BaseEnv):
                 render_fps=self.metadata["render_fps"],
                 track=self.track
             )
-        else:
-            # Use Python-based clock for headless mode to avoid pygame in subprocesses
-            # This is crucial for macOS compatibility with multiprocessing
-            self.headless_clock = PythonClock()
             
         # Environment state
         self.simulation_time = 0.0
         self.actual_dt = BOX2D_TIME_STEP  # Will be updated with each physics step
+        
+        # Physics timing tracking (fixed-rate physics independent of frame rate)
+        self.last_frame_time = None  # Will be initialized on first step
+        self.physics_accumulator = 0.0  # Accumulates time for fixed-rate physics
         
         # Store latest action for physics updates
         self._current_physics_action = None
@@ -291,6 +262,10 @@ class CarEnv(BaseEnv):
             lap_timer.reset()
         
         self.simulation_time = 0.0
+        
+        # Reset physics timing tracking
+        self.last_frame_time = None  # Will be initialized on first step
+        self.physics_accumulator = 0.0
         
         # Reset physics action tracking
         self._current_physics_action = None
@@ -423,11 +398,14 @@ class CarEnv(BaseEnv):
         
     def update_physics(self, actions) -> None:
         """
-        Update physics simulation with proper timing modes.
+        Update physics simulation using fixed-rate accumulator approach.
         
-        Two modes:
-        1. Human render mode: One physics step per frame, simulating delta time from frame rate
-        2. Headless mode: Run physics as fast as possible with fixed 1/60 timesteps
+        Physics always runs at exactly 60Hz regardless of frame rate.
+        - At 50fps: Some frames will run 2 physics steps, some 1 step
+        - At 60fps: Each frame runs exactly 1 physics step  
+        - At 120fps: Half the frames run 1 physics step, half run 0 steps
+        
+        This ensures identical physics behavior regardless of rendering performance.
         
         Args:
             actions: Multi-car actions array with shape (num_cars, 3)
@@ -441,31 +419,36 @@ class CarEnv(BaseEnv):
         # Actions should already be in multi-car format: (num_cars, 3)
         physics_actions = np.array(actions, dtype=np.float32)
 
-        # Check if we're in human render mode (which always limits FPS)
-        # or headless mode (which never limits FPS)
-        is_human_mode = self.renderer is not None
+        # Get current time and calculate frame delta
+        current_time = time.perf_counter()
         
-        if is_human_mode:
-            # MODE 1: Human render mode (FPS limited)
-            # One physics step per frame, using the expected frame rate as timestep
-            # This ensures consistent physics regardless of actual frame rate variations
-            
-            # Get target fps for this environment
-            target_fps = self.metadata.get("render_fps", DEFAULT_RENDER_FPS)
-            expected_dt = 1.0 / target_fps
-            
-            # Run exactly one physics step with expected delta time
-            self._run_single_physics_step(physics_actions, expected_dt)
-            
-        else:
-            # MODE 2: Headless mode (no FPS limit)
-            # Run physics as fast as possible with fixed 1/60 timesteps
-            
-            # Always use fixed timestep for consistent simulation speed
-            fixed_dt = 1.0/60.0
-            
-            # Run exactly one physics step with fixed timestep
-            self._run_single_physics_step(physics_actions, fixed_dt)
+        if self.last_frame_time is None:
+            # First frame - no physics step, just initialize timing
+            self.last_frame_time = current_time
+            return
+        
+        # Calculate time elapsed since last frame
+        frame_dt = current_time - self.last_frame_time
+        self.last_frame_time = current_time
+        
+        # Clamp frame time to prevent spiral of death
+        frame_dt = min(frame_dt, MAX_PHYSICS_TIMESTEP)
+        
+        # Add frame time to accumulator
+        self.physics_accumulator += frame_dt
+        
+        # Fixed physics timestep (60Hz)
+        physics_dt = 1.0 / 60.0
+        
+        # Run physics steps while we have enough accumulated time
+        physics_steps_run = 0
+        while self.physics_accumulator >= physics_dt and physics_steps_run < 5:  # Max 5 steps per frame
+            self._run_single_physics_step(physics_actions, physics_dt)
+            self.physics_accumulator -= physics_dt
+            physics_steps_run += 1
+        
+        # Store the actual timestep used for other calculations
+        self.actual_dt = physics_dt
 
     def _run_single_physics_step(self, physics_actions, dt):
         """Run a single physics step with the given timestep"""
@@ -558,11 +541,6 @@ class CarEnv(BaseEnv):
         
         # Update physics with filtered actions
         self.update_physics(filtered_actions)
-        
-        # Maintain timing in headless mode (no FPS limiting)
-        if self.headless_clock:
-            from .constants import UNLIMITED_FPS_CAP
-            self.headless_clock.tick(UNLIMITED_FPS_CAP)
         
         # Check for new collisions and disable cars if necessary
         self._check_and_disable_cars()
@@ -1019,6 +997,10 @@ class CarEnv(BaseEnv):
                 if hasattr(self, '_cumulative_rewards') and car_index < len(self._cumulative_rewards):
                     info["cumulative_reward"] = self._cumulative_rewards[car_index]
                 
+                # Add cumulative collision force for this car
+                if hasattr(self, 'total_impact_force_for_info') and car_index < len(self.total_impact_force_for_info):
+                    info["cumulative_impact_force"] = self.total_impact_force_for_info[car_index]
+                
             else:
                 # Car doesn't exist
                 info.update({
@@ -1029,6 +1011,7 @@ class CarEnv(BaseEnv):
                     "performance": {"performance_valid": False},
                     "lap_timing": {},
                     "cumulative_reward": 0.0,
+                    "cumulative_impact_force": 0.0,
                 })
             
             infos.append(info)
@@ -1267,10 +1250,6 @@ class CarEnv(BaseEnv):
         # Step 3: Clean up other resources with timeout protection
         try:
             if time.time() - cleanup_start < CLEANUP_TIMEOUT:
-                # Clean up headless clock
-                if hasattr(self, 'headless_clock'):
-                    self.headless_clock = None
-                    
                 # Clear other references safely
                 if hasattr(self, 'track'):
                     self.track = None
