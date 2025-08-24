@@ -8,5 +8,5 @@ REWARD_FAST_LAP_BONUS = 0.1  # Bonus for completing lap under threshold time
 
 # Negative Rewards (Penalties)
 # Unified collision penalty (severity classification removed)
-PENALTY_COLLISION = 1.0  # Collision penalty per second
+PENALTY_COLLISION = 0.1  # Collision penalty per second
 PENALTY_BACKWARD_PER_METER = 0.05  # penalty per meter of backward movement beyond threshold

@@ -14,8 +14,8 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 50_000_000
-eval_freq = 50_000
+total_timesteps = 25_000_000
+eval_freq = 25_000
 log_interval = 1_000
 learning_rate_initial_value = 9e-4
 learning_rate_final_value = 5e-4
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[256, 128],
+        net_arch=[128, 128],
         activation_fn=torch.nn.ReLU
     )
 
