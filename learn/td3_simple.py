@@ -1,6 +1,7 @@
 import numpy as np
 import sys
 import os
+import torch
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import TD3
 from stable_baselines3.common.noise import NormalActionNoise, VectorizedActionNoise
@@ -16,12 +17,12 @@ num_envs = 8
 base_path = "learn/"
 verbose = 1
 total_timesteps = 25_000_000
-eval_freq = 50_000
+eval_freq = 25_000
 log_interval = 1
-learning_rate_initial_value = 1e-4
-learning_rate_final_value = 3e-5
+learning_rate_initial_value = 3e-3
+learning_rate_final_value = 7e-4
 stats_window_size = 25
-model_name = "td3_simple"
+model_name = "td3_512_relu_512_batch_25m"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -90,7 +91,8 @@ if __name__ == "__main__":
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
     policy_kwargs = dict(
-        net_arch=[512, 512, 512]
+        net_arch=[512, 512],
+        activation_fn=torch.nn.ReLU
     )
 
     model = TD3(
@@ -101,12 +103,8 @@ if __name__ == "__main__":
         action_noise=action_noise,
         stats_window_size=stats_window_size,
         verbose=verbose,
-        train_freq=1,
-        gradient_steps=4,
-        policy_delay=4,
-        tau=0.002,
-        batch_size=512,
         policy_kwargs=policy_kwargs,
+        batch_size=512,
     )
 
     # tanulás
