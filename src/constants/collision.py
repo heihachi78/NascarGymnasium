@@ -3,7 +3,7 @@
 # Car Collision Properties
 CAR_COLLISION_SHAPES = 4  # number of collision shapes for car (corners)
 CAR_COLLISION_RADIUS = 0.3  # radius of corner collision shapes in meters
-COLLISION_FORCE_THRESHOLD = 50.0  # minimum force to register as significant collision (increased to ignore light touches)
+COLLISION_FORCE_THRESHOLD = 100.0  # minimum force to register as significant collision (increased to ignore light touches)
 COLLISION_DAMAGE_FACTOR = 0.001  # damage per unit collision force
 
 # Collision Force Threshold
@@ -21,3 +21,6 @@ STUCK_RECENT_INPUT_TIME = 3.0  # seconds - time window to check for recent meani
 BACKWARD_MOVEMENT_THRESHOLD = 25.0  # meters - distance backward before penalty starts
 BACKWARD_DISABLE_THRESHOLD = 200.0  # meters - distance backward before car is disabled
 
+# Impact-based disabling thresholds
+INSTANT_DISABLE_IMPACT_THRESHOLD = 50_000.0  # N⋅s - single impact to instantly disable car
+CUMULATIVE_DISABLE_IMPACT_THRESHOLD = 100_000.0  # N⋅s - total accumulated impacts to disable car

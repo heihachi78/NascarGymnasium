@@ -39,9 +39,10 @@ from .constants import (
     REWARD_LAP_COMPLETION,
     REWARD_FAST_LAP_TIME,
     REWARD_FAST_LAP_BONUS,
-    PENALTY_COLLISION,
     # Collision constants
     COLLISION_FORCE_THRESHOLD,
+    INSTANT_DISABLE_IMPACT_THRESHOLD,
+    CUMULATIVE_DISABLE_IMPACT_THRESHOLD,
     # Termination constants
     TERMINATION_MIN_REWARD,
     TERMINATION_MAX_TIME,
@@ -165,6 +166,9 @@ class CarEnv(BaseEnv):
         # Track cumulative impact force for each car during the entire run
         self.total_impact_force_for_info = []  # List of total impact forces for info reporting - no decay
         
+        # Track cumulative collision impacts for new disabling features
+        self.cumulative_collision_impacts = {}  # Dict of car_index -> total accumulated collision impulse
+        
         # Lap reset control - prevent immediate reset on first lap
         self._lap_reset_pending = False
         
@@ -271,6 +275,9 @@ class CarEnv(BaseEnv):
         # Reset cumulative impact force tracking for all cars
         # Reset cumulative impact force for info reporting (no decay)
         self.total_impact_force_for_info = [0.0] * self.num_cars
+        
+        # Reset cumulative collision impacts for new disabling features
+        self.cumulative_collision_impacts = {i: 0.0 for i in range(self.num_cars)}
         
         # Reset lap reset control
         self._lap_reset_pending = False
@@ -432,6 +439,32 @@ class CarEnv(BaseEnv):
                 # Accumulate impact force for this car (only when above threshold)
                 if collision_impulse > COLLISION_FORCE_THRESHOLD:
                     self.total_impact_force_for_info[car_idx] += collision_impulse * dt
+                
+                # Check for instant disable on severe single impact
+                if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
+                    if car_idx not in self.disabled_cars:
+                        self.disabled_cars.add(car_idx)
+                        if not hasattr(self, '_just_disabled_cars'):
+                            self._just_disabled_cars = set()
+                        self._just_disabled_cars.add(car_idx)
+                        car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
+                        print(f"🚫 {car_name} disabled due to CATASTROPHIC IMPACT ({collision_impulse:.0f} N⋅s > {INSTANT_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+                
+                # Track cumulative collision impacts for gradual disabling
+                if collision_impulse > 0:
+                    if car_idx not in self.cumulative_collision_impacts:
+                        self.cumulative_collision_impacts[car_idx] = 0.0
+                    self.cumulative_collision_impacts[car_idx] += collision_impulse * dt
+                    
+                    # Check for cumulative disable threshold
+                    if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
+                        if car_idx not in self.disabled_cars:
+                            self.disabled_cars.add(car_idx)
+                            if not hasattr(self, '_just_disabled_cars'):
+                                self._just_disabled_cars = set()
+                            self._just_disabled_cars.add(car_idx)
+                            car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
+                            print(f"🚫 {car_name} disabled due to ACCUMULATED DAMAGE ({self.cumulative_collision_impacts[car_idx]:.0f} N⋅s > {CUMULATIVE_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
                 
                 # Update stuck duration tracking during physics steps only
                 if car_idx < len(self.cars) and self.cars[car_idx]:
@@ -709,6 +742,10 @@ class CarEnv(BaseEnv):
                     norm_collision_impulse = np.clip(collision_impulse / NORM_MAX_COLLISION_IMPULSE, 0.0, 1.0)
                     norm_collision_angle = collision_angle / np.pi
                     
+                    # Calculate cumulative impact percentage
+                    cumulative_impact = self.cumulative_collision_impacts.get(car_index, 0.0)
+                    cumulative_impact_percentage = np.clip(cumulative_impact / CUMULATIVE_DISABLE_IMPACT_THRESHOLD, 0.0, 1.0)
+                    
                     # Get sensor distances
                     world = self.car_physics.world if self.car_physics else None
                     sensor_distances = self.distance_sensor.get_sensor_distances(
@@ -726,6 +763,7 @@ class CarEnv(BaseEnv):
                         norm_tyre_temps[0], norm_tyre_temps[1], norm_tyre_temps[2], norm_tyre_temps[3],
                         norm_tyre_wear[0], norm_tyre_wear[1], norm_tyre_wear[2], norm_tyre_wear[3],
                         norm_collision_impulse, norm_collision_angle,
+                        cumulative_impact_percentage,
                         normalized_sensor_distances[0], normalized_sensor_distances[1], 
                         normalized_sensor_distances[2], normalized_sensor_distances[3],
                         normalized_sensor_distances[4], normalized_sensor_distances[5], 
@@ -760,6 +798,7 @@ class CarEnv(BaseEnv):
             normalized_start_temp, normalized_start_temp,  # tyre temperatures
             0.0, 0.0, 0.0, 0.0,  # tyre wear
             0.0, 0.0,  # collision data
+            0.0,       # cumulative impact percentage
             *default_normalized_sensor_distances  # sensor distances
         ], dtype=np.float32)
     
@@ -862,19 +901,7 @@ class CarEnv(BaseEnv):
                         self._track_progress_history[car_index] = current_track_progress
                         self._first_step_after_reset[car_index] = False
                 
-                # CONTINUOUS collision penalty - applied every timestep while colliding
-                # Get current collision impulse from physics system
-                collision_impulse = self.car_physics.get_continuous_collision_impulse(car_index)
-                
-                if collision_impulse > 0:
-                    # Apply uniform collision penalty per second for any collision above threshold
-                    # Fixed timestep: 1/60 second per physics step
-                    penalty_applied = PENALTY_COLLISION * (1.0 / 60.0)
-                    #print(f"💰 COLLISION PENALTY: car={car_index} impulse={collision_impulse:.1f} penalty={penalty_applied:.3f} (rate={PENALTY_COLLISION:.1f}/s)")
-                    
-                    reward -= penalty_applied
-                
-                
+                # Collision penalties have been removed - cars are now disabled instead of penalized
                 
                 # Lap completion bonus
                 if car_index < len(self.car_lap_timers):
@@ -1437,6 +1464,10 @@ class CarEnv(BaseEnv):
         )
         sensor_angles = self.distance_sensor.get_sensor_angles(car_angle)
         
+        # Cumulative impact data
+        cumulative_impact = self.cumulative_collision_impacts.get(self.followed_car_index, 0.0)
+        cumulative_impact_percentage = cumulative_impact / CUMULATIVE_DISABLE_IMPACT_THRESHOLD
+        
         return {
             'car_position': (car_position.x, car_position.y),
             'car_angle': car_angle,
@@ -1456,6 +1487,10 @@ class CarEnv(BaseEnv):
             'sensor_data': {
                 'distances': sensor_distances,
                 'angles': sensor_angles
+            },
+            'collision_damage': {
+                'cumulative_impact': cumulative_impact,
+                'cumulative_percentage': cumulative_impact_percentage
             }
         }
         

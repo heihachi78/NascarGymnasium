@@ -61,7 +61,7 @@ class BaseController:
             - steering: -1.0 to 1.0
         """
         # Extract sensor data
-        sensors = observation[21:29]  # All 8 sensor distances
+        sensors = observation[22:30]  # All 8 sensor distances
         forward = sensors[0]          # Forward sensor
         front_left = sensors[1]       # Front-left sensor  
         front_right = sensors[7]      # Front-right sensor

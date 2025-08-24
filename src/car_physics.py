@@ -592,8 +592,10 @@ class CarPhysics:
             self.car.body.angle = angle
             self.car.reset()
             
-        # Clear collision history
-        self.recent_collisions.clear()
+        # Clear collision tracking
+        if hasattr(self, 'collision_listener') and self.collision_listener:
+            self.collision_listener.active_collisions.clear()
+            self.collision_listener.car_collision_impulses.clear()
         self.simulation_time = 0.0
     
     def reset_cars(self, position: Tuple[float, float] = (0.0, 0.0), angle: float = 0.0) -> None:
@@ -611,8 +613,10 @@ class CarPhysics:
                 car.body.angle = angle
                 car.reset()
         
-        # Clear collision history
-        self.recent_collisions.clear()
+        # Clear collision tracking
+        if hasattr(self, 'collision_listener') and self.collision_listener:
+            self.collision_listener.active_collisions.clear()
+            self.collision_listener.car_collision_impulses.clear()
         self.simulation_time = 0.0
         
         # Reset performance tracking
@@ -687,8 +691,6 @@ class CarPhysics:
                     pass  # World may be in inconsistent state
                     
             # Clear collision data
-            if hasattr(self, 'recent_collisions'):
-                self.recent_collisions.clear()
             if hasattr(self, 'collision_listener'):
                 self.collision_listener = None
             
@@ -708,8 +710,6 @@ class CarPhysics:
                 self.cars.clear()
             if hasattr(self, 'wall_bodies'):
                 self.wall_bodies.clear()
-            if hasattr(self, 'recent_collisions'):
-                self.recent_collisions.clear()
             if hasattr(self, 'collision_listener'):
                 self.collision_listener = None
             # Don't set world to None here as it may still be locked

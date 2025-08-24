@@ -15,8 +15,9 @@ SENSOR_ANGLE_STEP = 45.0  # Degrees between sensors (360/8)
 #                      tyre_temp_fl, tyre_temp_fr, tyre_temp_rl, tyre_temp_rr,
 #                      tyre_wear_fl, tyre_wear_fr, tyre_wear_rl, tyre_wear_rr,
 #                      collision_impulse, collision_angle_relative,
+#                      cumulative_impact_percentage,
 #                      sensor_dist_0, sensor_dist_1, ..., sensor_dist_7]
-CAR_OBSERVATION_SHAPE = (29,)  # 29 total observation elements (21 + 8 sensor distances)
+CAR_OBSERVATION_SHAPE = (30,)  # 30 total observation elements (22 + 8 sensor distances)
 
 # Observation bounds
 MAX_POSITION_VALUE = 10000.0  # maximum world position coordinate
@@ -45,6 +46,7 @@ CAR_OBSERVATION_LOW = np.array([
     0.0, 0.0, 0.0, 0.0, # tyre temperatures (normalized to [0, 1])
     0.0, 0.0, 0.0, 0.0, # tyre wear (normalized to [0, 1])
     0.0, -1.0,          # collision impulse (normalized to [0, 1]), angle (normalized to [-1, 1])
+    0.0,                # cumulative impact percentage (normalized to [0, 1])
     0.0, 0.0, 0.0, 0.0, # sensor distances (normalized to [0, 1])
     0.0, 0.0, 0.0, 0.0  # sensor distances (normalized to [0, 1])
 ], dtype=np.float32)
@@ -58,6 +60,7 @@ CAR_OBSERVATION_HIGH = np.array([
     1.0, 1.0, 1.0, 1.0, # tyre temperatures (normalized to [0, 1])
     1.0, 1.0, 1.0, 1.0, # tyre wear (normalized to [0, 1])
     1.0, 1.0,           # collision impulse (normalized to [0, 1]), angle (normalized to [-1, 1])
+    1.0,                # cumulative impact percentage (normalized to [0, 1])
     1.0, 1.0, 1.0, 1.0, # sensor distances (normalized to [0, 1])
     1.0, 1.0, 1.0, 1.0  # sensor distances (normalized to [0, 1])
 ], dtype=np.float32)

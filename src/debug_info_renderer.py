@@ -189,6 +189,31 @@ class DebugInfoRenderer:
             # Perfect monospace alignment
             lines.append(f"{label:<8} {load:6.0f}  {temp:5.1f} {temp_indicator:<4} {pressure:5.1f} {pressure_indicator:<4} {wear_val:4.1f} {wear_indicator}")
         
+        # Collision damage section
+        collision_data = debug_data.get('collision_damage', {})
+        cumulative_impact = collision_data.get('cumulative_impact', 0.0)
+        cumulative_percentage = collision_data.get('cumulative_percentage', 0.0)
+        
+        # Always show collision damage section (even when 0)
+        lines.append("")
+        lines.append("COLLISION DAMAGE")
+        lines.append(f"Total Impact : {cumulative_impact:10.1f} N⋅s")
+        
+        # Progress bar style display for percentage
+        percentage_display = cumulative_percentage * 100  # Convert to 0-100%
+        lines.append(f"Damage Level : {percentage_display:8.2f}%")
+        
+        # ASCII progress bar (20 characters wide)
+        bar_width = 20
+        filled_width = int(cumulative_percentage * bar_width)
+        bar_char = "█" if cumulative_percentage < 0.8 else "▓"  # Different char when approaching limit
+        empty_char = "░"
+        
+        bar = bar_char * filled_width + empty_char * (bar_width - filled_width)
+        status_indicator = self._get_damage_status_indicator(cumulative_percentage)
+        lines.append(f"Progress Bar : [{bar}] {status_indicator}")
+        lines.append("")
+        
         # Sensor data section
         sensor_data = debug_data.get('sensor_data', {})
         sensor_distances = sensor_data.get('distances', [])
@@ -235,6 +260,17 @@ class DebugInfoRenderer:
             return " MODERATE"
         else:  # High wear
             return " HIGH WEAR"
+    
+    def _get_damage_status_indicator(self, percentage: float) -> str:
+        """Get damage status indicator for cumulative collision impact"""
+        if percentage <= 0.5:  # 0-50%
+            return "SAFE"
+        elif percentage <= 0.8:  # 50-80%
+            return "WARN"
+        elif percentage < 1.0:  # 80-100%
+            return "CRIT"
+        else:  # 100%+
+            return "FAIL"
     
     def _render_vectors(self, window: pygame.Surface, debug_data: dict) -> None:
         """Render velocity, acceleration, and steering vectors"""
