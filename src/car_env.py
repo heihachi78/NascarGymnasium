@@ -426,13 +426,22 @@ class CarEnv(BaseEnv):
             "performance_valid": False
         }
         
-        # Get initial observation (use appropriate method for single vs multi-car)
+        # Get initial observation using unified multi-car methods
+        observations = self._get_multi_obs()
+        infos = self._get_multi_info()
+        
+        # Convert to single-car format if needed
         if self.num_cars == 1:
-            observation = self._get_obs()
-            info = self._get_info()
+            observation = observations[0] if len(observations) > 0 else self._get_default_observation()
+            if len(infos) > 0:
+                info = infos[0].copy()
+                # Add episode stats for single car mode
+                info["episode_stats"] = self.episode_stats.copy()
+            else:
+                info = {"simulation_time": 0.0, "episode_stats": self.episode_stats.copy()}
         else:
-            observation = self._get_multi_obs()
-            info = self._get_multi_info()
+            observation = observations
+            info = infos
         
         logger.debug("Environment reset complete")
         return observation, info
@@ -455,26 +464,32 @@ class CarEnv(BaseEnv):
         # Store the latest action(s)
         self._current_physics_action = actions
         
-        # Prepare actions for physics step
-        if self.num_cars == 1:
-            # Single car mode - handle followed car only
-            if self.followed_car_index >= len(self.cars):
-                return
-            throttle, brake, steering = float(actions[0]), float(actions[1]), float(actions[2])
-            physics_actions = (throttle, brake, steering)
-        else:
-            # Multi-car mode - handle all cars
-            if hasattr(actions, 'shape') and len(actions.shape) == 2:
-                # Multi-car actions: (num_cars, 3) array
-                physics_actions = actions
-            elif len(actions) == 3 and isinstance(actions[0], (int, float)):
-                # Single action for followed car - create multi-car action array with idle for others
+        # Prepare actions for physics step - unified approach
+        # Actions should be in the format: single car [throttle, brake, steering] or multi-car [[...], [...]]
+        if hasattr(actions, 'shape') and len(actions.shape) == 2:
+            # Already multi-car format: (num_cars, 3) array
+            physics_actions = actions
+        elif hasattr(actions, 'shape') and len(actions.shape) == 1 and len(actions) == 3:
+            # Single car action - convert to multi-car format
+            if self.num_cars == 1:
+                # For single car, wrap in array
+                physics_actions = np.array([actions], dtype=np.float32)
+            else:
+                # Single action for followed car in multi-car environment
                 physics_actions = np.zeros((self.num_cars, 3), dtype=np.float32)
                 if self.followed_car_index < self.num_cars:
                     physics_actions[self.followed_car_index] = actions
+        elif isinstance(actions, (list, tuple)) and len(actions) == 3 and isinstance(actions[0], (int, float)):
+            # Single car action as list/tuple - convert to array format
+            if self.num_cars == 1:
+                physics_actions = np.array([actions], dtype=np.float32)
             else:
-                # Assume it's already a list/array of actions for each car
-                physics_actions = actions
+                physics_actions = np.zeros((self.num_cars, 3), dtype=np.float32)
+                if self.followed_car_index < self.num_cars:
+                    physics_actions[self.followed_car_index] = actions
+        else:
+            # Assume it's already a proper multi-car action array
+            physics_actions = np.array(actions, dtype=np.float32)
 
         # Check if fps limit is enabled
         enable_fps_limit = getattr(self, 'headless_enable_fps_limit', True)
@@ -558,89 +573,47 @@ class CarEnv(BaseEnv):
         if not self.cars:
             raise RuntimeError("Environment not properly initialized. Call reset() first.")
         
+        # Convert single-car action to multi-car format for unified processing
         if self.num_cars == 1:
-            # Single car mode - backward compatibility
-            return self._step_single_car(action)
-        else:
-            # Multi-car mode
-            return self._step_multi_car(action)
-    
-    def _step_single_car(self, action):
-        """Handle single car step for backward compatibility"""
-        # Convert discrete action to continuous if needed
-        if self.discrete_action_space:
-            continuous_action = self._discrete_to_continuous(action)
-            throttle, brake, steering = continuous_action[0], continuous_action[1], continuous_action[2]
-        else:
-            # Convert action to tuple for car physics
-            throttle, brake, steering = float(action[0]), float(action[1]), float(action[2])
-        
-        # Store current action for rendering
-        self.current_action = np.array([throttle, brake, steering], dtype=np.float32)
-        
-        # Update physics simulation
-        continuous_action_array = np.array([throttle, brake, steering], dtype=np.float32)
-        self.update_physics(continuous_action_array)
-        
-        # Maintain timing in headless mode
-        if self.headless_clock:
-            if self.headless_enable_fps_limit:
-                self.headless_clock.tick(self.metadata["render_fps"])
+            if self.discrete_action_space:
+                # Convert discrete action to continuous, then to array format
+                continuous_action = self._discrete_to_continuous(action)
+                actions_array = np.array([continuous_action], dtype=np.float32)
             else:
-                from .constants import UNLIMITED_FPS_CAP
-                self.headless_clock.tick(UNLIMITED_FPS_CAP)
+                # Wrap single action in array
+                actions_array = np.array([action], dtype=np.float32)
+        else:
+            # Multi-car mode - actions already in correct format or convert if discrete
+            if self.discrete_action_space:
+                # Convert each discrete action to continuous
+                continuous_actions = []
+                for discrete_action in action:
+                    continuous_action = self._discrete_to_continuous(discrete_action)
+                    continuous_actions.append(continuous_action)
+                actions_array = np.array(continuous_actions, dtype=np.float32)
+            else:
+                actions_array = np.array(action, dtype=np.float32)
         
-        # Check for stuck conditions and disable cars if necessary
-        self._check_and_disable_cars()
+        # Use unified multi-car step logic
+        observations, rewards, terminated, truncated, infos = self._step_multi_car(actions_array)
         
-        # Update episode statistics
-        self._update_episode_stats()
-        
-        # Get observation
-        observation = self._get_obs()
-        
-        # Calculate reward
-        reward = self._calculate_reward()
-        self._current_reward = reward
-        self._cumulative_reward += reward  # Kept for backward compatibility
-        
-        # Update cumulative rewards array for consistency
-        if not hasattr(self, '_cumulative_rewards'):
-            self._cumulative_rewards = [0.0]
-        self._cumulative_rewards[0] += reward
-        
-        # Track collision duration for single-car mode (similar to multi-car mode)
+        # Convert outputs back to single-car format if needed
         if self.num_cars == 1:
-            collision_impulse = self.car_physics.get_continuous_collision_impulse(0)
-            
-            # Accumulate impact force for the car (only when above threshold)
-            if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.total_impact_force_for_info[0] += collision_impulse * self.actual_dt
-        
-        # Check termination conditions
-        terminated, truncated = self._check_termination()
-        
-        # Check if lap reset is pending
-        if self._lap_reset_pending:
-            self._lap_reset_pending = False
-            terminated = True
-            
-        # Get info
-        info = self._get_info()
-        
-        return observation, reward, terminated, truncated, info
+            # Get single car info and add episode_stats
+            single_info = infos[0].copy() if len(infos) > 0 else {}
+            single_info["episode_stats"] = self.episode_stats.copy()
+            # Update episode stats with performance validation if available
+            if "performance" in single_info:
+                self.episode_stats["performance_valid"] = single_info["performance"].get("performance_valid", False)
+            return observations[0], rewards[0], terminated, truncated, single_info
+        else:
+            return observations, rewards, terminated, truncated, infos
+    
+    # _step_single_car method removed - now handled by unified step() method
     
     def _step_multi_car(self, actions):
-        """Handle multi-car step"""
-        # Convert actions to proper format
-        if self.discrete_action_space:
-            # Convert each discrete action to continuous
-            continuous_actions = []
-            for discrete_action in actions:
-                continuous_action = self._discrete_to_continuous(discrete_action)
-                continuous_actions.append(continuous_action)
-            actions = np.array(continuous_actions, dtype=np.float32)
-        
+        """Handle multi-car step - unified for both single and multi-car modes"""
+        # Actions should already be in continuous format as an array
         # Store all actions for rendering
         self.all_actions = np.array(actions, dtype=np.float32)
         
@@ -674,6 +647,9 @@ class CarEnv(BaseEnv):
         # Update physics system with disabled cars info (to suppress collision messages)
         self.car_physics.set_disabled_cars(self.disabled_cars)
         
+        # Update episode statistics (for followed car)
+        self._update_episode_stats()
+        
         # Get observations, rewards, and info for all cars
         observations = self._get_multi_obs()
         rewards = self._calculate_multi_rewards()
@@ -688,6 +664,16 @@ class CarEnv(BaseEnv):
             self._cumulative_rewards = [0.0] * self.num_cars
         for i, reward in enumerate(rewards):
             self._cumulative_rewards[i] += reward
+        
+        # For single-car backward compatibility, also update _cumulative_reward
+        if self.num_cars == 1 and len(self._cumulative_rewards) > 0:
+            self._cumulative_reward = self._cumulative_rewards[0]
+            self._current_reward = rewards[0]
+        
+        # Check if lap reset is pending (for single car mode)
+        if self._lap_reset_pending:
+            self._lap_reset_pending = False
+            terminated = True
         
         return observations, rewards, terminated, truncated, infos
     
@@ -897,7 +883,6 @@ class CarEnv(BaseEnv):
                     rewards.append(0.0)
                     continue
                     
-                car = self.cars[car_index]
                 reward = 0.0
                 
                 # Survival reward - only for active (non-disabled) cars
@@ -906,10 +891,7 @@ class CarEnv(BaseEnv):
                     if hasattr(self, '_survival_time'):
                         self._survival_time[car_index] += self.actual_dt
                 
-                # Speed reward - time-based
-                speed = car.get_velocity_magnitude()
-                
-                # NEW: Only give speed reward when NOT colliding with walls
+                # Get collision impulse for this car
                 collision_impulse = self.car_physics.get_continuous_collision_impulse(car_index)
                 
                 # Distance reward (track per car if needed)
@@ -1168,283 +1150,63 @@ class CarEnv(BaseEnv):
                 collision.reported_to_environment = True
                 
     def _get_obs(self) -> np.ndarray:
-        """Get current environment observation with normalized values (for followed car)"""
-        if not self.cars or self.followed_car_index >= len(self.cars):
-            # Return default normalized observation if no car
-            static_load = CAR_MASS * GRAVITY_MS2 / 4.0
-            normalized_static_load = static_load / NORM_MAX_TYRE_LOAD
-            normalized_start_temp = TYRE_START_TEMPERATURE / NORM_MAX_TYRE_TEMP
-            
-            # Default normalized sensor distances (1.0 means max distance)
-            default_normalized_sensor_distances = [1.0] * SENSOR_NUM_DIRECTIONS
-            return np.array([
-                0.0, 0.0,  # position (normalized)
-                0.0, 0.0,  # velocity (normalized)
-                0.0,       # speed magnitude (normalized)
-                0.0, 0.0,  # orientation, angular velocity (normalized)
-                normalized_static_load, normalized_static_load, 
-                normalized_static_load, normalized_static_load,  # tyre loads (normalized)
-                normalized_start_temp, normalized_start_temp,
-                normalized_start_temp, normalized_start_temp,  # tyre temperatures (normalized)
-                0.0, 0.0, 0.0, 0.0,  # tyre wear (normalized)
-                0.0, 0.0,  # collision data (normalized)
-                *default_normalized_sensor_distances  # 8 normalized sensor distances
-            ], dtype=np.float32)
-            
-        # Get followed car state
-        car_state = self.car_physics.get_car_state(self.followed_car_index)
-        pos_x, pos_y, vel_x, vel_y, orientation, angular_vel = car_state
+        """Get current environment observation with normalized values (for followed car) - uses unified multi-car calculation"""
+        # Use the unified multi-car observation calculation
+        observations = self._get_multi_obs()
         
-        # Normalize position to [-1, 1]
-        norm_pos_x = np.clip(pos_x / NORM_MAX_POSITION, -1.0, 1.0)
-        norm_pos_y = np.clip(pos_y / NORM_MAX_POSITION, -1.0, 1.0)
+        # For single car mode, return the observation for the followed car
+        if self.followed_car_index < len(observations):
+            return observations[self.followed_car_index]
         
-        # Normalize velocity to [-1, 1]
-        norm_vel_x = np.clip(vel_x / NORM_MAX_VELOCITY, -1.0, 1.0)
-        norm_vel_y = np.clip(vel_y / NORM_MAX_VELOCITY, -1.0, 1.0)
-        
-        # Calculate and normalize speed magnitude to [0, 1]
-        speed_magnitude_ms = (vel_x**2 + vel_y**2)**0.5
-        norm_speed_magnitude = np.clip(speed_magnitude_ms / NORM_MAX_VELOCITY, 0.0, 1.0)
-        
-        # Normalize orientation from [-π, π] to [-1, 1]
-        norm_orientation = orientation / np.pi
-        
-        # Normalize angular velocity to [-1, 1]
-        norm_angular_vel = np.clip(angular_vel / NORM_MAX_ANGULAR_VEL, -1.0, 1.0)
-        
-        # Get tyre data for followed car
-        tyre_data = self.car_physics.get_tyre_data(self.followed_car_index)
-        tyre_loads, tyre_temps, tyre_wear = tyre_data
-        
-        # Normalize tyre loads to [0, 1]
-        norm_tyre_loads = [np.clip(load / NORM_MAX_TYRE_LOAD, 0.0, 1.0) for load in tyre_loads]
-        
-        # Normalize tyre temperatures to [0, 1]
-        norm_tyre_temps = [np.clip(temp / NORM_MAX_TYRE_TEMP, 0.0, 1.0) for temp in tyre_temps]
-        
-        # Normalize tyre wear to [0, 1] (already 0-100, so divide by 100)
-        norm_tyre_wear = [np.clip(wear / NORM_MAX_TYRE_WEAR, 0.0, 1.0) for wear in tyre_wear]
-        
-        # Get collision data (use same method as multi-car environment)
-        collision_impulse, collision_angle = self.car_physics.get_collision_data(0)
-        
-        # Normalize collision impulse to [0, 1]
-        norm_collision_impulse = np.clip(collision_impulse / NORM_MAX_COLLISION_IMPULSE, 0.0, 1.0)
-        
-        # Normalize collision angle from [-π, π] to [-1, 1]
-        norm_collision_angle = collision_angle / np.pi
-        
-        # Get sensor distances
-        world = self.car_physics.world if self.car_physics else None
-        sensor_distances = self.distance_sensor.get_sensor_distances(
-            world, (pos_x, pos_y), orientation
-        )
-        
-        # Normalize sensor distances to range [0, 1] based on SENSOR_MAX_DISTANCE
-        normalized_sensor_distances = [np.clip(d / SENSOR_MAX_DISTANCE, 0.0, 1.0) for d in sensor_distances]
-        
-        # Construct normalized observation vector
-        observation = np.array([
-            norm_pos_x, norm_pos_y,  # Normalized car position
-            norm_vel_x, norm_vel_y,  # Normalized car velocity
-            norm_speed_magnitude,  # Normalized car speed magnitude
-            norm_orientation, norm_angular_vel,  # Normalized orientation and rotation
-            norm_tyre_loads[0], norm_tyre_loads[1], norm_tyre_loads[2], norm_tyre_loads[3],  # Normalized tyre loads
-            norm_tyre_temps[0], norm_tyre_temps[1], norm_tyre_temps[2], norm_tyre_temps[3],  # Normalized tyre temperatures
-            norm_tyre_wear[0], norm_tyre_wear[1], norm_tyre_wear[2], norm_tyre_wear[3],  # Normalized tyre wear
-            norm_collision_impulse, norm_collision_angle,  # Normalized collision data
-            normalized_sensor_distances[0], normalized_sensor_distances[1], normalized_sensor_distances[2], normalized_sensor_distances[3],  # Normalized sensor distances 0-3
-            normalized_sensor_distances[4], normalized_sensor_distances[5], normalized_sensor_distances[6], normalized_sensor_distances[7]   # Normalized sensor distances 4-7
-        ], dtype=np.float32)
-        
-        return observation
+        # Return default observation if car index is out of range
+        return self._get_default_observation()
         
     def _calculate_reward(self) -> float:
-        """Calculate step reward (for followed car)"""
-        if not self.cars or self.followed_car_index >= len(self.cars):
-            return 0.0
-            
-        followed_car = self.cars[self.followed_car_index]
-        if not followed_car:
-            return 0.0
-            
-        reward = 0.0
+        """Calculate step reward (for followed car) - uses unified multi-car calculation"""
+        # Use the unified multi-car reward calculation
+        rewards = self._calculate_multi_rewards()
         
-        # Survival reward - only for active (non-disabled) cars
-        if self.followed_car_index not in self.disabled_cars:
-            # Update survival time tracking
-            if hasattr(self, '_survival_time'):
-                self._survival_time[self.followed_car_index] += self.actual_dt
+        # For single car mode, return the reward for the followed car (index 0)
+        if self.followed_car_index < len(rewards):
+            return rewards[self.followed_car_index]
         
-        # Speed reward (encourage forward progress) - time-based
-        speed = followed_car.get_velocity_magnitude()
-        
-        # NEW: Only give speed reward when NOT colliding with walls
-        collision_impulse = self.car_physics.get_continuous_collision_impulse(self.followed_car_index)
-        
-        # NEW: Reward for distance traveled (+0.1 per meter)
-        if self._previous_car_position is not None:
-            car_state = self.car_physics.get_car_state(self.followed_car_index)
-            if car_state:
-                current_position = (car_state[0], car_state[1])
-                
-                # Calculate distance traveled since last step
-                dx = current_position[0] - self._previous_car_position[0]
-                dy = current_position[1] - self._previous_car_position[1]
-                distance = (dx**2 + dy**2)**0.5
-                
-                # Add reward for distance traveled
-                reward += distance * REWARD_DISTANCE_MULTIPLIER
-                
-                # Update tracking
-                self._total_distance_traveled += distance
-                self._previous_car_position = current_position
-                
-                # Track backward movement for penalty (skip on first step after reset)
-                if not self._first_step_after_reset[0]:
-                    current_track_progress = self._calculate_track_progress(current_position)
-                    previous_track_progress = self._track_progress_history[0]
-                    
-                    # Calculate progress delta (accounting for lap wrap-around)
-                    track_length = self.track.total_length if self.track else 1000.0  # Fallback length
-                    progress_delta = current_track_progress - previous_track_progress
-                    
-                    # Handle lap boundary wrap-around (e.g., progress goes from 950 to 50)
-                    if progress_delta > track_length / 2:
-                        progress_delta -= track_length  # Large positive = backward through start/finish
-                    elif progress_delta < -track_length / 2:
-                        progress_delta += track_length  # Large negative = forward through start/finish
-                    
-                    if progress_delta < 0:  # Moving backward
-                        self._backward_distance[0] += abs(progress_delta)
-                        
-                        # Check if car should be disabled for excessive backward driving
-                        if self._backward_distance[0] > BACKWARD_DISABLE_THRESHOLD:
-                            if 0 not in self.disabled_cars:
-                                self.disabled_cars.add(0)
-                                if hasattr(self, '_just_disabled_cars'):
-                                    self._just_disabled_cars.add(0)  # Track for final penalty
-                                car_name = self.car_names[0] if len(self.car_names) > 0 else "Car 0"
-                                print(f"🚫 {car_name} disabled for driving {self._backward_distance[0]:.0f}m backwards (threshold: {BACKWARD_DISABLE_THRESHOLD:.0f}m)")
-                        
-                        if self._backward_distance[0] > BACKWARD_MOVEMENT_THRESHOLD:
-                            if not self._backward_penalty_active[0]:
-                                self._backward_penalty_active[0] = True
-                                logger.debug(f"Car 0 backward penalty activated after {self._backward_distance[0]:.1f}m backward")
-                            
-                            # Apply penalty only for NEW backward movement beyond threshold
-                            current_excess = max(0, self._backward_distance[0] - BACKWARD_MOVEMENT_THRESHOLD)
-                            previous_excess = max(0, self._previous_backward_distance[0] - BACKWARD_MOVEMENT_THRESHOLD)
-                            new_backward_distance = current_excess - previous_excess
-                            
-                            if new_backward_distance > 0:
-                                backward_penalty = new_backward_distance * PENALTY_BACKWARD_PER_METER
-                                reward -= backward_penalty
-                    else:  # Moving forward - reset backward accumulation
-                        if self._backward_penalty_active[0]:
-                            logger.debug(f"Car 0 backward penalty deactivated after moving forward")
-                        self._backward_distance[0] = 0.0
-                        self._previous_backward_distance[0] = 0.0
-                        self._backward_penalty_active[0] = False
-                    
-                    # Update track progress history
-                    self._track_progress_history[0] = current_track_progress
-                else:
-                    # First step after reset - just update progress history without penalty
-                    current_track_progress = self._calculate_track_progress(current_position)
-                    self._track_progress_history[0] = current_track_progress
-                    self._first_step_after_reset[0] = False
-        
-        # CONTINUOUS collision penalty - applied every timestep while colliding
-        # Get current collision impulse from physics system
-        collision_impulse = self.car_physics.get_continuous_collision_impulse(self.followed_car_index)
-        
-        if collision_impulse > 0:
-            # Apply uniform collision penalty per second for any collision above threshold
-            penalty_applied = PENALTY_COLLISION * self.actual_dt
-            #print(f"💰 COLLISION PENALTY: car={self.followed_car_index} impulse={collision_impulse:.1f} penalty={penalty_applied:.3f} (rate={PENALTY_COLLISION:.1f}/s)")
-            
-            reward -= penalty_applied
-            
-            
-        # Lap completion bonus - major reward for completing laps (for followed car)
-        followed_lap_timer = self.car_lap_timers[self.followed_car_index] if self.followed_car_index < len(self.car_lap_timers) else self.lap_timer
-        lap_info = followed_lap_timer.get_timing_info()
-        current_lap_count = lap_info.get("lap_count", 0)
-        
-        if current_lap_count > self._previous_lap_count:
-            # Lap completed! Give substantial bonus
-            laps_completed_this_step = current_lap_count - self._previous_lap_count
-            lap_bonus = REWARD_LAP_COMPLETION * laps_completed_this_step
-            reward += lap_bonus
-            
-            # Optional: Additional bonus for faster laps
-            last_lap_time = lap_info.get("last_lap_time", None)
-            if last_lap_time and last_lap_time < REWARD_FAST_LAP_TIME:
-                reward += REWARD_FAST_LAP_BONUS * (REWARD_FAST_LAP_TIME - last_lap_time)**2
-            
-            self._previous_lap_count = current_lap_count
-        
-        # Update previous backward distance for next step
-        if 0 not in self.disabled_cars:
-            self._previous_backward_distance[0] = self._backward_distance[0]
-            
-        return reward
+        return 0.0
         
     def _check_termination(self) -> Tuple[bool, bool]:
-        """Check if episode should terminate"""
-        terminated = False
-        truncated = False
+        """Check if episode should terminate - uses unified multi-car calculation"""
+        # For single-car mode, we use the multi-car termination logic
+        # but with special handling since we only have one car
         
-        if not self.cars or self.followed_car_index >= len(self.cars):
-            self.termination_reason = "no_car"
-            return True, False
+        if self.num_cars == 1:
+            # Check basic car existence
+            if not self.cars or self.followed_car_index >= len(self.cars):
+                self.termination_reason = "no_car"
+                return True, False
+                
+            followed_car = self.cars[self.followed_car_index]
+            if not followed_car:
+                self.termination_reason = "no_followed_car"
+                return True, False
             
-        followed_car = self.cars[self.followed_car_index]
-        if not followed_car:
-            self.termination_reason = "no_followed_car"
-            return True, False
+            # Check if the single car is disabled
+            if self.followed_car_index in self.disabled_cars:
+                self.termination_reason = "car_disabled"
+                return True, False
+            
+            # Check cumulative reward threshold for single car
+            if hasattr(self, '_cumulative_rewards') and len(self._cumulative_rewards) > 0:
+                cumulative_reward = self._cumulative_rewards[0]
+                if cumulative_reward < TERMINATION_MIN_REWARD:
+                    if self.reset_on_lap:
+                        self.termination_reason = f"low_reward (cumulative reward: {cumulative_reward:.2f})"
+                        return True, False
+                    else:
+                        # In demo mode, just log but don't terminate
+                        logger.debug(f"Low reward detected (cumulative: {cumulative_reward:.2f}) but demo mode active - not terminating")
         
-        # Terminate if followed car is disabled (stuck or severely damaged)
-        if self.followed_car_index in self.disabled_cars:
-            self.termination_reason = "car_disabled"
-            return True, False
-            
-        # Terminate if cumulative reward goes below threshold (only in training mode)
-        # In demo mode (reset_on_lap=False), don't terminate on low rewards
-        # Use the array version for consistency with multi-car mode
-        if hasattr(self, '_cumulative_rewards') and len(self._cumulative_rewards) > 0:
-            cumulative_reward = self._cumulative_rewards[0]
-        else:
-            cumulative_reward = self._cumulative_reward  # Fallback for backward compatibility
-            
-        if cumulative_reward < TERMINATION_MIN_REWARD:
-            if self.reset_on_lap:
-                terminated = True
-                self.termination_reason = f"low_reward (cumulative reward: {cumulative_reward:.2f})"
-            else:
-                # In demo mode, just log the event but don't terminate
-                logger.debug(f"Low reward detected (cumulative: {cumulative_reward:.2f}) but demo mode active - not terminating")
-            
-        # Note: Collision-based immediate termination has been removed
-        # Sustained collision termination is handled by collision duration tracking
-        
-            
-            
-        # Terminate if episode exceeds time limit (only when reset_on_lap=True for training)
-        # When reset_on_lap=False (demo mode), allow unlimited time
-        if self.reset_on_lap and self.simulation_time > TERMINATION_MAX_TIME:
-            terminated = True
-            if not self.termination_reason:  # Only set if no other reason already
-                self.termination_reason = f"time_limit ({self.simulation_time:.1f}s > {TERMINATION_MAX_TIME}s)"
-            
-        # Truncate on hard time limit
-        if self.simulation_time > TRUNCATION_MAX_TIME:
-            truncated = True
-            self.termination_reason = f"truncated (hard time limit {TRUNCATION_MAX_TIME}s)"
-            
-        return terminated, truncated
+        # Use the unified multi-car termination check for time limits
+        # This handles both single and multi-car cases uniformly
+        return self._check_multi_termination()
         
     def _update_episode_stats(self) -> None:
         """Update episode statistics (for followed car)"""
@@ -1470,49 +1232,36 @@ class CarEnv(BaseEnv):
             self.episode_stats["time_on_track"] += self.actual_dt
             
     def _get_info(self) -> Dict[str, Any]:
-        """Get environment info dictionary (for followed car)"""
-        info = {
+        """Get environment info dictionary (for followed car) - uses unified multi-car calculation"""
+        # Use the unified multi-car info calculation
+        infos = self._get_multi_info()
+        
+        # For single car mode, return the info for the followed car
+        if self.followed_car_index < len(infos):
+            info = infos[self.followed_car_index].copy()  # Make a copy to avoid modifying the original
+            
+            # Add episode stats which are global, not per-car
+            info["episode_stats"] = self.episode_stats.copy()
+            
+            # Ensure cumulative_reward uses the right source for backward compatibility
+            if hasattr(self, '_cumulative_rewards') and self.followed_car_index < len(self._cumulative_rewards):
+                info["cumulative_reward"] = self._cumulative_rewards[self.followed_car_index]
+            
+            # Update episode stats with performance validation if available
+            if "performance" in info:
+                self.episode_stats["performance_valid"] = info["performance"].get("performance_valid", False)
+            
+            return info
+        
+        # Fallback if index is out of range
+        return {
             "simulation_time": self.simulation_time,
             "episode_stats": self.episode_stats.copy(),
             "termination_reason": self.termination_reason,
-            "cumulative_reward": self._cumulative_rewards[0] if hasattr(self, '_cumulative_rewards') and len(self._cumulative_rewards) > 0 else self._cumulative_reward,
+            "cumulative_reward": 0.0,
             "num_cars": self.num_cars,
             "followed_car_index": self.followed_car_index,
         }
-        
-        if self.cars and self.followed_car_index < len(self.cars):
-            followed_car = self.cars[self.followed_car_index]
-            if followed_car:
-                # Add followed car-specific info
-                car_state = self.car_physics.get_car_state(self.followed_car_index)
-                if car_state:
-                    info.update({
-                        "car_position": (car_state[0], car_state[1]),
-                        "car_speed_kmh": followed_car.get_velocity_kmh(),
-                        "car_speed_ms": followed_car.get_velocity_magnitude(),
-                        "on_track": self.car_physics.is_car_on_track(self.followed_car_index),
-                    })
-                
-                # Add performance validation
-                performance = followed_car.validate_performance()
-                info["performance"] = performance
-                self.episode_stats["performance_valid"] = performance["performance_valid"]
-            
-        # Add collision info
-        collision_stats = self.collision_reporter.get_collision_statistics()
-        info["collisions"] = collision_stats
-        
-        # Add physics performance
-        physics_stats = self.car_physics.get_performance_stats()
-        info["physics"] = physics_stats
-        
-        # Add lap timing info (for followed car)
-        followed_lap_timer = self.car_lap_timers[self.followed_car_index] if self.followed_car_index < len(self.car_lap_timers) else self.lap_timer
-        lap_timing = followed_lap_timer.get_timing_info()
-        info["lap_timing"] = lap_timing
-        
-        
-        return info
         
     def check_quit_requested(self) -> bool:
         """Check if user has requested to quit (e.g., by clicking window close button)"""
