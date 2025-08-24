@@ -170,8 +170,7 @@ def main():
         track_file="tracks/nascar.track", 
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',  # Test without rendering
-        enable_fps_limit=False,  # Test without fps limit
+        render_mode=None,#'human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -257,11 +256,8 @@ def main():
                 
                 car_actions.append(action)
             
-            # Create actions array
-            if num_cars == 1:
-                action = np.array(car_actions[0], dtype=np.float32)
-            else:
-                action = np.array(car_actions, dtype=np.float32)
+            # Create actions array - always use multi-car format
+            action = np.array(car_actions, dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
             

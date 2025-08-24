@@ -94,15 +94,15 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        ("game/control/models/td3_model_time_trial.zip", "TD3-TT"),
-        ("game/control/models/td3_model.zip", "TD3"),
-        ("game/control/models/ppo_model.zip", "PPO"),
-        ("game/control/models/ppo_model2.zip", "PPO-2"),
-        ("game/control/models/sac_model.zip", "SAC"),
-        ("game/control/models/a2c_model_time_trial.zip", "A2C-TT"),
-        ("game/control/models/a2c_model_competition.zip", "A2C-COMP"),
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
-        ("game/control/models/a2c_simplea2c_simple_final.zip", "A2C-F"),
+        #("game/control/models/td3_model_time_trial.zip", "TD3-TT"),
+        #("game/control/models/td3_model.zip", "TD3"),
+        #("game/control/models/ppo_model.zip", "PPO"),
+        #("game/control/models/ppo_model2.zip", "PPO-2"),
+        #("game/control/models/sac_model.zip", "SAC"),
+        #("game/control/models/a2c_model_time_trial.zip", "A2C-TT"),
+        #("game/control/models/a2c_model_competition.zip", "A2C-COMP"),
+        #("game/control/models/a2c_best_model.zip", "A2C-B"),
+        #("game/control/models/a2c_simplea2c_simple_final.zip", "A2C-F"),
         (None, "Rule-Based"),  # Use None for rule-based control
     ]
     
@@ -168,8 +168,7 @@ def main():
     env = CarEnv(track_file="tracks/nascar.track",
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
-                 render_mode="human",
-                 enable_fps_limit=False,
+                 render_mode=None,#"human",
                  discrete_action_space=False,
                  car_names=car_names)
     
@@ -251,11 +250,8 @@ def main():
                     action = controller.control(car_obs)
                     car_actions.append(action)
                 
-                # Create actions array
-                if num_cars == 1:
-                    action = np.array(car_actions[0], dtype=np.float32)
-                else:
-                    action = np.array(car_actions, dtype=np.float32)
+                # Create actions array - always use multi-car format
+                action = np.array(car_actions, dtype=np.float32)
                 
                 # Step environment
                 obs, reward, _, _, info = env.step(action)

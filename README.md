@@ -358,8 +358,7 @@ def make_env():
     return CarEnv(
         num_cars=1,                    # Train single car
         discrete_action_space=True,    # Use discrete actions
-        reset_on_lap=True,            # Reset after each lap
-        enable_fps_limit=False        # No FPS limit for training
+        reset_on_lap=True             # Reset after each lap
     )
 
 # Create vectorized environments for parallel training
@@ -397,7 +396,7 @@ During rendering (`render_mode="human"`):
 
 ## Performance Tips
 
-- Set `enable_fps_limit=False` for training (faster simulation)
+- Use `render_mode=None` for training (headless mode for faster simulation)
 - Use `reset_on_lap=True` for training, `False` for demos
 - Monitor TensorBoard logs during training: `tensorboard --logdir=./tensorboard/`
 - Save checkpoints frequently during long training runs

@@ -7,7 +7,6 @@ from typing import Optional
 from .constants import (
     DEFAULT_WINDOW_SIZE,
     DEFAULT_RENDER_FPS,
-    UNLIMITED_FPS_CAP,
     BACKGROUND_COLOR,
     FPS_COLOR_LOW,
     FPS_COLOR_NORMAL,
@@ -94,10 +93,9 @@ logger = logging.getLogger(__name__)
 
 class Renderer:
     def __init__(self, window_size=DEFAULT_WINDOW_SIZE, render_fps=DEFAULT_RENDER_FPS, track: Optional[Track] = None, 
-                 use_antialiasing: bool = True, enable_fps_limit: bool = True):
+                 use_antialiasing: bool = True):
         self.window_size = window_size
         self.render_fps = render_fps
-        self.enable_fps_limit = enable_fps_limit
         self.window = None
         self.clock = None
         
@@ -312,10 +310,9 @@ class Renderer:
         if countdown_info is not None:
             self._render_countdown_clock(countdown_info)
         
-        # Calculate FPS - use pygame clock when FPS limited, manual calculation when uncapped
-        if self.enable_fps_limit:
-            current_fps = self.clock.get_fps()
-        else:
+        # Calculate FPS using pygame clock (human mode always limits FPS)
+        current_fps = self.clock.get_fps()
+        if current_fps == 0:
             current_fps = self._calculate_manual_fps()
         
         if current_fps < FPS_THRESHOLD:
@@ -333,12 +330,8 @@ class Renderer:
         
         pygame.display.flip()
         
-        # Only limit FPS if enabled (for frame rate independence)
-        if self.enable_fps_limit:
-            self.clock.tick(self.render_fps)
-        else:
-            # Use high FPS cap instead of unlimited to prevent physics timing issues
-            self.clock.tick(UNLIMITED_FPS_CAP)
+        # Always limit FPS in human render mode
+        self.clock.tick(self.render_fps)
     
     def _calculate_manual_fps(self) -> float:
         """Calculate FPS manually when not using pygame's FPS limiting."""

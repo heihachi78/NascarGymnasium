@@ -35,47 +35,25 @@ class BaseEnv(gym.Env):
         self.num_cars = num_cars
         
         if discrete_action_space:
-            # Discrete action space: 5 actions per car
+            # Discrete action space: 5 actions per car - always multi-car format
             # 0: do nothing, 1: accelerate, 2: brake, 3: turn left, 4: turn right
-            if num_cars == 1:
-                self.action_space = spaces.Discrete(5)
-            else:
-                # Multi-agent discrete: array of discrete actions
-                self.action_space = spaces.MultiDiscrete([5] * num_cars)
+            self.action_space = spaces.MultiDiscrete([5] * num_cars)
         else:
-            # Continuous action space: [throttle, brake, steering] per car
-            if num_cars == 1:
-                self.action_space = spaces.Box(
-                    low=CAR_ACTION_LOW,
-                    high=CAR_ACTION_HIGH,
-                    shape=CAR_ACTION_SHAPE,
-                    dtype=np.float32
-                )
-            else:
-                # Multi-agent continuous: (num_cars, 3) shape
-                self.action_space = spaces.Box(
-                    low=np.tile(CAR_ACTION_LOW, (num_cars, 1)),
-                    high=np.tile(CAR_ACTION_HIGH, (num_cars, 1)),
-                    shape=(num_cars, 3),
-                    dtype=np.float32
-                )
+            # Continuous action space: [throttle, brake, steering] per car - always multi-car format
+            self.action_space = spaces.Box(
+                low=np.tile(CAR_ACTION_LOW, (num_cars, 1)),
+                high=np.tile(CAR_ACTION_HIGH, (num_cars, 1)),
+                shape=(num_cars, 3),
+                dtype=np.float32
+            )
         
-        # Observation space: single car or multi-car
-        if num_cars == 1:
-            self.observation_space = spaces.Box(
-                low=CAR_OBSERVATION_LOW,
-                high=CAR_OBSERVATION_HIGH,
-                shape=CAR_OBSERVATION_SHAPE,
-                dtype=np.float32
-            )
-        else:
-            # Multi-agent observations: (num_cars, observation_dim) shape
-            self.observation_space = spaces.Box(
-                low=np.tile(CAR_OBSERVATION_LOW, (num_cars, 1)),
-                high=np.tile(CAR_OBSERVATION_HIGH, (num_cars, 1)),
-                shape=(num_cars, CAR_OBSERVATION_SHAPE[0]),
-                dtype=np.float32
-            )
+        # Observation space: always multi-car format
+        self.observation_space = spaces.Box(
+            low=np.tile(CAR_OBSERVATION_LOW, (num_cars, 1)),
+            high=np.tile(CAR_OBSERVATION_HIGH, (num_cars, 1)),
+            shape=(num_cars, CAR_OBSERVATION_SHAPE[0]),
+            dtype=np.float32
+        )
         
         self.start_time = None
         self.elapsed_time = INITIAL_ELAPSED_TIME

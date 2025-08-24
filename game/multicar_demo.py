@@ -38,7 +38,6 @@ def main():
                  num_cars=num_cars, 
                  reset_on_lap=False, 
                  render_mode="human",
-                 enable_fps_limit=True,
                  car_names=car_names)
     
     print(f"🎮 CONTROLS:")
@@ -155,12 +154,8 @@ def main():
                 
                 car_actions.append([car_throttles[car_idx], car_brakes[car_idx], car_steerings[car_idx]])
             
-            # Create actions array
-            if num_cars == 1:
-                action = np.array(car_actions[0], dtype=np.float32)
-                #action = np.array([1, 0, 0], dtype=np.float32)
-            else:
-                action = np.array(car_actions, dtype=np.float32)
+            # Create actions array - always use multi-car format
+            action = np.array(car_actions, dtype=np.float32)
                 #action = np.array([[1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0], [1, 0, 0]], dtype=np.float32)
 
             obs, reward, terminated, truncated, info = env.step(action)

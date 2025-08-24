@@ -17,11 +17,11 @@ discrete_action_space = False
 def main():
     print("=" * 50)
     
-    env = CarEnv(render_mode="human", 
+    env = CarEnv(render_mode=None,#"human", 
                  track_file="tracks/nascar.track", 
                  reset_on_lap=False,
-                 discrete_action_space=discrete_action_space,
-                 enable_fps_limit=False)
+                 num_cars=1,
+                 discrete_action_space=discrete_action_space)
     
     try:
         # Reset environment first
@@ -40,7 +40,11 @@ def main():
                 action = np.array(env.action_space.sample(), dtype=np.float32)
 
             obs, reward, terminated, truncated, info = env.step(action)
-            total_reward += reward
+            # Handle multi-car reward format
+            if isinstance(reward, (list, np.ndarray)):
+                total_reward += sum(reward)
+            else:
+                total_reward += reward
 
             env.render()
 

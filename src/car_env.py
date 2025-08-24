@@ -106,7 +106,6 @@ class CarEnv(BaseEnv):
                  track_file: Optional[str] = None,
                  start_position: Optional[Tuple[float, float]] = None,
                  start_angle: float = 0.0,
-                 enable_fps_limit: bool = True,
                  reset_on_lap: bool = False,
                  discrete_action_space: bool = False,
                  num_cars: int = 1,
@@ -120,7 +119,6 @@ class CarEnv(BaseEnv):
             track_file: Path to track definition file
             start_position: Car starting position (auto-detected if None)
             start_angle: Car starting angle in radians
-            enable_fps_limit: Whether to limit render FPS (True for normal use, False for benchmarking)
             reset_on_lap: If True, reset environment automatically when a lap is completed
             discrete_action_space: If True, use discrete action space (5 actions) instead of continuous
             num_cars: Number of cars to create (1-10)
@@ -159,7 +157,6 @@ class CarEnv(BaseEnv):
             
         # Create physics system
         self.car_physics = CarPhysics(self.track)
-        self.car = None  # Legacy single car reference (for backward compatibility)
         self.cars = []   # List of all cars in the simulation
         
         # Collision system
@@ -175,22 +172,16 @@ class CarEnv(BaseEnv):
         self.renderer = None
         self.headless_clock = None  # Clock for timing in headless mode
         
-        # Force headless mode when enable_fps_limit=False
-        if not enable_fps_limit:
-            render_mode = None
-            
         if render_mode == RENDER_MODE_HUMAN:
             self.renderer = Renderer(
                 window_size=DEFAULT_WINDOW_SIZE,
                 render_fps=self.metadata["render_fps"],
-                track=self.track,
-                enable_fps_limit=enable_fps_limit  # Use the parameter from constructor
+                track=self.track
             )
         else:
             # Use Python-based clock for headless mode to avoid pygame in subprocesses
             # This is crucial for macOS compatibility with multiprocessing
             self.headless_clock = PythonClock()
-            self.headless_enable_fps_limit = enable_fps_limit
             
         # Environment state
         self.simulation_time = 0.0
@@ -229,7 +220,6 @@ class CarEnv(BaseEnv):
         # Reward display control
         self._show_reward = False
         self._current_reward = 0.0
-        self._cumulative_reward = 0.0  # Kept for backward compatibility
         self._cumulative_rewards = [0.0]  # Use array for consistency with multi-car
         
         # Termination reason tracking
@@ -252,8 +242,6 @@ class CarEnv(BaseEnv):
             lap_timer = LapTimer(self.track, car_id=car_name)
             self.car_lap_timers.append(lap_timer)
         
-        # Set main lap timer to first car's timer for backward compatibility
-        self.lap_timer = self.car_lap_timers[0] if self.car_lap_timers else LapTimer(self.track, car_id="Legacy Car")
         
     def _load_track(self, track_file: str) -> None:
         """Load track from file"""
@@ -291,7 +279,6 @@ class CarEnv(BaseEnv):
         if not self.cars:
             # Create multiple cars
             self.cars = self.car_physics.create_cars(self.num_cars, self.start_position, self.start_angle)
-            self.car = self.cars[0] if self.cars else None  # Legacy reference
         else:
             # Reset existing cars
             self.car_physics.reset_cars(self.start_position, self.start_angle)
@@ -302,7 +289,6 @@ class CarEnv(BaseEnv):
         # Reset all lap timers
         for lap_timer in self.car_lap_timers:
             lap_timer.reset()
-        self.lap_timer.reset()  # Legacy timer
         
         self.simulation_time = 0.0
         
@@ -339,9 +325,8 @@ class CarEnv(BaseEnv):
         else:
             self._previous_car_position = None
         
-        # For single car mode, ensure we also get the initial position
-        # This prevents stale position data from previous episodes
-        if self.num_cars == 1 and self.cars and len(self.cars) > 0:
+        # Initialize position tracking for distance calculations
+        if self.cars and len(self.cars) > 0:
             car_state = self.car_physics.get_car_state(0)
             if car_state:
                 self._previous_car_position = (car_state[0], car_state[1])
@@ -354,7 +339,6 @@ class CarEnv(BaseEnv):
         
         # Reset reward tracking
         self._current_reward = 0.0
-        self._cumulative_reward = 0.0  # Kept for backward compatibility
         
         # Reset cumulative rewards array for both single and multi-car modes
         self._cumulative_rewards = [0.0] * self.num_cars
@@ -430,18 +414,9 @@ class CarEnv(BaseEnv):
         observations = self._get_multi_obs()
         infos = self._get_multi_info()
         
-        # Convert to single-car format if needed
-        if self.num_cars == 1:
-            observation = observations[0] if len(observations) > 0 else self._get_default_observation()
-            if len(infos) > 0:
-                info = infos[0].copy()
-                # Add episode stats for single car mode
-                info["episode_stats"] = self.episode_stats.copy()
-            else:
-                info = {"simulation_time": 0.0, "episode_stats": self.episode_stats.copy()}
-        else:
-            observation = observations
-            info = infos
+        # Always return multi-car format
+        observation = observations
+        info = infos
         
         logger.debug("Environment reset complete")
         return observation, info
@@ -451,12 +426,11 @@ class CarEnv(BaseEnv):
         Update physics simulation with proper timing modes.
         
         Two modes:
-        1. enable_fps_limit=True: One physics step per frame, simulating delta time from frame rate
-        2. enable_fps_limit=False: Run physics as fast as possible with fixed 1/60 timesteps
+        1. Human render mode: One physics step per frame, simulating delta time from frame rate
+        2. Headless mode: Run physics as fast as possible with fixed 1/60 timesteps
         
         Args:
-            actions: For single car: [throttle, brake, steering] for followed car
-                    For multi-car: array of actions for all cars or single action for followed car only
+            actions: Multi-car actions array with shape (num_cars, 3)
         """
         if not self.cars:
             return
@@ -464,40 +438,15 @@ class CarEnv(BaseEnv):
         # Store the latest action(s)
         self._current_physics_action = actions
         
-        # Prepare actions for physics step - unified approach
-        # Actions should be in the format: single car [throttle, brake, steering] or multi-car [[...], [...]]
-        if hasattr(actions, 'shape') and len(actions.shape) == 2:
-            # Already multi-car format: (num_cars, 3) array
-            physics_actions = actions
-        elif hasattr(actions, 'shape') and len(actions.shape) == 1 and len(actions) == 3:
-            # Single car action - convert to multi-car format
-            if self.num_cars == 1:
-                # For single car, wrap in array
-                physics_actions = np.array([actions], dtype=np.float32)
-            else:
-                # Single action for followed car in multi-car environment
-                physics_actions = np.zeros((self.num_cars, 3), dtype=np.float32)
-                if self.followed_car_index < self.num_cars:
-                    physics_actions[self.followed_car_index] = actions
-        elif isinstance(actions, (list, tuple)) and len(actions) == 3 and isinstance(actions[0], (int, float)):
-            # Single car action as list/tuple - convert to array format
-            if self.num_cars == 1:
-                physics_actions = np.array([actions], dtype=np.float32)
-            else:
-                physics_actions = np.zeros((self.num_cars, 3), dtype=np.float32)
-                if self.followed_car_index < self.num_cars:
-                    physics_actions[self.followed_car_index] = actions
-        else:
-            # Assume it's already a proper multi-car action array
-            physics_actions = np.array(actions, dtype=np.float32)
+        # Actions should already be in multi-car format: (num_cars, 3)
+        physics_actions = np.array(actions, dtype=np.float32)
 
-        # Check if fps limit is enabled
-        enable_fps_limit = getattr(self, 'headless_enable_fps_limit', True)
-        if self.renderer:
-            enable_fps_limit = self.renderer.enable_fps_limit
+        # Check if we're in human render mode (which always limits FPS)
+        # or headless mode (which never limits FPS)
+        is_human_mode = self.renderer is not None
         
-        if enable_fps_limit:
-            # MODE 1: enable_fps_limit=True
+        if is_human_mode:
+            # MODE 1: Human render mode (FPS limited)
             # One physics step per frame, using the expected frame rate as timestep
             # This ensures consistent physics regardless of actual frame rate variations
             
@@ -509,7 +458,7 @@ class CarEnv(BaseEnv):
             self._run_single_physics_step(physics_actions, expected_dt)
             
         else:
-            # MODE 2: enable_fps_limit=False  
+            # MODE 2: Headless mode (no FPS limit)
             # Run physics as fast as possible with fixed 1/60 timesteps
             
             # Always use fixed timestep for consistent simulation speed
@@ -560,12 +509,15 @@ class CarEnv(BaseEnv):
         Execute one environment step.
         
         Args:
-            action: Control inputs - for single car: [throttle, brake, steering]
-                   for multi-car: [[throttle, brake, steering], ...] or (num_cars, 3) array
+            action: Control inputs as array of actions for all cars.
+                   Shape: (num_cars, 3) for continuous or (num_cars,) for discrete
             
         Returns:
-            For single car: (observation, reward, terminated, truncated, info)
-            For multi-car: (observations, rewards, terminated, truncated, infos)
+            observations: Array of observations for all cars (num_cars, obs_size)
+            rewards: Array of rewards for all cars (num_cars,)
+            terminated: Boolean indicating if episode is terminated
+            truncated: Boolean indicating if episode is truncated
+            infos: List of info dictionaries for all cars
         """
         # Validate action
         assert self.action_space.contains(action), f"Invalid action {action}"
@@ -573,41 +525,15 @@ class CarEnv(BaseEnv):
         if not self.cars:
             raise RuntimeError("Environment not properly initialized. Call reset() first.")
         
-        # Convert single-car action to multi-car format for unified processing
-        if self.num_cars == 1:
-            if self.discrete_action_space:
-                # Convert discrete action to continuous, then to array format
-                continuous_action = self._discrete_to_continuous(action)
-                actions_array = np.array([continuous_action], dtype=np.float32)
-            else:
-                # Wrap single action in array
-                actions_array = np.array([action], dtype=np.float32)
+        # Convert discrete to continuous if needed
+        if self.discrete_action_space:
+            continuous_actions = [self._discrete_to_continuous(a) for a in action]
+            actions_array = np.array(continuous_actions, dtype=np.float32)
         else:
-            # Multi-car mode - actions already in correct format or convert if discrete
-            if self.discrete_action_space:
-                # Convert each discrete action to continuous
-                continuous_actions = []
-                for discrete_action in action:
-                    continuous_action = self._discrete_to_continuous(discrete_action)
-                    continuous_actions.append(continuous_action)
-                actions_array = np.array(continuous_actions, dtype=np.float32)
-            else:
-                actions_array = np.array(action, dtype=np.float32)
+            actions_array = np.array(action, dtype=np.float32)
         
         # Use unified multi-car step logic
-        observations, rewards, terminated, truncated, infos = self._step_multi_car(actions_array)
-        
-        # Convert outputs back to single-car format if needed
-        if self.num_cars == 1:
-            # Get single car info and add episode_stats
-            single_info = infos[0].copy() if len(infos) > 0 else {}
-            single_info["episode_stats"] = self.episode_stats.copy()
-            # Update episode stats with performance validation if available
-            if "performance" in single_info:
-                self.episode_stats["performance_valid"] = single_info["performance"].get("performance_valid", False)
-            return observations[0], rewards[0], terminated, truncated, single_info
-        else:
-            return observations, rewards, terminated, truncated, infos
+        return self._step_multi_car(actions_array)
     
     # _step_single_car method removed - now handled by unified step() method
     
@@ -617,7 +543,7 @@ class CarEnv(BaseEnv):
         # Store all actions for rendering
         self.all_actions = np.array(actions, dtype=np.float32)
         
-        # Store current action for the followed car for backward compatibility
+        # Store current action for the followed car for rendering
         if hasattr(self, 'followed_car_index') and 0 <= self.followed_car_index < len(actions):
             self.current_action = np.array(actions[self.followed_car_index], dtype=np.float32)
         else:
@@ -633,13 +559,10 @@ class CarEnv(BaseEnv):
         # Update physics with filtered actions
         self.update_physics(filtered_actions)
         
-        # Maintain timing in headless mode
+        # Maintain timing in headless mode (no FPS limiting)
         if self.headless_clock:
-            if self.headless_enable_fps_limit:
-                self.headless_clock.tick(self.metadata["render_fps"])
-            else:
-                from .constants import UNLIMITED_FPS_CAP
-                self.headless_clock.tick(UNLIMITED_FPS_CAP)
+            from .constants import UNLIMITED_FPS_CAP
+            self.headless_clock.tick(UNLIMITED_FPS_CAP)
         
         # Check for new collisions and disable cars if necessary
         self._check_and_disable_cars()
@@ -665,12 +588,8 @@ class CarEnv(BaseEnv):
         for i, reward in enumerate(rewards):
             self._cumulative_rewards[i] += reward
         
-        # For single-car backward compatibility, also update _cumulative_reward
-        if self.num_cars == 1 and len(self._cumulative_rewards) > 0:
-            self._cumulative_reward = self._cumulative_rewards[0]
-            self._current_reward = rewards[0]
         
-        # Check if lap reset is pending (for single car mode)
+        # Check if lap reset is pending
         if self._lap_reset_pending:
             self._lap_reset_pending = False
             terminated = True
@@ -793,7 +712,7 @@ class CarEnv(BaseEnv):
                 if car_state:
                     pos_x, pos_y, vel_x, vel_y, orientation, angular_vel = car_state
                     
-                    # Normalize position, velocity, etc. (same as single car)
+                    # Normalize position, velocity, etc.
                     norm_pos_x = np.clip(pos_x / NORM_MAX_POSITION, -1.0, 1.0)
                     norm_pos_y = np.clip(pos_y / NORM_MAX_POSITION, -1.0, 1.0)
                     norm_vel_x = np.clip(vel_x / NORM_MAX_VELOCITY, -1.0, 1.0)
@@ -1149,65 +1068,6 @@ class CarEnv(BaseEnv):
                 # Mark as reported to avoid re-processing
                 collision.reported_to_environment = True
                 
-    def _get_obs(self) -> np.ndarray:
-        """Get current environment observation with normalized values (for followed car) - uses unified multi-car calculation"""
-        # Use the unified multi-car observation calculation
-        observations = self._get_multi_obs()
-        
-        # For single car mode, return the observation for the followed car
-        if self.followed_car_index < len(observations):
-            return observations[self.followed_car_index]
-        
-        # Return default observation if car index is out of range
-        return self._get_default_observation()
-        
-    def _calculate_reward(self) -> float:
-        """Calculate step reward (for followed car) - uses unified multi-car calculation"""
-        # Use the unified multi-car reward calculation
-        rewards = self._calculate_multi_rewards()
-        
-        # For single car mode, return the reward for the followed car (index 0)
-        if self.followed_car_index < len(rewards):
-            return rewards[self.followed_car_index]
-        
-        return 0.0
-        
-    def _check_termination(self) -> Tuple[bool, bool]:
-        """Check if episode should terminate - uses unified multi-car calculation"""
-        # For single-car mode, we use the multi-car termination logic
-        # but with special handling since we only have one car
-        
-        if self.num_cars == 1:
-            # Check basic car existence
-            if not self.cars or self.followed_car_index >= len(self.cars):
-                self.termination_reason = "no_car"
-                return True, False
-                
-            followed_car = self.cars[self.followed_car_index]
-            if not followed_car:
-                self.termination_reason = "no_followed_car"
-                return True, False
-            
-            # Check if the single car is disabled
-            if self.followed_car_index in self.disabled_cars:
-                self.termination_reason = "car_disabled"
-                return True, False
-            
-            # Check cumulative reward threshold for single car
-            if hasattr(self, '_cumulative_rewards') and len(self._cumulative_rewards) > 0:
-                cumulative_reward = self._cumulative_rewards[0]
-                if cumulative_reward < TERMINATION_MIN_REWARD:
-                    if self.reset_on_lap:
-                        self.termination_reason = f"low_reward (cumulative reward: {cumulative_reward:.2f})"
-                        return True, False
-                    else:
-                        # In demo mode, just log but don't terminate
-                        logger.debug(f"Low reward detected (cumulative: {cumulative_reward:.2f}) but demo mode active - not terminating")
-        
-        # Use the unified multi-car termination check for time limits
-        # This handles both single and multi-car cases uniformly
-        return self._check_multi_termination()
-        
     def _update_episode_stats(self) -> None:
         """Update episode statistics (for followed car)"""
         if not self.cars or self.followed_car_index >= len(self.cars):
@@ -1231,38 +1091,6 @@ class CarEnv(BaseEnv):
         if self.car_physics.is_car_on_track(self.followed_car_index):
             self.episode_stats["time_on_track"] += self.actual_dt
             
-    def _get_info(self) -> Dict[str, Any]:
-        """Get environment info dictionary (for followed car) - uses unified multi-car calculation"""
-        # Use the unified multi-car info calculation
-        infos = self._get_multi_info()
-        
-        # For single car mode, return the info for the followed car
-        if self.followed_car_index < len(infos):
-            info = infos[self.followed_car_index].copy()  # Make a copy to avoid modifying the original
-            
-            # Add episode stats which are global, not per-car
-            info["episode_stats"] = self.episode_stats.copy()
-            
-            # Ensure cumulative_reward uses the right source for backward compatibility
-            if hasattr(self, '_cumulative_rewards') and self.followed_car_index < len(self._cumulative_rewards):
-                info["cumulative_reward"] = self._cumulative_rewards[self.followed_car_index]
-            
-            # Update episode stats with performance validation if available
-            if "performance" in info:
-                self.episode_stats["performance_valid"] = info["performance"].get("performance_valid", False)
-            
-            return info
-        
-        # Fallback if index is out of range
-        return {
-            "simulation_time": self.simulation_time,
-            "episode_stats": self.episode_stats.copy(),
-            "termination_reason": self.termination_reason,
-            "cumulative_reward": 0.0,
-            "num_cars": self.num_cars,
-            "followed_car_index": self.followed_car_index,
-        }
-        
     def check_quit_requested(self) -> bool:
         """Check if user has requested to quit (e.g., by clicking window close button)"""
         if self.render_mode != RENDER_MODE_HUMAN:
@@ -1341,7 +1169,7 @@ class CarEnv(BaseEnv):
             if self._show_reward:
                 # Get reward for the currently followed car
                 if self.num_cars == 1:
-                    # Single car mode
+                    # Current followed car
                     current_reward = self._current_reward
                     cumulative_reward = self._cumulative_reward
                 else:
@@ -1363,7 +1191,7 @@ class CarEnv(BaseEnv):
                     'show': True
                 }
             
-            # For backward compatibility, also provide single car data
+            # Also provide followed car data
             followed_car_position = None
             followed_car_angle = None
             if cars_data and self.followed_car_index < len(cars_data):

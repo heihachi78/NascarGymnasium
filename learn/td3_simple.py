@@ -42,7 +42,6 @@ def make_env(rank):
             render_mode=None,
             track_file="tracks/nascar.track",
             discrete_action_space=False,
-            enable_fps_limit=False,
             reset_on_lap=True,
         )
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
