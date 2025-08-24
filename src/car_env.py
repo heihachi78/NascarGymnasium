@@ -9,7 +9,6 @@ import logging
 import math
 import numpy as np
 import pygame
-import time
 from typing import Optional, Tuple, Dict, Any
 from .base_env import BaseEnv
 from .car_physics import CarPhysics
@@ -26,7 +25,6 @@ from .constants import (
     TYRE_START_TEMPERATURE,
     CAR_MASS,
     GRAVITY_MS2,
-    BOX2D_TIME_STEP,
     SENSOR_MAX_DISTANCE,
     SENSOR_NUM_DIRECTIONS,
     STUCK_SPEED_THRESHOLD,
@@ -59,10 +57,7 @@ from .constants import (
     # Multi-car constants
     MAX_CARS,
     MULTI_CAR_COLORS,
-    CAR_SELECT_KEYS,
-    # Physics timing constants
-    MAX_PHYSICS_TIMESTEP,
-    MIN_PHYSICS_TIMESTEP
+    CAR_SELECT_KEYS
 )
 
 # Setup module logger
@@ -152,12 +147,6 @@ class CarEnv(BaseEnv):
             
         # Environment state
         self.simulation_time = 0.0
-        self.actual_dt = BOX2D_TIME_STEP  # Will be updated with each physics step
-        
-        # Physics timing tracking (fixed-rate physics independent of frame rate)
-        self.last_frame_time = None  # Will be initialized on first step
-        self.physics_accumulator = 0.0  # Accumulates time for fixed-rate physics
-        self.physics_steps_this_frame = 0  # Track how many physics steps ran in current frame
         
         # Store latest action for physics updates
         self._current_physics_action = None
@@ -263,10 +252,6 @@ class CarEnv(BaseEnv):
             lap_timer.reset()
         
         self.simulation_time = 0.0
-        
-        # Reset physics timing tracking
-        self.last_frame_time = None  # Will be initialized on first step
-        self.physics_accumulator = 0.0
         
         # Reset physics action tracking
         self._current_physics_action = None
@@ -419,57 +404,18 @@ class CarEnv(BaseEnv):
         # Actions should already be in multi-car format: (num_cars, 3)
         physics_actions = np.array(actions, dtype=np.float32)
 
-        # Fixed physics timestep (60Hz) 
+        # Fixed physics timestep (60Hz) - consistent across all modes
         physics_dt = 1.0 / 60.0
         
-        # Calculate frame_dt based on mode (only difference between modes)
-        if self.render_mode == RENDER_MODE_HUMAN:
-            # Render mode: use real elapsed time
-            current_time = time.perf_counter()
-            
-            if self.last_frame_time is None:
-                # First frame - initialize timing, no physics
-                self.last_frame_time = current_time
-                return
-            
-            # Real elapsed time since last frame
-            frame_dt = current_time - self.last_frame_time
-            self.last_frame_time = current_time
-            
-            # Clamp to prevent spiral of death
-            frame_dt = min(frame_dt, MAX_PHYSICS_TIMESTEP)
-        else:
-            # Non-render mode: fake that 1/60 second passed
-            if self.last_frame_time is None:
-                # First frame - initialize, no physics
-                self.last_frame_time = 0.0  # Dummy value
-                return
-            
-            # Always pretend exactly 1/60 second passed for maximum speed
-            frame_dt = physics_dt
-        
-        # IDENTICAL accumulator logic for both modes
-        self.physics_accumulator += frame_dt
-        
-        # Run physics steps while we have enough accumulated time
-        self.physics_steps_this_frame = 0
-        while self.physics_accumulator >= physics_dt and self.physics_steps_this_frame < 5:  # Max 5 steps per frame
-            self._run_single_physics_step(physics_actions, physics_dt)
-            self.physics_accumulator -= physics_dt
-            self.physics_steps_this_frame += 1
-        
-        # Store the actual timestep used for other calculations
-        self.actual_dt = physics_dt
+        # Always run exactly one physics step per env.step() call
+        # This ensures 1:1 action-to-physics ratio regardless of rendering mode
+        self._run_single_physics_step(physics_actions, physics_dt)
 
     def _run_single_physics_step(self, physics_actions, dt):
         """Run a single physics step with the given timestep"""
         
-        # Store the actual timestep used (for reward calculations)
-        self.actual_dt = dt
-        
         # Update collision reporter time
         self.collision_reporter.update_time(self.simulation_time)
-        #print(f'self.actual_dt={self.actual_dt} self.simulation_time={self.simulation_time}')
         
         # Perform physics step with given timestep
         self.car_physics.step(physics_actions, dt)
@@ -922,7 +868,8 @@ class CarEnv(BaseEnv):
                 
                 if collision_impulse > 0:
                     # Apply uniform collision penalty per second for any collision above threshold
-                    penalty_applied = PENALTY_COLLISION * self.actual_dt
+                    # Fixed timestep: 1/60 second per physics step
+                    penalty_applied = PENALTY_COLLISION * (1.0 / 60.0)
                     #print(f"💰 COLLISION PENALTY: car={car_index} impulse={collision_impulse:.1f} penalty={penalty_applied:.3f} (rate={PENALTY_COLLISION:.1f}/s)")
                     
                     reward -= penalty_applied
