@@ -19,10 +19,10 @@ verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 25_000
 log_interval = 1
-learning_rate_initial_value = 3e-3
+learning_rate_initial_value = 1e-3
 learning_rate_final_value = 7e-4
 stats_window_size = 25
-model_name = "td3_512_relu_50_sigma_512_batch_4_grad_25m"
+model_name = "td3_512_relu_10_sigma_512_batch_4_grad_25m"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -84,14 +84,14 @@ if __name__ == "__main__":
     # single-env noise
     base_action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.5 * np.ones(n_actions)
+        sigma=0.1 * np.ones(n_actions)
     )
 
     # vectorized noise (applies one copy per environment)
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
     policy_kwargs = dict(
-        net_arch=[512, 512],
+        net_arch=[512, 256],
         activation_fn=torch.nn.ReLU
     )
 
@@ -102,7 +102,6 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=action_noise,
         learning_starts=25_000,
-        batch_size=512,
         gradient_steps=4,
         stats_window_size=stats_window_size,
         verbose=verbose,
