@@ -18,10 +18,10 @@ discrete_action_space = False
 def main():
     print("=" * 50)
     
-    env = CarEnv(render_mode=None,#"human", 
+    env = CarEnv(render_mode="human", 
                  track_file="tracks/nascar.track", 
-                 reset_on_lap=False,
-                 num_cars=1,
+                 reset_on_lap=True,
+                 num_cars=10,
                  discrete_action_space=discrete_action_space)
     
     try:
