@@ -39,6 +39,8 @@ from .constants import (
     REWARD_LAP_COMPLETION,
     REWARD_FAST_LAP_TIME,
     REWARD_FAST_LAP_BONUS,
+    PENALTY_PER_STEP,
+    PENALTY_WALL_COLLISION_RATIO_MULTIPLIER,
     # Collision constants
     COLLISION_FORCE_THRESHOLD,
     INSTANT_DISABLE_IMPACT_THRESHOLD,
@@ -830,13 +832,24 @@ class CarEnv(BaseEnv):
                     
                 reward = 0.0
                 
-                # Survival reward - only for active (non-disabled) cars
+                # Apply per-step penalty to encourage speed
                 if car_index not in self.disabled_cars:
-                    # Survival time is now updated in physics steps
-                    pass
+                    reward -= PENALTY_PER_STEP
                 
                 # Get collision impulse for this car
                 collision_impulse = self.car_physics.get_continuous_collision_impulse(car_index)
+                
+                # Wall collision penalty based on accumulated impulse ratio
+                if car_index not in self.disabled_cars:
+                    # Get accumulated impulse for this car (if tracked)
+                    if hasattr(self, 'cumulative_collision_impacts') and car_index in self.cumulative_collision_impacts:
+                        accumulated_impulse = self.cumulative_collision_impacts[car_index]
+                        # Calculate damage ratio (0 to 1 scale)
+                        damage_ratio = min(accumulated_impulse / CUMULATIVE_DISABLE_IMPACT_THRESHOLD, 1.0)
+                        # Apply penalty proportional to damage ratio
+                        if damage_ratio > 0:
+                            collision_penalty = damage_ratio * PENALTY_WALL_COLLISION_RATIO_MULTIPLIER
+                            reward -= collision_penalty
                 
                 # Distance reward (track per car if needed)
                 car_state = self.car_physics.get_car_state(car_index)
