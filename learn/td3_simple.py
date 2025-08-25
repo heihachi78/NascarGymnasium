@@ -81,19 +81,22 @@ if __name__ == "__main__":
     # TD3 modell
     n_actions = env.action_space.shape[-1]
 
+    mean_action_noise = np.array([0, 0, 0])
+    sigma_action_noise = np.array([0.25, 0.1, 0.5])
+
     # single-env noise
     base_action_noise = NormalActionNoise(
-        mean=np.zeros(n_actions),
-        sigma=0.1 * np.ones(n_actions)
+        mean=mean_action_noise,
+        sigma=sigma_action_noise
     )
 
     # vectorized noise (applies one copy per environment)
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
-    policy_kwargs = dict(
-        net_arch=[512, 256],
-        activation_fn=torch.nn.ReLU
-    )
+    #policy_kwargs = dict(
+    #    net_arch=[512, 256],
+    #    activation_fn=torch.nn.ReLU
+    #)
 
     model = TD3(
         "MlpPolicy",
@@ -102,10 +105,10 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=action_noise,
         learning_starts=25_000,
-        gradient_steps=4,
+        gradient_steps=8,
         stats_window_size=stats_window_size,
         verbose=verbose,
-        policy_kwargs=policy_kwargs,
+        #policy_kwargs=policy_kwargs,
     )
 
     # tanulás
