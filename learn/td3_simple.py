@@ -22,7 +22,7 @@ log_interval = 1
 learning_rate_initial_value = 1e-3
 learning_rate_final_value = 7e-4
 stats_window_size = 25
-model_name = "td3_512_relu_10_sigma_512_batch_4_grad_25m"
+model_name = "td3_simple"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
