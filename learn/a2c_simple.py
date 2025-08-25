@@ -17,8 +17,8 @@ verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 25_000
 log_interval = 1_000
-learning_rate_initial_value = 8e-4 #7.95e-4
-learning_rate_final_value = 6e-4 #7.55e-4
+learning_rate_initial_value = 7.95e-4
+learning_rate_final_value = 7.55e-4
 stats_window_size = 25
 model_name = "a2c_simple"
 
@@ -77,7 +77,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[128, 128],
+        net_arch=[128, 64],
         activation_fn=torch.nn.ReLU
     )
 
