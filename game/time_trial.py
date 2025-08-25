@@ -94,8 +94,8 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        (None, "Rule-Based"),  # Use None for rule-based control
-        (None, "Rule-Based"),  # Use None for rule-based control
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
@@ -228,7 +228,7 @@ def main():
                 for car_idx in range(num_cars):
                     # Skip disabled cars
                     if car_idx in env.disabled_cars or car_idx in cars_finished_attempt:
-                        car_actions.append([0.0, 0.0, 0.0])
+                        car_actions.append([0.0, 0.0])  # [throttle_brake, steering]
                         continue
                     
                     # Get observation for this car
