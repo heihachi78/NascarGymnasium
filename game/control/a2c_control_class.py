@@ -93,15 +93,16 @@ class A2CController(BaseController):
                 - Distance sensor readings (8 directions): indices 21-28
         
         Returns:
-            numpy array of shape (3,) containing [throttle, brake, steering]
-            - throttle: 0.0 to 1.0
-            - brake: 0.0 to 1.0
+            numpy array of shape (2,) containing [throttle_brake, steering]
+            - throttle_brake: -1.0 (full brake) to 1.0 (full throttle)
             - steering: -1.0 to 1.0
         """
         # Use A2C model if available
         if self.model_loaded and self.model is not None:
             try:
                 # Use A2C model for prediction (deterministic=True for consistent racing)
+                # NOTE: Existing models trained with 3-element actions will not work correctly
+                # Models need to be retrained with 2-element action space
                 action, _ = self.model.predict(observation, deterministic=True)
                 return action.astype(np.float32)
             except Exception as e:

@@ -81,8 +81,8 @@ if __name__ == "__main__":
     # TD3 modell
     n_actions = env.action_space.shape[-1]
 
-    mean_action_noise = np.array([0, 0, 0])
-    sigma_action_noise = np.array([0.15, 0.1, 0.25])
+    mean_action_noise = np.array([0, 0])
+    sigma_action_noise = np.array([0.5, 0.5])
 
     # single-env noise
     base_action_noise = NormalActionNoise(
@@ -105,8 +105,6 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=action_noise,
         learning_starts=25_000,
-        gradient_steps=4,
-        batch_size=128,
         stats_window_size=stats_window_size,
         verbose=verbose,
         policy_kwargs=policy_kwargs,

@@ -94,18 +94,19 @@ class PPOController(BaseController):
                 - Distance sensor readings (8 directions): indices 21-28
         
         Returns:
-            numpy array of shape (3,) containing [throttle, brake, steering]
-            - throttle: 0.0 to 1.0
-            - brake: 0.0 to 1.0
+            numpy array of shape (2,) containing [throttle_brake, steering]
+            - throttle_brake: -1.0 (full brake) to 1.0 (full throttle) 
             - steering: -1.0 to 1.0
         """
         # Use PPO model if available
         if self.model_loaded and self.model is not None:
             try:
-                # Use PPO model for prediction (deterministic=True for consistent racing)
-                action, _ = self.model.predict(observation, deterministic=True)
-                # Convert discrete action to continuous format
-                return action.astype(np.float32)
+                # Use PPO model for prediction (deterministic=True for consistent racing)  
+                discrete_action, _ = self.model.predict(observation, deterministic=True)
+                # NOTE: Existing PPO models trained with discrete actions will not work correctly
+                # Models need to be retrained with 2-element action space (continuous)
+                # For now, return the discrete action as-is which will cause errors
+                return discrete_action.astype(np.float32)
             except Exception as e:
                 print(f"[{self.name}] Error using PPO model: {e}")
                 print(f"[{self.name}] Switching to fallback control")

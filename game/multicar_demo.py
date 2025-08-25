@@ -102,7 +102,9 @@ def main():
                     car_steerings[car_idx] = 0
                     car_throttles[car_idx] = 1
                 
-                car_actions.append([car_throttles[car_idx], car_brakes[car_idx], car_steerings[car_idx]])
+                # Convert to new 2-element format: [throttle_brake, steering]
+                throttle_brake = car_throttles[car_idx] - car_brakes[car_idx]
+                car_actions.append([throttle_brake, car_steerings[car_idx]])
             
             # Create actions array - always use multi-car format
             action = np.array(car_actions, dtype=np.float32)

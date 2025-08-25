@@ -6,6 +6,7 @@ from .constants import (
     CAR_ACTION_SHAPE,
     CAR_ACTION_LOW,
     CAR_ACTION_HIGH,
+    CAR_ACTION_SHAPE_INTERNAL,
     CAR_OBSERVATION_SHAPE,
     CAR_OBSERVATION_LOW,
     CAR_OBSERVATION_HIGH,
@@ -43,13 +44,13 @@ class BaseEnv(gym.Env):
                 # Multi-car: array of discrete actions
                 self.action_space = spaces.MultiDiscrete([5] * num_cars)
         else:
-            # Continuous action space: [throttle, brake, steering] per car
+            # Continuous action space: [throttle_brake, steering] per car
             if num_cars == 1:
                 # Single-car: scalar continuous action
                 self.action_space = spaces.Box(
                     low=CAR_ACTION_LOW,
                     high=CAR_ACTION_HIGH,
-                    shape=(3,),
+                    shape=(2,),
                     dtype=np.float32
                 )
             else:
@@ -57,7 +58,7 @@ class BaseEnv(gym.Env):
                 self.action_space = spaces.Box(
                     low=np.tile(CAR_ACTION_LOW, (num_cars, 1)),
                     high=np.tile(CAR_ACTION_HIGH, (num_cars, 1)),
-                    shape=(num_cars, 3),
+                    shape=(num_cars, 2),
                     dtype=np.float32
                 )
         
@@ -81,14 +82,14 @@ class BaseEnv(gym.Env):
         
         self.start_time = None
         self.elapsed_time = INITIAL_ELAPSED_TIME
-        self.last_action = np.zeros(CAR_ACTION_SHAPE, dtype=np.float32)
+        self.last_action = np.zeros(CAR_ACTION_SHAPE_INTERNAL, dtype=np.float32)  # Internal 3-element format
         
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
         
         self.start_time = time.time()
         self.elapsed_time = INITIAL_ELAPSED_TIME
-        self.last_action = np.zeros(CAR_ACTION_SHAPE, dtype=np.float32)
+        self.last_action = np.zeros(CAR_ACTION_SHAPE_INTERNAL, dtype=np.float32)  # Internal 3-element format
         
         observation = self._get_obs()
         info = self._get_info()
@@ -101,10 +102,14 @@ class BaseEnv(gym.Env):
         
         # Convert discrete action to continuous if needed
         if self.discrete_action_space:
-            continuous_action = self._discrete_to_continuous(action)
-            self.last_action = np.array(continuous_action, dtype=np.float32)
+            # Convert discrete to 2-element continuous, then to 3-element internal
+            continuous_action_2d = self._discrete_to_continuous(action)
+            internal_action = self._convert_to_internal_action(continuous_action_2d)
+            self.last_action = np.array(internal_action, dtype=np.float32)
         else:
-            self.last_action = np.array(action, dtype=np.float32)
+            # Convert 2-element action to internal 3-element format
+            internal_action = self._convert_to_internal_action(action)
+            self.last_action = np.array(internal_action, dtype=np.float32)
         
         current_time = time.time()
         self.elapsed_time = current_time - self.start_time
@@ -148,30 +153,56 @@ class BaseEnv(gym.Env):
         
         return observation
     
+    def _convert_to_internal_action(self, action):
+        """Convert 2-element action to internal 3-element format.
+        
+        Args:
+            action: 2-element action [throttle_brake, steering]
+                    throttle_brake: -1.0 (full brake) to 1.0 (full throttle)
+                    steering: -1.0 (left) to 1.0 (right)
+            
+        Returns:
+            3-element action [throttle, brake, steering]
+        """
+        throttle_brake = action[0]
+        steering = action[1]
+        
+        # Convert combined throttle/brake to separate values
+        if throttle_brake >= 0:
+            # Positive values map to throttle
+            throttle = throttle_brake
+            brake = 0.0
+        else:
+            # Negative values map to brake
+            throttle = 0.0
+            brake = -throttle_brake  # Convert negative to positive brake value
+        
+        return [throttle, brake, steering]
+    
     def _discrete_to_continuous(self, action):
-        """Convert discrete action to continuous action values.
+        """Convert discrete action to 2-element continuous action values.
         
         Args:
             action: Discrete action (0-4)
             
         Returns:
-            Continuous action [throttle, brake, steering]
+            2-element continuous action [throttle_brake, steering]
         """
         if action == 0:
             # Do nothing
-            return [0.0, 0.0, 0.0]
+            return [0.0, 0.0]
         elif action == 1:
             # Accelerate
-            return [1.0, 0.0, 0.0]
+            return [1.0, 0.0]  # full throttle, no steering
         elif action == 2:
             # Brake
-            return [0.0, 1.0, 0.0]
+            return [-1.0, 0.0]  # full brake, no steering
         elif action == 3:
             # Turn left
-            return [0.0, 0.0, -1.0]
+            return [0.0, -1.0]  # no throttle/brake, full left
         elif action == 4:
             # Turn right
-            return [0.0, 0.0, 1.0]
+            return [0.0, 1.0]   # no throttle/brake, full right
         else:
             raise ValueError(f"Invalid discrete action: {action}")
     

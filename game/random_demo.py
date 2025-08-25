@@ -4,6 +4,7 @@ Random action demonstration.
 This demo runs the car with random actions within proper ranges.
 """
 
+import re
 import sys
 import os
 import numpy as np

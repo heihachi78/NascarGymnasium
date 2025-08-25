@@ -538,7 +538,7 @@ class CarEnv(BaseEnv):
         
         Args:
             action: Control inputs as array of actions for all cars.
-                   Shape: (num_cars, 3) for continuous or (num_cars,) for discrete
+                   Shape: (num_cars, 2) for continuous [throttle_brake, steering] or (num_cars,) for discrete
             
         Returns:
             observations: Array of observations for all cars (num_cars, obs_size)
@@ -554,15 +554,23 @@ class CarEnv(BaseEnv):
             raise RuntimeError("Environment not properly initialized. Call reset() first.")
         
         # Convert scalar actions to multi-car format for internal processing
-        if self.num_cars == 1 and action.ndim == 1:
-            action = action.reshape(1, -1)  # Convert (3,) to (1,3) or (1,) to (1,1)
+        if self.num_cars == 1:
+            if self.discrete_action_space:
+                # Discrete action is a scalar, wrap in array
+                action = np.array([action])
+            elif hasattr(action, 'ndim') and action.ndim == 1:
+                action = action.reshape(1, -1)  # Convert (2,) to (1,2)
         
-        # Convert discrete to continuous if needed
+        # Convert discrete to continuous if needed, or convert 2-element to 3-element
         if self.discrete_action_space:
-            continuous_actions = [self._discrete_to_continuous(a) for a in action]
+            # Convert discrete to 2-element continuous, then to 3-element internal
+            continuous_actions_2d = [self._discrete_to_continuous(a) for a in action]
+            continuous_actions = [self._convert_to_internal_action(a) for a in continuous_actions_2d]
             actions_array = np.array(continuous_actions, dtype=np.float32)
         else:
-            actions_array = np.array(action, dtype=np.float32)
+            # Convert 2-element actions to 3-element internal format
+            continuous_actions = [self._convert_to_internal_action(a) for a in action]
+            actions_array = np.array(continuous_actions, dtype=np.float32)
         
         # Use unified multi-car step logic
         return self._step_multi_car(actions_array)

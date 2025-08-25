@@ -14,13 +14,22 @@ BRAKE_MAX = 1.0  # maximum brake input
 STEERING_MIN = -1.0  # full left steering
 STEERING_MAX = 1.0  # full right steering
 
+# Combined throttle/brake axis constants
+THROTTLE_BRAKE_MIN = -1.0  # full brake (negative values)
+THROTTLE_BRAKE_MAX = 1.0   # full throttle (positive values)
+
 # Control Response Constants
 MAX_STEERING_ANGLE = 30.0  # degrees maximum wheel turn angle (increased for tighter turns)
 
 # Car Action Space Constants (Continuous Control)
-CAR_ACTION_SHAPE = (3,)  # [throttle, brake, steering]
-CAR_ACTION_LOW = np.array([THROTTLE_MIN, BRAKE_MIN, STEERING_MIN], dtype=np.float32)
-CAR_ACTION_HIGH = np.array([THROTTLE_MAX, BRAKE_MAX, STEERING_MAX], dtype=np.float32)
+CAR_ACTION_SHAPE = (2,)  # [throttle_brake, steering] - merged throttle/brake axis
+CAR_ACTION_LOW = np.array([THROTTLE_BRAKE_MIN, STEERING_MIN], dtype=np.float32)
+CAR_ACTION_HIGH = np.array([THROTTLE_BRAKE_MAX, STEERING_MAX], dtype=np.float32)
+
+# Legacy 3-element action shape for internal use
+CAR_ACTION_SHAPE_INTERNAL = (3,)  # [throttle, brake, steering]
+CAR_ACTION_LOW_INTERNAL = np.array([THROTTLE_MIN, BRAKE_MIN, STEERING_MIN], dtype=np.float32)
+CAR_ACTION_HIGH_INTERNAL = np.array([THROTTLE_MAX, BRAKE_MAX, STEERING_MAX], dtype=np.float32)
 
 # Force Application Constants
 # RWD_GRIP_FACTOR removed - rely directly on tire physics model for grip calculation

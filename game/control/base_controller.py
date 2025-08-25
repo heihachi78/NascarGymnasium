@@ -55,9 +55,8 @@ class BaseController:
                 - Distance sensor readings (8 directions): indices 21-28
         
         Returns:
-            numpy array of shape (3,) containing [throttle, brake, steering]
-            - throttle: 0.0 to 1.0
-            - brake: 0.0 to 1.0
+            numpy array of shape (2,) containing [throttle_brake, steering]
+            - throttle_brake: -1.0 (full brake) to 1.0 (full throttle)
             - steering: -1.0 to 1.0
         """
         # Extract sensor data
@@ -101,9 +100,11 @@ class BaseController:
         
         self.control_state['throttle'] = max(min(self.control_state['throttle'], 1), 0)
         
+        # Convert separate throttle/brake to combined throttle_brake axis
+        throttle_brake = self.control_state['throttle'] - self.control_state['brake']
+        
         return np.array([
-            self.control_state['throttle'], 
-            self.control_state['brake'], 
+            throttle_brake,
             self.control_state['steering']
         ], dtype=np.float32)
     
@@ -118,7 +119,7 @@ class BaseController:
             observation: numpy array of shape (29,) containing car state
         
         Returns:
-            numpy array of shape (3,) containing [throttle, brake, steering]
+            numpy array of shape (2,) containing [throttle_brake, steering]
         """
         return self._fallback_control(observation)
     
