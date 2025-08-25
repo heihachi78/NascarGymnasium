@@ -77,7 +77,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[128, 64],
+        net_arch=[256, 256],
         activation_fn=torch.nn.ReLU
     )
 
