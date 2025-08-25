@@ -22,7 +22,7 @@ log_interval = 1
 learning_rate_initial_value = 3e-3
 learning_rate_final_value = 7e-4
 stats_window_size = 25
-model_name = "td3_512_relu_512_batch_25m"
+model_name = "td3_512_relu_50_sigma_512_batch_4_grad_25m"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -84,7 +84,7 @@ if __name__ == "__main__":
     # single-env noise
     base_action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.25 * np.ones(n_actions)
+        sigma=0.5 * np.ones(n_actions)
     )
 
     # vectorized noise (applies one copy per environment)
@@ -101,10 +101,12 @@ if __name__ == "__main__":
         tensorboard_log=tensorboard_log,
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=action_noise,
+        learning_starts=25_000,
+        batch_size=512,
+        gradient_steps=4,
         stats_window_size=stats_window_size,
         verbose=verbose,
         policy_kwargs=policy_kwargs,
-        batch_size=512,
     )
 
     # tanulás
