@@ -94,15 +94,8 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        #("game/control/models/td3_model_time_trial.zip", "TD3-TT"),
-        #("game/control/models/td3_model.zip", "TD3"),
-        #("game/control/models/ppo_model.zip", "PPO"),
-        #("game/control/models/ppo_model2.zip", "PPO-2"),
-        #("game/control/models/sac_model.zip", "SAC"),
-        #("game/control/models/a2c_model_time_trial.zip", "A2C-TT"),
-        #("game/control/models/a2c_model_competition.zip", "A2C-COMP"),
-        #("game/control/models/a2c_best_model.zip", "A2C-B"),
-        #("game/control/models/a2c_simplea2c_simple_final.zip", "A2C-F"),
+        ("game/control/models/a2c_best.zip", "A2C-B"),
+        ("game/control/models/a2c_best2.zip", "A2C-B2"),
         (None, "Rule-Based"),  # Use None for rule-based control
     ]
     
@@ -265,16 +258,16 @@ def main():
                     car_rewards[0] += reward
                 
                 # Check lap completions for all cars
-                if isinstance(info, list):
-                    followed_car_info = info[current_followed_car] if current_followed_car < len(info) else info[0]
-                    current_followed_car = followed_car_info.get('followed_car_index', current_followed_car)
+                if isinstance(info, dict) and "cars" in info:
+                    # Multi-car mode: info is a dict with cars list
+                    current_followed_car = info.get('followed_car_index', current_followed_car)
                     
-                    for car_idx in range(min(num_cars, len(info))):
+                    for car_idx in range(min(num_cars, len(info["cars"]))):
                         # Skip cars that have finished this attempt
                         if car_idx in cars_finished_attempt:
                             continue
                             
-                        car_info = info[car_idx]
+                        car_info = info["cars"][car_idx]
                         lap_timing = car_info.get('lap_timing', {})
                         current_lap_count = lap_timing.get('lap_count', 0)
                         is_timing = lap_timing.get('is_timing', False)

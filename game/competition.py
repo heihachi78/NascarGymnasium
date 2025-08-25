@@ -18,7 +18,7 @@ from game.control.a2c_control_class import A2CController
 from game.control.base_controller import BaseController
 
 
-def calculate_finishing_order(num_cars, car_names, total_laps, best_lap_time, car_rewards, disabled_cars, finishing_times):
+def calculate_finishing_order(num_cars, car_names, lap_counts, best_lap_time, car_rewards, disabled_cars, finishing_times):
     """
     Calculate the finishing order based on race performance.
     
@@ -36,7 +36,7 @@ def calculate_finishing_order(num_cars, car_names, total_laps, best_lap_time, ca
     
     for car_idx in range(num_cars):
         car_name = car_names[car_idx] if car_idx < len(car_names) else f"Car {car_idx}"
-        laps = total_laps.get(car_idx, 0)
+        laps = lap_counts.get(car_idx, 0)
         best_time = best_lap_time.get(car_idx, None)
         finish_time = finishing_times.get(car_idx, None)
         reward = car_rewards.get(car_idx, 0.0)
@@ -96,7 +96,7 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best.zip", "A2C-B"),
-        ("game/control/models/a2c_final.zip", "A2C-F"),
+        ("game/control/models/a2c_best2.zip", "A2C-B2"),
         (None, "Rule-Based"),  # Use None for rule-based control
     ]
 
@@ -163,7 +163,7 @@ def main():
         track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -181,7 +181,6 @@ def main():
     # Lap time tracking (per car)
     all_lap_times = {}
     best_lap_time = {}
-    total_laps = {}
     previous_lap_count = {}
     finishing_times = {}
     
@@ -205,7 +204,6 @@ def main():
     for i in range(num_cars):
         all_lap_times[i] = []
         best_lap_time[i] = None
-        total_laps[i] = 0
         previous_lap_count[i] = 0
         finishing_times[i] = None
         car_rewards[i] = 0.0
@@ -282,13 +280,13 @@ def main():
                 total_reward += reward
             
             # Handle multi-car info and check lap completions
-            if isinstance(info, list):
-                followed_car_info = info[current_followed_car] if current_followed_car < len(info) else info[0]
-                current_followed_car = followed_car_info.get('followed_car_index', current_followed_car)
+            if isinstance(info, dict) and "cars" in info:
+                # Multi-car mode: info is a dict with cars list
+                current_followed_car = info.get('followed_car_index', current_followed_car)
                 
                 # Check lap completions for ALL cars
-                for car_idx in range(min(num_cars, len(info))):
-                    car_info = info[car_idx]
+                for car_idx in range(min(num_cars, len(info["cars"]))):
+                    car_info = info["cars"][car_idx]
                     lap_timing = car_info.get('lap_timing', {})
                     current_lap_count = lap_timing.get('lap_count', 0)
                     is_timing = lap_timing.get('is_timing', False)
@@ -304,7 +302,6 @@ def main():
                         last_lap_time = lap_timing.get('last_lap_time', None)
                         if last_lap_time:
                             all_lap_times[car_idx].append(last_lap_time)
-                            total_laps[car_idx] += 1
                             
                             # Record finishing time
                             current_sim_time = car_info.get("simulation_time", 0)
@@ -320,16 +317,28 @@ def main():
                             lap_time_str = f"{minutes}:{seconds:06.3f}"
                             
                             # Update best lap for this car
-                            if best_lap_time[car_idx] is None or last_lap_time < best_lap_time[car_idx]:
+                            is_new_best = False
+                            if best_lap_time[car_idx] is None:
+                                # First lap for this car - always a personal best
                                 best_lap_time[car_idx] = last_lap_time
-                                print(f"🏁 {car_name} NEW BEST LAP! Time: {lap_time_str} | Reward: {lap_reward:.1f}")
+                                is_new_best = True
+                                print(f"🏁 {car_name} FIRST LAP COMPLETED! Time: {lap_time_str} | Reward: {lap_reward:.1f}")
+                            elif last_lap_time < best_lap_time[car_idx]:
+                                # Improved their personal best
+                                best_lap_time[car_idx] = last_lap_time
+                                is_new_best = True
+                                print(f"🏁 {car_name} NEW PERSONAL BEST! Lap {current_lap_count}: {lap_time_str} | Reward: {lap_reward:.1f}")
                             else:
-                                print(f"🏁 {car_name} Lap {total_laps[car_idx]}: {lap_time_str} | Reward: {lap_reward:.1f}")
+                                # Regular lap completion
+                                print(f"🏁 {car_name} Lap {current_lap_count}: {lap_time_str} | Reward: {lap_reward:.1f}")
                             
                             # Check overall best lap
                             if overall_best_lap_time is None or last_lap_time < overall_best_lap_time:
                                 overall_best_lap_time = last_lap_time
-                                print(f"   🌟 NEW OVERALL BEST LAP by {car_name}!")
+                                if is_new_best:
+                                    print(f"   🌟 NEW OVERALL BEST LAP by {car_name}!")
+                                else:
+                                    print(f"   🌟 {car_name} takes the OVERALL BEST LAP!")
                         
                         previous_lap_count[car_idx] = current_lap_count
                 
@@ -341,8 +350,8 @@ def main():
             if terminated or truncated:
                 # Display termination info
                 termination_type = "terminated" if terminated else "truncated"
-                reason = info.get("termination_reason", "unknown") if not isinstance(info, list) else info[0].get("termination_reason", "unknown")
-                sim_time = info.get("simulation_time", 0) if not isinstance(info, list) else info[0].get("simulation_time", 0)
+                reason = info.get("termination_reason", "unknown")
+                sim_time = info.get("simulation_time", 0)
                 
                 print(f"\n⚠️  Episode {termination_type} at step {step}")
                 print(f"📊 Reason: {reason}")
@@ -353,8 +362,19 @@ def main():
                 print("🏁 COMPETITION FINISHED - FINAL RESULTS")
                 print("=" * 60)
                 
+                # Gather final lap counts from lap timers
+                final_lap_counts = {}
+                if isinstance(info, dict) and "cars" in info:
+                    for car_idx in range(min(num_cars, len(info["cars"]))):
+                        lap_timing = info["cars"][car_idx].get('lap_timing', {})
+                        final_lap_counts[car_idx] = lap_timing.get('lap_count', 0)
+                else:
+                    # Single car mode or legacy format
+                    lap_timing = info.get('lap_timing', {})
+                    final_lap_counts[0] = lap_timing.get('lap_count', 0)
+                
                 finishing_order = calculate_finishing_order(
-                    num_cars, car_names, total_laps, best_lap_time, 
+                    num_cars, car_names, final_lap_counts, best_lap_time, 
                     car_rewards, env.disabled_cars, finishing_times
                 )
                 
@@ -367,7 +387,7 @@ def main():
                 
                 # Display race statistics
                 print(f"\n📊 RACE STATISTICS:")
-                print(f"   🏁 Total laps completed: {sum(total_laps.values())}")
+                print(f"   🏁 Total laps completed: {sum(final_lap_counts.values())}")
                 print(f"   💰 Total rewards: {sum(car_rewards.values()):.2f}")
                 
                 # Display collision force summary using real physics data
@@ -399,7 +419,7 @@ def main():
                     print(f"   🔥 Maximum collision impulse: {max_physics_impulse:.1f} N⋅s")
                     
                     # Calculate collision rate based on simulation time
-                    sim_time = info.get("simulation_time", 0) if not isinstance(info, list) else info[0].get("simulation_time", 0)
+                    sim_time = info.get("simulation_time", 0)
                     if sim_time > 0:
                         collision_rate = (total_physics_collisions / sim_time) * 60  # per minute
                         print(f"   ⏱️ Collision rate: {collision_rate:.1f}/min")
@@ -427,7 +447,7 @@ def main():
                     else:
                         model_info = "Unknown"
                     
-                    laps = total_laps[car_idx]
+                    laps = final_lap_counts.get(car_idx, 0)
                     best = best_lap_time[car_idx]
                     reward = car_rewards[car_idx]
                     collision_force = physics_total_impulses[car_idx]  # Use actual physics collision data
