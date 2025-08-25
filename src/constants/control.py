@@ -19,7 +19,7 @@ THROTTLE_BRAKE_MIN = -1.0  # full brake (negative values)
 THROTTLE_BRAKE_MAX = 1.0   # full throttle (positive values)
 
 # Control Response Constants
-MAX_STEERING_ANGLE = 30.0  # degrees maximum wheel turn angle (increased for tighter turns)
+MAX_STEERING_ANGLE = 45.0  # degrees maximum wheel turn angle (increased for tighter turns)
 
 # Car Action Space Constants (Continuous Control)
 CAR_ACTION_SHAPE = (2,)  # [throttle_brake, steering] - merged throttle/brake axis

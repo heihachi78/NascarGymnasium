@@ -54,7 +54,7 @@ from .constants import (
     NORM_MAX_TYRE_LOAD,
     NORM_MAX_TYRE_TEMP,
     NORM_MAX_TYRE_WEAR,
-    NORM_MAX_COLLISION_IMPULSE,
+    INSTANT_DISABLE_IMPACT_THRESHOLD,
     # Multi-car constants
     MAX_CARS,
     MULTI_CAR_COLORS,
@@ -742,7 +742,7 @@ class CarEnv(BaseEnv):
                     norm_vel_y = np.clip(vel_y / NORM_MAX_VELOCITY, -1.0, 1.0)
                     speed_magnitude_ms = (vel_x**2 + vel_y**2)**0.5
                     norm_speed_magnitude = np.clip(speed_magnitude_ms / NORM_MAX_VELOCITY, 0.0, 1.0)
-                    norm_orientation = orientation / np.pi
+                    norm_orientation = np.clip(orientation / np.pi, -1.0, 1.0)
                     norm_angular_vel = np.clip(angular_vel / NORM_MAX_ANGULAR_VEL, -1.0, 1.0)
                     
                     # Get tyre data
@@ -754,8 +754,8 @@ class CarEnv(BaseEnv):
                     
                     # Get collision data (simplified for multi-car)
                     collision_impulse, collision_angle = self.car_physics.get_collision_data(car_index)
-                    norm_collision_impulse = np.clip(collision_impulse / NORM_MAX_COLLISION_IMPULSE, 0.0, 1.0)
-                    norm_collision_angle = collision_angle / np.pi
+                    norm_collision_impulse = np.clip(collision_impulse / INSTANT_DISABLE_IMPACT_THRESHOLD, 0.0, 1.0)
+                    norm_collision_angle = np.clip(collision_angle / np.pi, -1.0, 1.0)
                     
                     # Calculate cumulative impact percentage
                     cumulative_impact = self.cumulative_collision_impacts.get(car_index, 0.0)
