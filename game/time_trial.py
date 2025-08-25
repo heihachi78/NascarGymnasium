@@ -95,6 +95,7 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         (None, "Rule-Based"),  # Use None for rule-based control
+        (None, "Rule-Based"),  # Use None for rule-based control
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
@@ -242,7 +243,10 @@ def main():
                     car_actions.append(action)
                 
                 # Create actions array - always use multi-car format
-                action = np.array(car_actions, dtype=np.float32)
+                if num_cars > 1:
+                    action = np.array(car_actions, dtype=np.float32)
+                else:
+                    action = np.array(car_actions[0], dtype=np.float32)
                 
                 # Step environment
                 obs, reward, _, _, info = env.step(action)

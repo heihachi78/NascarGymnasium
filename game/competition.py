@@ -96,6 +96,7 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         (None, "Rule-Based"),  # Use None for rule-based control
+        (None, "Rule-Based"),  # Use None for rule-based control
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -161,7 +162,7 @@ def main():
         track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -244,7 +245,10 @@ def main():
                 car_actions.append(action)
             
             # Create actions array - always use multi-car format
-            action = np.array(car_actions, dtype=np.float32)
+            if num_cars > 1:
+                action = np.array(car_actions, dtype=np.float32)
+            else:
+                action = np.array(car_actions[0], dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
             

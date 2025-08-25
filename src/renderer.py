@@ -17,7 +17,6 @@ from .constants import (
     FULLSCREEN_TOGGLE_KEY,
     TRACK_INFO_TOGGLE_KEY,
     TRACK_INFO_TEXT_COLOR,
-    CAMERA_MODE_CAR_FOLLOW,
     TRACK_INFO_BG_COLOR,
     TRACK_INFO_BG_ALPHA,
     TRACK_INFO_PADDING,
@@ -302,8 +301,8 @@ class Renderer:
         if reward_info is not None and reward_info.get('show', False):
             self._render_reward(reward_info)
         
-        # Render race tables if data is available and not in car follow mode
-        if (race_positions_data is not None or best_lap_times_data is not None) and self.camera.get_camera_mode() != CAMERA_MODE_CAR_FOLLOW:
+        # Render race tables if data is available and track info is enabled
+        if (race_positions_data is not None or best_lap_times_data is not None) and self.show_track_info:
             self._render_race_tables(race_positions_data, best_lap_times_data)
         
         # Render countdown clock if timing info is available

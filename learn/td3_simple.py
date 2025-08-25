@@ -82,7 +82,7 @@ if __name__ == "__main__":
     n_actions = env.action_space.shape[-1]
 
     mean_action_noise = np.array([0, 0])
-    sigma_action_noise = np.array([0.5, 0.5])
+    sigma_action_noise = np.array([0.1, 0.25])
 
     # single-env noise
     base_action_noise = NormalActionNoise(
@@ -94,7 +94,7 @@ if __name__ == "__main__":
     action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
 
     policy_kwargs = dict(
-        net_arch=[512, 512],
+        net_arch=[256, 256],
         activation_fn=torch.nn.ReLU
     )
 
