@@ -19,8 +19,8 @@ verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 25_000
 log_interval = 1
-learning_rate_initial_value = 1e-3
-learning_rate_final_value = 7e-4
+learning_rate_initial_value = 1e-4
+learning_rate_final_value = 1e-5
 stats_window_size = 25
 model_name = "td3_simple"
 
@@ -81,33 +81,23 @@ if __name__ == "__main__":
     # TD3 modell
     n_actions = env.action_space.shape[-1]
 
-    mean_action_noise = np.array([0, 0])
-    sigma_action_noise = np.array([0.1, 0.25])
-
-    # single-env noise
-    base_action_noise = NormalActionNoise(
-        mean=mean_action_noise,
-        sigma=sigma_action_noise
-    )
-
-    # vectorized noise (applies one copy per environment)
-    action_noise = VectorizedActionNoise(base_action_noise, n_envs=num_envs)
-
-    policy_kwargs = dict(
-        net_arch=[256, 256],
-        activation_fn=torch.nn.ReLU
-    )
-
     model = TD3(
         "MlpPolicy",
         env,
         tensorboard_log=tensorboard_log,
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
-        action_noise=action_noise,
+        action_noise=NormalActionNoise(
+            mean=np.zeros(n_actions),
+            sigma=0.1 * np.ones(n_actions)
+        ),
         learning_starts=25_000,
+        buffer_size=360_000,
+        batch_size=128,
+        train_freq=(1, "step"),
+        gradient_steps=2,
+        policy_delay=3,
         stats_window_size=stats_window_size,
         verbose=verbose,
-        policy_kwargs=policy_kwargs,
     )
 
     # tanulás
