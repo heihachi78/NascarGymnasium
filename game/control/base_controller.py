@@ -44,7 +44,7 @@ class BaseController:
         per-instance state for multi-car scenarios.
         
         Args:
-            observation: numpy array of shape (29,) containing:
+            observation: numpy array of shape (38,) containing:
                 - Position (x, y): indices 0-1
                 - Velocity (x, y, magnitude): indices 2-4
                 - Orientation and angular velocity: indices 5-6
@@ -52,19 +52,18 @@ class BaseController:
                 - Tire temperatures (4): indices 11-14
                 - Tire wear (4): indices 15-18
                 - Collision data (impulse, angle): indices 19-20
-                - Distance sensor readings (8 directions): indices 21-28
+                - Cumulative impact percentage: index 21
+                - Distance sensor readings (16 directions): indices 22-37
         
         Returns:
             numpy array of shape (2,) containing [throttle_brake, steering]
             - throttle_brake: -1.0 (full brake) to 1.0 (full throttle)
-            - steering: -1.0 to 1.0
+            - steering: -1.0 to 1.0 (left/right)
         """
-        # Extract sensor data
-        sensors = observation[22:30]  # All 8 sensor distances
-        forward = sensors[0]          # Forward sensor
-        front_left = sensors[1]       # Front-left sensor  
-        front_right = sensors[7]      # Front-right sensor
-        current_speed = observation[4]  # Speed from observation
+        # Extract sensor data (16 sensors from index 22-37)
+        sensors = observation[22:38]   # All 16 sensor distances
+        forward = sensors[0]           # Forward sensor (0°) - used for speed control
+        current_speed = observation[4] # Speed from observation
         
         # Calculate speed limit based on forward distance
         speed_limit = forward * 500 / 3.6
@@ -81,14 +80,17 @@ class BaseController:
         if current_speed * 200 > speed_limit:
             self.control_state['brake'] += 0.01
         
-        # Steering control based on sensor readings
-        if front_right > front_left:
-            self.control_state['steering'] = front_right / front_left - forward
-        elif front_right < front_left:
-            self.control_state['steering'] = front_left / front_right - forward
-            self.control_state['steering'] *= -1
+        # Steering control based on sensor readings (improved with 16 sensors)
+        # Compare left vs right sensor groups for better steering decisions
+        right_sensors = (sensors[1] + sensors[2] + sensors[3] + sensors[4]) / 4  # 22.5° to 90°
+        left_sensors = (sensors[13] + sensors[14] + sensors[15] + sensors[12]) / 4  # 270° to 337.5°
+        
+        if right_sensors > left_sensors:
+            self.control_state['steering'] = min(0.5, (right_sensors - left_sensors) * 2.0)
+        elif left_sensors > right_sensors:
+            self.control_state['steering'] = max(-0.5, -(left_sensors - right_sensors) * 2.0)
         else:
-            self.control_state['steering'] = 0
+            self.control_state['steering'] *= 0.9  # Gradual return to center
         
         # Apply limits and adjustments
         self.control_state['brake'] = max(min(self.control_state['brake'], 1), 0)
@@ -116,7 +118,7 @@ class BaseController:
         their specific control logic and fall back to this when needed.
         
         Args:
-            observation: numpy array of shape (29,) containing car state
+            observation: numpy array of shape (38,) containing car state
         
         Returns:
             numpy array of shape (2,) containing [throttle_brake, steering]

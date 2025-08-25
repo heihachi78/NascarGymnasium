@@ -779,10 +779,7 @@ class CarEnv(BaseEnv):
                         norm_tyre_wear[0], norm_tyre_wear[1], norm_tyre_wear[2], norm_tyre_wear[3],
                         norm_collision_impulse, norm_collision_angle,
                         cumulative_impact_percentage,
-                        normalized_sensor_distances[0], normalized_sensor_distances[1], 
-                        normalized_sensor_distances[2], normalized_sensor_distances[3],
-                        normalized_sensor_distances[4], normalized_sensor_distances[5], 
-                        normalized_sensor_distances[6], normalized_sensor_distances[7]
+                        *normalized_sensor_distances
                     ], dtype=np.float32)
                     
                     observations.append(observation)

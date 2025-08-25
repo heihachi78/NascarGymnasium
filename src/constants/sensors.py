@@ -5,9 +5,9 @@ from .control import MAX_TYRE_LOAD
 from .tyre import TYRE_MAX_WEAR
 
 # Distance Sensor Constants
-SENSOR_NUM_DIRECTIONS = 8  # Number of sensor directions around the car
+SENSOR_NUM_DIRECTIONS = 16  # Number of sensor directions around the car
 SENSOR_MAX_DISTANCE = 250.0  # Maximum sensor range in meters
-SENSOR_ANGLE_STEP = 45.0  # Degrees between sensors (360/8)
+SENSOR_ANGLE_STEP = 360.0 / SENSOR_NUM_DIRECTIONS  # Degrees between sensors (360/16 = 22.5)
 
 # Car Observation Space Constants (Comprehensive Car State)
 # Observation vector: [pos_x, pos_y, vel_x, vel_y, speed_magnitude, orientation, angular_vel, 
@@ -17,7 +17,7 @@ SENSOR_ANGLE_STEP = 45.0  # Degrees between sensors (360/8)
 #                      collision_impulse, collision_angle_relative,
 #                      cumulative_impact_percentage,
 #                      sensor_dist_0, sensor_dist_1, ..., sensor_dist_7]
-CAR_OBSERVATION_SHAPE = (30,)  # 30 total observation elements (22 + 8 sensor distances)
+CAR_OBSERVATION_SHAPE = (22 + SENSOR_NUM_DIRECTIONS,)  # Total observation elements (22 + sensor distances)
 
 # Observation bounds
 MAX_POSITION_VALUE = 10000.0  # maximum world position coordinate
@@ -47,8 +47,7 @@ CAR_OBSERVATION_LOW = np.array([
     0.0, 0.0, 0.0, 0.0, # tyre wear (normalized to [0, 1])
     0.0, -1.0,          # collision impulse (normalized to [0, 1]), angle (normalized to [-1, 1])
     0.0,                # cumulative impact percentage (normalized to [0, 1])
-    0.0, 0.0, 0.0, 0.0, # sensor distances (normalized to [0, 1])
-    0.0, 0.0, 0.0, 0.0  # sensor distances (normalized to [0, 1])
+    *[0.0] * SENSOR_NUM_DIRECTIONS  # sensor distances (normalized to [0, 1])
 ], dtype=np.float32)
 
 CAR_OBSERVATION_HIGH = np.array([
@@ -61,6 +60,5 @@ CAR_OBSERVATION_HIGH = np.array([
     1.0, 1.0, 1.0, 1.0, # tyre wear (normalized to [0, 1])
     1.0, 1.0,           # collision impulse (normalized to [0, 1]), angle (normalized to [-1, 1])
     1.0,                # cumulative impact percentage (normalized to [0, 1])
-    1.0, 1.0, 1.0, 1.0, # sensor distances (normalized to [0, 1])
-    1.0, 1.0, 1.0, 1.0  # sensor distances (normalized to [0, 1])
+    *[1.0] * SENSOR_NUM_DIRECTIONS  # sensor distances (normalized to [0, 1])
 ], dtype=np.float32)

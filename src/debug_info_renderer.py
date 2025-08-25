@@ -9,6 +9,7 @@ import pygame
 import math
 from typing import Dict, Tuple, Optional
 from .constants import (
+    SENSOR_NUM_DIRECTIONS,
     DEBUG_INFO_PANEL_X,
     DEBUG_INFO_PANEL_Y,
     DEBUG_INFO_PANEL_WIDTH,
@@ -120,14 +121,18 @@ class DebugInfoRenderer:
     
     def _render_info_panel(self, window: pygame.Surface, debug_data: dict) -> None:
         """Render the debug info panel with text information"""
-        # Create semi-transparent background
-        bg_surface = pygame.Surface((DEBUG_INFO_PANEL_WIDTH, DEBUG_INFO_PANEL_HEIGHT))
+        # Prepare text lines first to calculate required height
+        lines = self._prepare_text_lines(debug_data)
+        
+        # Calculate dynamic height based on content
+        content_height = len(lines) * DEBUG_INFO_LINE_HEIGHT + 2 * DEBUG_INFO_PANEL_PADDING
+        panel_height = min(content_height, DEBUG_INFO_PANEL_HEIGHT)  # Cap at max height
+        
+        # Create semi-transparent background with dynamic height
+        bg_surface = pygame.Surface((DEBUG_INFO_PANEL_WIDTH, panel_height))
         bg_surface.set_alpha(DEBUG_INFO_PANEL_BG_ALPHA)
         bg_surface.fill(DEBUG_INFO_PANEL_BG_COLOR)
         window.blit(bg_surface, (DEBUG_INFO_PANEL_X, DEBUG_INFO_PANEL_Y))
-        
-        # Prepare text lines
-        lines = self._prepare_text_lines(debug_data)
         
         # Render text lines
         y_offset = DEBUG_INFO_PANEL_Y + DEBUG_INFO_PANEL_PADDING
@@ -218,18 +223,35 @@ class DebugInfoRenderer:
         sensor_data = debug_data.get('sensor_data', {})
         sensor_distances = sensor_data.get('distances', [])
         
-        if len(sensor_distances) >= 8:
+        if len(sensor_distances) >= SENSOR_NUM_DIRECTIONS:
             lines.append("")
-            lines.append("SENSOR DATA (8-DIR)")
+            lines.append(f"SENSOR DATA ({SENSOR_NUM_DIRECTIONS}-DIR)")
             lines.append("Direction  Distance")
             lines.append("           (meters) ")
             lines.append("------------------")
             
-            direction_labels = ['Front   ', 'Fr-Right', 'Right   ', 'Bk-Right', 
-                              'Back    ', 'Bk-Left ', 'Left    ', 'Fr-Left ']
+            direction_labels = ['Front   ', 'F-R 22.5', 'F-Right ', 'F-R 67.5',
+                              'Right   ', 'B-R112.5', 'B-Right ', 'B-R157.5',
+                              'Back    ', 'B-L202.5', 'B-Left  ', 'B-L247.5',
+                              'Left    ', 'F-L292.5', 'F-Left  ', 'F-L337.5']
             
-            for label, distance in zip(direction_labels, sensor_distances):
-                lines.append(f"{label:<8} {distance:8.1f}")
+            # Display in two columns (8 rows each) for better space usage
+            num_sensors = min(len(direction_labels), len(sensor_distances))
+            half = (num_sensors + 1) // 2  # 8 for 16 sensors
+            
+            for i in range(half):
+                left_label = direction_labels[i] if i < len(direction_labels) else ""
+                left_distance = sensor_distances[i] if i < len(sensor_distances) else 0.0
+                
+                right_idx = i + half
+                if right_idx < num_sensors:
+                    right_label = direction_labels[right_idx]
+                    right_distance = sensor_distances[right_idx]
+                    # Two column format: "Label1 dist1   Label2 dist2"
+                    lines.append(f"{left_label:<8} {left_distance:5.1f}  {right_label:<8} {right_distance:5.1f}")
+                else:
+                    # Only left column data
+                    lines.append(f"{left_label:<8} {left_distance:5.1f}")
         
         return lines
     
@@ -360,14 +382,14 @@ class DebugInfoRenderer:
         sensor_distances = sensor_data.get('distances', [])
         sensor_angles = sensor_data.get('angles', [])
         
-        if len(sensor_distances) < 8 or len(sensor_angles) < 8:
+        if len(sensor_distances) < SENSOR_NUM_DIRECTIONS or len(sensor_angles) < SENSOR_NUM_DIRECTIONS:
             return
             
         # Convert car position to screen coordinates
         screen_pos = self.camera.world_to_screen(car_position)
         
         # Render each sensor ray
-        for i in range(8):
+        for i in range(SENSOR_NUM_DIRECTIONS):
             distance = sensor_distances[i]
             angle = sensor_angles[i]
             

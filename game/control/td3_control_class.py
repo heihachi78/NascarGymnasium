@@ -81,7 +81,7 @@ class TD3Controller(BaseController):
         to rule-based control logic.
         
         Args:
-            observation: numpy array of shape (29,) containing:
+            observation: numpy array of shape (38,) containing:
                 - Position (x, y): indices 0-1
                 - Velocity (x, y, magnitude): indices 2-4
                 - Orientation and angular velocity: indices 5-6
@@ -89,7 +89,8 @@ class TD3Controller(BaseController):
                 - Tire temperatures (4): indices 11-14
                 - Tire wear (4): indices 15-18
                 - Collision data (impulse, angle): indices 19-20
-                - Distance sensor readings (8 directions): indices 21-28
+                - Cumulative impact percentage: index 21
+                - Distance sensor readings (16 directions): indices 22-37
         
         Returns:
             numpy array of shape (2,) containing [throttle_brake, steering] 
