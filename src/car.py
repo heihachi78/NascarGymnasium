@@ -166,6 +166,7 @@ class Car:
         # Acceleration tracking for proper weight transfer calculation
         self.previous_velocity = COORDINATE_ZERO  # Previous velocity for acceleration calculation
         self.acceleration_history = deque(maxlen=ACCELERATION_HISTORY_SIZE)  # History of acceleration values for smoothing
+        self.last_acceleration = (0.0, 0.0)  # Cache last computed acceleration (longitudinal, lateral) to avoid side effects
         
         # Lateral force and slip angle tracking for tyre heating
         self.lateral_force_magnitude = 0.0  # Total lateral force applied for slip correction
@@ -710,6 +711,9 @@ class Car:
         # Update previous velocity for next calculation
         self.previous_velocity = current_vel_tuple
         
+        # Cache the result for debug display without side effects
+        self.last_acceleration = result
+        
         return result
         
     def get_state(self) -> Tuple[float, float, float, float, float, float]:
@@ -757,6 +761,21 @@ class Car:
         """Get current acceleration vector in m/s² (world coordinates)"""
         # Get car-relative acceleration (longitudinal, lateral)
         longitudinal, lateral = self._get_acceleration(self.current_dt)
+        
+        # Get car orientation vectors in world space
+        car_forward = self.body.GetWorldVector(WORLD_FORWARD_VECTOR)
+        car_right = self.body.GetWorldVector(WORLD_RIGHT_VECTOR)
+        
+        # Transform car-relative acceleration to world coordinates
+        world_accel_x = longitudinal * car_forward[0] + lateral * car_right[0]
+        world_accel_y = longitudinal * car_forward[1] + lateral * car_right[1]
+        
+        return (world_accel_x, world_accel_y)
+        
+    def get_last_acceleration_vector(self) -> Tuple[float, float]:
+        """Get last computed acceleration vector without side effects (for debug display)"""
+        # Get cached car-relative acceleration (longitudinal, lateral)
+        longitudinal, lateral = self.last_acceleration
         
         # Get car orientation vectors in world space
         car_forward = self.body.GetWorldVector(WORLD_FORWARD_VECTOR)
@@ -817,6 +836,7 @@ class Car:
         # Reset acceleration tracking
         self.previous_velocity = COORDINATE_ZERO
         self.acceleration_history = deque(maxlen=ACCELERATION_HISTORY_SIZE)
+        self.last_acceleration = (0.0, 0.0)
         
         # Reset lateral force and slip angle tracking
         self.lateral_force_magnitude = 0.0

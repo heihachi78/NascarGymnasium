@@ -1474,7 +1474,7 @@ class CarEnv(BaseEnv):
         car_angle = followed_car.body.angle
         drag_force = followed_car.get_drag_force()
         velocity_vector = followed_car.get_velocity_vector()
-        acceleration_vector = followed_car.get_acceleration_vector()
+        acceleration_vector = followed_car.get_last_acceleration_vector()  # Use cached value to avoid side effects
         input_steering_vector, actual_steering_vector = followed_car.get_steering_vectors()
         
         # Tyre data
