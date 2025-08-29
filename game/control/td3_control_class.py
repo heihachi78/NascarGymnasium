@@ -9,6 +9,7 @@ Each controller maintains its own model and state independently.
 import numpy as np
 import os
 from .base_controller import BaseController
+from io import BytesIO
 
 try:
     from stable_baselines3 import TD3
@@ -63,7 +64,9 @@ class TD3Controller(BaseController):
             return False
         
         try:
-            self.model = TD3.load(self.model_path)
+            with open(self.model_path, "rb") as f:
+                model_data = f.read()
+            self.model = TD3.load(BytesIO(model_data))
             self.model_loaded = True
             print(f"[{self.name}] Successfully loaded TD3 model from {self.model_path}")
             return True

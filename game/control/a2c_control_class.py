@@ -9,6 +9,7 @@ Each controller maintains its own model and state independently.
 import numpy as np
 import os
 from .base_controller import BaseController
+from io import BytesIO
 
 try:
     from stable_baselines3 import A2C
@@ -64,7 +65,9 @@ class A2CController(BaseController):
             return False
         
         try:
-            self.model = A2C.load(self.model_path, device='cpu')
+            with open(self.model_path, "rb") as f:
+                model_data = f.read()
+            self.model = A2C.load(BytesIO(model_data), device='cpu')
             self.model_loaded = True
             print(f"[{self.name}] Successfully loaded A2C model from {self.model_path}")
             return True
