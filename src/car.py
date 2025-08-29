@@ -165,7 +165,7 @@ class Car:
         
         # Acceleration tracking for proper weight transfer calculation
         self.previous_velocity = COORDINATE_ZERO  # Previous velocity for acceleration calculation
-        self.acceleration_history = deque(maxlen=ACCELERATION_HISTORY_SIZE)  # History of acceleration values for smoothing
+        self.acceleration_history = deque(maxlen=ACCELERATION_HISTORY_SIZE)
         self.last_acceleration = (0.0, 0.0)  # Cache last computed acceleration (longitudinal, lateral) to avoid side effects
         
         # Lateral force and slip angle tracking for tyre heating
@@ -760,7 +760,7 @@ class Car:
     def get_acceleration_vector(self) -> Tuple[float, float]:
         """Get current acceleration vector in m/s² (world coordinates)"""
         # Get car-relative acceleration (longitudinal, lateral)
-        longitudinal, lateral = self._get_acceleration(self.current_dt)
+        longitudinal, lateral = self.last_acceleration
         
         # Get car orientation vectors in world space
         car_forward = self.body.GetWorldVector(WORLD_FORWARD_VECTOR)

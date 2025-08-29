@@ -285,23 +285,25 @@ class CarEnv(BaseEnv):
         self._lap_reset_pending = False
         
         # Reset lap count tracking for rewards
-        self._previous_lap_count = 0
+        self._previous_lap_count = [0] * self.num_cars
         
         # Reset distance tracking for rewards (use followed car)
         # IMPORTANT: Always initialize _previous_car_position properly for both single and multi-car modes
-        if self.cars and self.followed_car_index < len(self.cars):
-            car_state = self.car_physics.get_car_state(self.followed_car_index)
-            self._previous_car_position = (car_state[0], car_state[1]) if car_state else None
-        else:
-            self._previous_car_position = None
+        self._previous_car_position = {}
+        if self.cars:
+            for i in range(self.num_cars):
+                car_state = self.car_physics.get_car_state(i)
+                if car_state:
+                    self._previous_car_position[i] = (car_state[0], car_state[1])
+
+
         
         # Initialize position tracking for distance calculations
         if self.cars and len(self.cars) > 0:
             car_state = self.car_physics.get_car_state(0)
             if car_state:
-                self._previous_car_position = (car_state[0], car_state[1])
                 # Also update per-car position tracker for consistency
-                setattr(self, '_previous_car_position_0', self._previous_car_position)
+                setattr(self, '_previous_car_position_0', (car_state[0], car_state[1]))
         
         # Reset collision penalty tracking
         self._last_penalized_collision_time = -float('inf')
@@ -857,8 +859,8 @@ class CarEnv(BaseEnv):
                     
                     # For simplicity, calculate distance from last position if we had one
                     # (In full implementation, you'd track previous positions per car)
-                    if hasattr(self, f'_previous_car_position_{car_index}'):
-                        prev_pos = getattr(self, f'_previous_car_position_{car_index}')
+                    if self._previous_car_position[car_index]:
+                        prev_pos = self._previous_car_position[car_index]
                         if prev_pos:
                             dx = current_position[0] - prev_pos[0]
                             dy = current_position[1] - prev_pos[1]
@@ -866,7 +868,7 @@ class CarEnv(BaseEnv):
                             reward += distance * REWARD_DISTANCE_MULTIPLIER
                     
                     # Update previous position for this car
-                    setattr(self, f'_previous_car_position_{car_index}', current_position)
+                    self._previous_car_position[car_index] = current_position
                     
                     # Track backward movement for penalty (skip on first step after reset)
                     if not self._first_step_after_reset[car_index]:
@@ -934,8 +936,7 @@ class CarEnv(BaseEnv):
                     current_lap_count = lap_info.get("lap_count", 0)
                     
                     # Track previous lap count per car
-                    prev_lap_attr = f'_previous_lap_count_{car_index}'
-                    prev_lap_count = getattr(self, prev_lap_attr, 0)
+                    prev_lap_count = self._previous_lap_count[car_index]
                     
                     if current_lap_count > prev_lap_count:
                         laps_completed = current_lap_count - prev_lap_count
@@ -946,7 +947,7 @@ class CarEnv(BaseEnv):
                         if last_lap_time and last_lap_time < REWARD_FAST_LAP_TIME:
                             reward += REWARD_FAST_LAP_BONUS * (REWARD_FAST_LAP_TIME - last_lap_time)**2
                         
-                        setattr(self, prev_lap_attr, current_lap_count)
+                        self._previous_lap_count[car_index] = current_lap_count
                 
                 # Update previous backward distance for next step
                 if car_index not in self.disabled_cars:

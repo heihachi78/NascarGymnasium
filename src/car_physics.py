@@ -365,6 +365,12 @@ class CarPhysics:
         """
         if not self.cars:
             raise ValueError("No cars created. Call create_cars() or create_car() first.")
+
+        # Reset collision impulses for all cars
+        for car in self.cars:
+            if car:
+                car_id = car.car_id
+                self.collision_listener.car_collision_impulses[car_id] = 0.0
             
         # Note: simulation_time is updated in car_env.py to avoid double increment
         
@@ -857,15 +863,5 @@ class CarCollisionListener(Box2D.b2ContactListener):
     
     def reset_impulses(self):
         """Reset impulse tracking for next physics step"""
-        # Reset impulses for cars that have no active collisions
-        for car_id in list(self.car_collision_impulses.keys()):
-            car_has_active_collisions = any(key[0] == car_id for key in self.active_collisions)
-            
-            if not car_has_active_collisions:
-                # No active collisions - completely reset impulse
-                if self.car_collision_impulses[car_id] > 0:
-                    print(f"🔄 IMPULSE RESET: {car_id} (no active collision)")
-                self.car_collision_impulses[car_id] = 0.0
-            else:
-                # Has active collisions - apply light decay to smooth readings
-                self.car_collision_impulses[car_id] *= 0.95
+        # This method is no longer used. Impulses are accumulated in the CarEnv.
+        pass

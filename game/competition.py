@@ -27,7 +27,7 @@ def calculate_finishing_order(num_cars, car_names, lap_counts, best_lap_time, ca
     2. Finishing time (earlier finish = better, for cars with same lap count)
     3. Best lap time (faster = better, fallback tiebreaker)
     4. Cumulative reward (higher = better, fallback)
-    5. Disabled status (disabled cars ranked last)
+    5. Disabled status (disabled cars ranked last) 
     
     Returns:
         List of tuples: (car_idx, car_name, status, details)
@@ -95,12 +95,6 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
@@ -226,7 +220,7 @@ def main():
     
     try:
         # Reset environment
-        obs, info = env.reset()
+        obs, info = env.reset(seed=42)
         print("🏁 RACE STARTED!")
         print("=" * 60)
         total_reward = 0.0
