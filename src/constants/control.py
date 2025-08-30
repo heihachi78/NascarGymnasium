@@ -70,8 +70,6 @@ MAX_LATERAL_FORCE = 20000.0  # Maximum lateral force from steering (N) - increas
 LATERAL_FORCE_SPEED_MULTIPLIER = 40.0  # Multiplier for speed-dependent lateral force (increased multiplier)
 LATERAL_FORCE_STEERING_MULTIPLIER = 10.0  # Additional multiplier for steering force calculation (increased multiplier)
 VELOCITY_ALIGNMENT_FORCE_FACTOR = 4.0  # Force multiplier for aligning velocity with car orientation (increased from 2.5 for stronger correction)
-FRONT_TYRE_LATERAL_FACTOR = 0.3  # Front tyre lateral force factor
-REAR_TYRE_LATERAL_FACTOR = 0.2  # Rear tyre lateral force factor
 
 # Friction Force Constants (for tyre heating)
 MAX_FRICTION_FORCE_CAP = 2000.0  # Maximum friction force per tyre (N)
@@ -83,7 +81,3 @@ MAX_LATERAL_ACCELERATION = 12.0  # m/s² maximum cornering acceleration (1.2g - 
 ACCELERATION_SANITY_CHECK_THRESHOLD = 14.0  # m/s² threshold for detecting unrealistic accelerations
 ACCELERATION_SANITY_DAMPENING = 0.5  # Dampening factor applied when acceleration exceeds sanity threshold
 ACCELERATION_HISTORY_SIZE = 10  # number of acceleration samples to average for smoothing
-
-# Wall Contact Force Reduction Constants
-WALL_CONTACT_FORCE_REDUCTION_FACTOR = 0.2  # Reduce lateral force to 20% during wall contact
-WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR = 0.3  # Reduce max force to 30% during wall contact

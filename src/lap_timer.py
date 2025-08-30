@@ -12,7 +12,6 @@ import time
 import math
 from typing import Optional, Tuple
 from .track_generator import Track
-from .constants import LAP_DETECTION_POSITION_TOLERANCE
 
 
 class LapTimer:

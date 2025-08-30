@@ -4,7 +4,6 @@
 TYRE_START_TEMPERATURE = 80.0  # °C
 TYRE_IDEAL_TEMPERATURE_MIN = 85.0  # °C
 TYRE_IDEAL_TEMPERATURE_MAX = 105.0  # °C
-TYRE_OPTIMAL_TEMPERATURE = (TYRE_IDEAL_TEMPERATURE_MIN + TYRE_IDEAL_TEMPERATURE_MAX) / 2.0
 
 # Tyre Grip Constants
 TYRE_MAX_GRIP_COEFFICIENT = 1.4  # 1.4 maximum grip coefficient at ideal temperature (optimal baseline)
@@ -63,7 +62,6 @@ SLIP_ANGLE_SPEED_THRESHOLD = 2.0  # m/s - minimum speed for slip angle heating
 LATERAL_FORCE_HEATING_FACTOR = 0.05  # Heating factor per Newton of lateral force (reduced for realistic temps)
 LATERAL_FORCE_DISTRIBUTION_FRONT = 0.5  # 50% of lateral heating goes to front tyres (balanced)
 LATERAL_FORCE_DISTRIBUTION_REAR = 0.5  # 50% of lateral heating goes to rear tyres (balanced)
-MAX_LATERAL_HEATING_PER_TYRE = 25.0  # Maximum additional heating per tyre from lateral forces (°C/s) - increased
 
 # Cornering Load Transfer Heating
 CORNERING_LOAD_HEATING_FACTOR = 0.001  # Additional heating factor for loaded outer tyres during cornering (increased 25x)

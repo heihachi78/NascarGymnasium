@@ -35,7 +35,6 @@ RACE_TABLES_LINE_HEIGHT = 22  # Height per text line in pixels
 # Race Tables Colors (RGB)
 RACE_TABLES_BG_COLOR = (0, 0, 0)  # Black background
 RACE_TABLES_BG_ALPHA = 180  # Semi-transparent background
-RACE_TABLES_TEXT_COLOR = (255, 255, 255)  # White text
 RACE_TABLES_HEADER_COLOR = (255, 255, 0)  # Yellow headers
 RACE_TABLES_POSITION_COLOR = (100, 255, 100)  # Green for positions
 RACE_TABLES_LAP_TIME_COLOR = (255, 200, 100)  # Orange for lap times
@@ -81,14 +80,11 @@ DEBUG_VECTOR_MIN_LENGTH = 5  # Minimum vector length for rendering (pixels)
 
 # Distance Sensor Debug Constants  
 DEBUG_SENSOR_VECTOR_COLOR = (255, 0, 255)  # Magenta color for distance sensor vectors
-DEBUG_SENSOR_VECTOR_SCALE = 1.0  # Scale factor for sensor vector display (pixels per meter)
-DEBUG_SENSOR_TEXT_COLOR = (255, 0, 255)  # Magenta color for sensor distance text
 
 # Lap Timer Display Constants
 LAP_TIMER_FONT_SIZE = 28  # Font size for lap time display
 LAP_TIMER_BOTTOM_MARGIN = 15  # Pixels from bottom of screen
 LAP_TIMER_LINE_SPACING = 25  # Pixels between timer lines
-LAP_TIMER_LABEL_WIDTH = 80  # Pixels for label width (Current:, Last:, Best:)
 
 # Lap Timer Colors (RGB)
 LAP_TIMER_CURRENT_COLOR = (255, 255, 255)  # White for current lap time

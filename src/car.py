@@ -24,14 +24,10 @@ from .constants import (
     CAR_MAX_SPEED_MS,
     CAR_TARGET_100KMH_MS,
     CAR_ACCELERATION_0_100_KMH,
-    CAR_DRAG_COEFFICIENT,
-    CAR_FRONTAL_AREA,
     ROLLING_RESISTANCE_FORCE,
-    AIR_DENSITY,
     CAR_DENSITY,
     CAR_FRICTION,
     CAR_RESTITUTION,
-    CAR_MOMENT_OF_INERTIA_FACTOR,
     MAX_STEERING_ANGLE,
     THROTTLE_MIN,
     THROTTLE_MAX,
@@ -90,8 +86,6 @@ from .constants import (
     STEERING_ANGULAR_DAMPING,
     LATERAL_FORCE_SPEED_THRESHOLD,
     MAX_LATERAL_FORCE,
-    FRONT_TYRE_LATERAL_FACTOR,
-    REAR_TYRE_LATERAL_FACTOR,
     MAX_FRICTION_FORCE_CAP,
     REAR_WHEEL_COUNT,
     # Performance validation constants
@@ -104,7 +98,6 @@ from .constants import (
     COORDINATE_ZERO,
     BODY_CENTER_OFFSET,
     RESET_ANGULAR_VELOCITY,
-    AERODYNAMIC_DRAG_FACTOR,
     DRAG_CONSTANT,
     CAR_MOMENT_OF_INERTIA,
     PERPENDICULAR_ANGLE_OFFSET,
@@ -117,14 +110,10 @@ from .constants import (
     LATERAL_FORCE_HEATING_FACTOR,
     LATERAL_FORCE_DISTRIBUTION_FRONT,
     LATERAL_FORCE_DISTRIBUTION_REAR,
-    MAX_LATERAL_HEATING_PER_TYRE,
     CORNERING_LOAD_HEATING_FACTOR,
     CORNERING_SPEED_THRESHOLD,
     CORNERING_OUTER_TYRE_HEATING_FACTOR,
     CORNERING_INNER_TYRE_HEATING_FACTOR,
-    # Wall contact constants
-    WALL_CONTACT_FORCE_REDUCTION_FACTOR,
-    WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR
 )
 
 
@@ -570,10 +559,6 @@ class Car:
         # Use a strong proportional controller to align velocity with car orientation
         alignment_force_factor = CAR_MASS * VELOCITY_ALIGNMENT_FORCE_FACTOR
         
-        # Reduce lateral force strength during wall contact to prevent sticking
-        if is_wall_contact:
-            alignment_force_factor *= WALL_CONTACT_FORCE_REDUCTION_FACTOR  # Reduce strength during wall contact
-        
         # Calculate corrective force for velocity alignment
         corrective_force = (velocity_error[0] * alignment_force_factor, 
                            velocity_error[1] * alignment_force_factor)
@@ -582,11 +567,7 @@ class Car:
         actual_grip_coefficient = self.tyre_manager.get_total_grip_coefficient()
         physics_based_force = CAR_MASS * GRAVITY_MS2 * actual_grip_coefficient * 1.0
         max_force = min(MAX_LATERAL_FORCE * actual_grip_coefficient, physics_based_force)
-        
-        # Further reduce max force during wall contact
-        if is_wall_contact:
-            max_force *= WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR  # Reduce max force during wall contact
-        
+       
         # Limit the total force magnitude
         force_magnitude = (corrective_force[0]**2 + corrective_force[1]**2)**0.5
         if force_magnitude > max_force:

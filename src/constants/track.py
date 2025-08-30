@@ -27,6 +27,3 @@ BOUNDARY_SMOOTHING_MAX_ANGLE = 120.0  # Maximum angle before corner smoothing ki
 BOUNDARY_SMOOTHING_MAX_FACTOR = 0.3  # Maximum smoothing amount (30%)
 BOUNDARY_POINTS_EQUAL_TOLERANCE = 1e-6  # Tolerance for point equality checks
 BOUNDARY_MIN_POLYGON_AREA = 1.0  # Minimum polygon area for validation (square units)
-
-# Lap Detection Constants
-LAP_DETECTION_POSITION_TOLERANCE = 2.0  # Meters tolerance for position-based detection

@@ -3,7 +3,6 @@ from gymnasium import spaces
 import numpy as np
 import time
 from .constants import (
-    CAR_ACTION_SHAPE,
     CAR_ACTION_LOW,
     CAR_ACTION_HIGH,
     CAR_ACTION_SHAPE_INTERNAL,

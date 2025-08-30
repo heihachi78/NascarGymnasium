@@ -14,7 +14,6 @@ from .centerline_generator import CenterlineGenerator
 from .track_boundary import TrackBoundary
 from .constants import (
     TRACK_COLOR, GRID_COLOR, STARTLINE_COLOR, FINISHLINE_COLOR,
-    MINIMUM_LINE_WIDTH,
     POLYGON_CENTERLINE_DEFAULT_SPACING,
     POLYGON_POSITION_MATCHING_TOLERANCE,
     POLYGON_MIN_CENTERLINE_SPACING,

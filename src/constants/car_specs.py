@@ -72,8 +72,6 @@ MAX_DOWNFORCE_MULTIPLIER = 1.5  # Maximum downforce as multiple of car weight (r
 
 # Weight Transfer Physics
 CAR_CENTER_OF_GRAVITY_HEIGHT = 0.35  # meters above ground (realistic for sports car, balanced between 0.15m and 0.50m)
-WHEELBASE_FRONT = CAR_WHEELBASE * CAR_WEIGHT_DISTRIBUTION_FRONT  # distance from CG to front axle
-WHEELBASE_REAR = CAR_WHEELBASE * CAR_WEIGHT_DISTRIBUTION_REAR  # distance from CG to rear axle
 TRACK_WIDTH = CAR_WIDTH * 0.8  # effective track width for weight transfer calculation
 
 # Effective Weight Transfer Factors (combines physics and rigidity)

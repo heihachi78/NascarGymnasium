@@ -24,7 +24,6 @@ DISPLAY_RESET_DELAY = 0.1  # Seconds to wait during display reset
 WINDOW_CREATION_MAX_ATTEMPTS = 3  # Maximum attempts for robust window creation
 WINDOW_CREATION_STEP_DELAY = 0.05  # Seconds between multi-step window creation
 TEMPORARY_WINDOW_SIZE = (100, 100)  # Small window size for intermediate steps
-MINIMUM_LINE_WIDTH = 1  # Minimum line width for drawing
 SEGMENT_RECT_HEIGHT_DIVISOR = 10  # Divisor for zero-length segment height
 
 # Camera Constants

@@ -20,9 +20,7 @@ from .distance_sensor import DistanceSensor
 from .lap_timer import LapTimer
 from .observation_visualizer_optimized import ObservationVisualizerOptimized as ObservationVisualizer
 from .constants import (
-    CAR_MAX_SPEED_MS,
     DEFAULT_WINDOW_SIZE,
-    DEFAULT_RENDER_FPS,
     RENDER_MODE_HUMAN,
     TYRE_START_TEMPERATURE,
     CAR_MASS,
