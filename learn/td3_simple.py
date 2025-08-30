@@ -92,10 +92,9 @@ if __name__ == "__main__":
         ),
         learning_starts=25_000,
         buffer_size=360_000,
-        batch_size=128,
+        batch_size=256,
         train_freq=(1, "step"),
-        gradient_steps=2,
-        policy_delay=3,
+        gradient_steps=4,
         stats_window_size=stats_window_size,
         verbose=verbose,
     )
