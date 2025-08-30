@@ -83,3 +83,7 @@ MAX_LATERAL_ACCELERATION = 12.0  # m/s² maximum cornering acceleration (1.2g - 
 ACCELERATION_SANITY_CHECK_THRESHOLD = 14.0  # m/s² threshold for detecting unrealistic accelerations
 ACCELERATION_SANITY_DAMPENING = 0.5  # Dampening factor applied when acceleration exceeds sanity threshold
 ACCELERATION_HISTORY_SIZE = 10  # number of acceleration samples to average for smoothing
+
+# Wall Contact Force Reduction Constants
+WALL_CONTACT_FORCE_REDUCTION_FACTOR = 0.2  # Reduce lateral force to 20% during wall contact
+WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR = 0.3  # Reduce max force to 30% during wall contact

@@ -33,6 +33,7 @@ class BaseController:
             'throttle_brake': 0.0,
             'steering': 0.0,
             'last_forward' : 0.0,
+            'speed_limit' : 0.0,
         }
     
     def _fallback_control(self, observation):
@@ -63,17 +64,17 @@ class BaseController:
         # Extract sensor data (16 sensors from index 22-37)
         sensors = observation[22:38]   # All 16 sensor distances
         forward = sensors[0]           # Forward sensor (0°) - used for speed control
-        current_speed = 200 * observation[4] # Speed from observation
+        current_speed = observation[4] # Speed from observation
 
         if self.control_state['last_forward'] >= forward:
-            speed_limit = forward * 200
+            self.control_state['speed_limit'] = forward / 2.0
         if self.control_state['last_forward'] < forward:
-            speed_limit = 200
+            self.control_state['speed_limit'] = 1
         
         # Throttle control - accumulate changes
-        if current_speed < speed_limit-5:
+        if current_speed < self.control_state['speed_limit'] * 0.95:
             self.control_state['throttle_brake'] += 0.1
-        if current_speed > speed_limit+5:
+        if current_speed > self.control_state['speed_limit'] * 1.05:
             self.control_state['throttle_brake'] -= 0.1
         
         # Steering control based on sensor readings (improved with 16 sensors)

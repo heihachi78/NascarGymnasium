@@ -99,7 +99,7 @@ def main():
         ("game/control/models/a2c_best_model4.zip", "A2C-B4"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B3"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model1.zip", "A2C-B1"),
         (None, "RB"),
     ]
 

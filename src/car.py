@@ -121,7 +121,10 @@ from .constants import (
     CORNERING_LOAD_HEATING_FACTOR,
     CORNERING_SPEED_THRESHOLD,
     CORNERING_OUTER_TYRE_HEATING_FACTOR,
-    CORNERING_INNER_TYRE_HEATING_FACTOR
+    CORNERING_INNER_TYRE_HEATING_FACTOR,
+    # Wall contact constants
+    WALL_CONTACT_FORCE_REDUCTION_FACTOR,
+    WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR
 )
 
 
@@ -482,6 +485,51 @@ class Car:
             
             self.body.ApplyTorque(steering_torque, True)
     
+    def _is_colliding_with_wall(self) -> bool:
+        """Check if the car is currently colliding with a track wall"""
+        if not self.world or not self.body:
+            return False
+            
+        # Check all contacts of the car body
+        contacts = self.body.contacts
+        
+        # Handle different Box2D contact representations
+        if isinstance(contacts, list):
+            # Direct list of contacts
+            for contact in contacts:
+                if hasattr(contact, 'touching') and contact.touching:
+                    # Check if this contact involves a wall
+                    other_fixture = None
+                    if hasattr(contact, 'fixtureA') and hasattr(contact, 'fixtureB'):
+                        if contact.fixtureA.body == self.body:
+                            other_fixture = contact.fixtureB
+                        elif contact.fixtureB.body == self.body:
+                            other_fixture = contact.fixtureA
+                            
+                        if other_fixture and hasattr(other_fixture, 'userData') and other_fixture.userData:
+                            if other_fixture.userData.get('type') == 'track_wall':
+                                return True
+        else:
+            # Contact edge linked list
+            contact_edge = contacts
+            while contact_edge:
+                contact = contact_edge.contact
+                if contact.touching:
+                    # Check if this contact involves a wall
+                    other_fixture = None
+                    if contact.fixtureA.body == self.body:
+                        other_fixture = contact.fixtureB
+                    elif contact.fixtureB.body == self.body:
+                        other_fixture = contact.fixtureA
+                        
+                    if other_fixture and other_fixture.userData:
+                        if other_fixture.userData.get('type') == 'track_wall':
+                            return True
+                            
+                contact_edge = contact_edge.next
+            
+        return False
+    
     def _apply_lateral_tire_forces(self, speed: float) -> None:
         """Apply lateral forces to align car velocity with car orientation and track slip angle"""
         # Reset tracking variables
@@ -491,6 +539,9 @@ class Car:
         if speed < LATERAL_FORCE_SPEED_THRESHOLD:
             return
             
+        # Check if car is colliding with walls
+        is_wall_contact = self._is_colliding_with_wall()
+        
         # Get car orientation vectors
         car_forward = self.body.GetWorldVector(WORLD_FORWARD_VECTOR)
         velocity = self.body.linearVelocity
@@ -519,6 +570,10 @@ class Car:
         # Use a strong proportional controller to align velocity with car orientation
         alignment_force_factor = CAR_MASS * VELOCITY_ALIGNMENT_FORCE_FACTOR
         
+        # Reduce lateral force strength during wall contact to prevent sticking
+        if is_wall_contact:
+            alignment_force_factor *= WALL_CONTACT_FORCE_REDUCTION_FACTOR  # Reduce strength during wall contact
+        
         # Calculate corrective force for velocity alignment
         corrective_force = (velocity_error[0] * alignment_force_factor, 
                            velocity_error[1] * alignment_force_factor)
@@ -527,6 +582,10 @@ class Car:
         actual_grip_coefficient = self.tyre_manager.get_total_grip_coefficient()
         physics_based_force = CAR_MASS * GRAVITY_MS2 * actual_grip_coefficient * 1.0
         max_force = min(MAX_LATERAL_FORCE * actual_grip_coefficient, physics_based_force)
+        
+        # Further reduce max force during wall contact
+        if is_wall_contact:
+            max_force *= WALL_CONTACT_MAX_FORCE_REDUCTION_FACTOR  # Reduce max force during wall contact
         
         # Limit the total force magnitude
         force_magnitude = (corrective_force[0]**2 + corrective_force[1]**2)**0.5
