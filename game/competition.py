@@ -96,6 +96,8 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        (None, "RB"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -257,8 +259,6 @@ def main():
                 action = np.array(car_actions[0], dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
-
-            print(obs)
             
             # Update collision tracking using environment's accumulated damage system
             for car_idx in range(num_cars):

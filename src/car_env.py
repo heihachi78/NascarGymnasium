@@ -18,6 +18,7 @@ from .track_generator import TrackLoader
 from .renderer import Renderer
 from .distance_sensor import DistanceSensor
 from .lap_timer import LapTimer
+from .observation_visualizer_optimized import ObservationVisualizerOptimized as ObservationVisualizer
 from .constants import (
     CAR_MAX_SPEED_MS,
     DEFAULT_WINDOW_SIZE,
@@ -61,7 +62,9 @@ from .constants import (
     # Multi-car constants
     MAX_CARS,
     MULTI_CAR_COLORS,
-    CAR_SELECT_KEYS
+    CAR_SELECT_KEYS,
+    # Observation visualization constants
+    OBSERVATION_HISTORY_LENGTH
 )
 
 # Setup module logger
@@ -187,6 +190,10 @@ class CarEnv(BaseEnv):
         self._show_reward = False
         self._current_reward = 0.0
         self._cumulative_rewards = [0.0]  # Use array for consistency with multi-car
+        
+        # Observation display control
+        self._show_observations = False
+        self.observation_visualizer = ObservationVisualizer(history_length=OBSERVATION_HISTORY_LENGTH)
         
         # Termination reason tracking
         self.termination_reason = None
@@ -366,6 +373,9 @@ class CarEnv(BaseEnv):
             "time_on_track": 0.0,
             "performance_valid": False
         }
+        
+        # Reset observation visualizer
+        self.observation_visualizer.clear_history()
         
         # Get initial observation using unified multi-car methods
         observations = self._get_multi_obs()
@@ -603,6 +613,11 @@ class CarEnv(BaseEnv):
         rewards = self._calculate_multi_rewards()
         terminated, truncated = self._check_multi_termination()
         infos = self._get_multi_info()
+        
+        # Update observation history for visualization (for followed car)
+        if self.followed_car_index < len(observations):
+            followed_car_obs = observations[self.followed_car_index] if self.num_cars > 1 else observations
+            self.observation_visualizer.add_observation(followed_car_obs, self.simulation_time)
         
         # Reset collision impulses after observations are gathered
         # This prevents double-counting while allowing observations to see current collisions
@@ -1097,6 +1112,10 @@ class CarEnv(BaseEnv):
                     # Toggle reward display
                     self._show_reward = not self._show_reward
                     logger.info(f"Reward display {'enabled' if self._show_reward else 'disabled'}")
+                elif event.key == pygame.K_o:
+                    # Toggle observation display
+                    self._show_observations = not self._show_observations
+                    logger.info(f"Observation display {'enabled' if self._show_observations else 'disabled'}")
                 elif event.key in CAR_SELECT_KEYS:
                     # Handle car switching (keys 0-9)
                     key_index = CAR_SELECT_KEYS.index(event.key)
@@ -1199,6 +1218,23 @@ class CarEnv(BaseEnv):
                 'reset_on_lap': self.reset_on_lap
             }
             
+            # Prepare observation visualization info if enabled
+            observation_info = None
+            if self._show_observations:
+                # Update graphs with latest data, passing current screen size for dynamic scaling
+                if self.renderer and self.renderer.window:
+                    # Get actual current window size (handles fullscreen properly)
+                    screen_width, screen_height = self.renderer.window.get_size()
+                else:
+                    # Fallback size
+                    screen_width, screen_height = (1280, 720)
+                self.observation_visualizer.update_graphs(screen_width, screen_height)
+                
+                observation_info = {
+                    'show': True,
+                    'visualizer': self.observation_visualizer
+                }
+            
             self.renderer.render_frame(
                 car_position=followed_car_position, 
                 car_angle=followed_car_angle, 
@@ -1210,7 +1246,8 @@ class CarEnv(BaseEnv):
                 followed_car_index=self.followed_car_index,
                 race_positions_data=race_positions_data,
                 best_lap_times_data=best_lap_times_data,
-                countdown_info=countdown_info
+                countdown_info=countdown_info,
+                observation_info=observation_info
             )
             
     def get_track(self):

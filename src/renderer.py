@@ -236,7 +236,7 @@ class Renderer:
                 pygame.font.init()
             self._initialized_pygame = True
             
-    def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None):
+    def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None, observation_info=None):
         self.init_pygame()
         
         if self.window is None:
@@ -308,6 +308,10 @@ class Renderer:
         # Render countdown clock if timing info is available
         if countdown_info is not None:
             self._render_countdown_clock(countdown_info)
+        
+        # Render observation overlay if enabled
+        if observation_info is not None and observation_info.get('show', False):
+            self._render_observation_overlay(observation_info)
         
         # Calculate FPS using pygame clock (human mode always limits FPS)
         current_fps = self.clock.get_fps()
@@ -1210,3 +1214,55 @@ class Renderer:
         
         # Draw countdown text
         self.window.blit(text_surface, (text_x, text_y))
+    
+    def _render_observation_overlay(self, observation_info):
+        """Render observation graphs overlay covering most of the screen
+        
+        Args:
+            observation_info: Dictionary containing observation visualization info
+        """
+        if not self.window or not observation_info:
+            return
+        
+        # Get the visualizer
+        visualizer = observation_info.get('visualizer')
+        if not visualizer:
+            return
+        
+        # Import constants for overlay
+        from .constants import (
+            OBSERVATION_OVERLAY_BG_COLOR,
+            OBSERVATION_OVERLAY_BG_ALPHA,
+            OBSERVATION_GRAPH_MARGIN
+        )
+        
+        # Create full-screen semi-transparent background
+        overlay_surface = pygame.Surface(self.window_size)
+        overlay_surface.set_alpha(OBSERVATION_OVERLAY_BG_ALPHA)
+        overlay_surface.fill(OBSERVATION_OVERLAY_BG_COLOR)
+        self.window.blit(overlay_surface, (0, 0))
+        
+        # Get graph surfaces from visualizer
+        graph_surfaces = visualizer.get_graph_surfaces()
+        if not graph_surfaces:
+            # No graphs to display, show loading message
+            font = pygame.font.Font(None, 48)
+            text = font.render("Collecting observation data...", True, (255, 255, 255))
+            text_rect = text.get_rect(center=(self.window_size[0]//2, self.window_size[1]//2))
+            self.window.blit(text, text_rect)
+            return
+        
+        # Calculate layout positions for graphs
+        positions = visualizer.get_layout_positions(self.window_size[0], self.window_size[1])
+        
+        # Render each graph
+        for category_name, graph_surface in graph_surfaces.items():
+            if category_name in positions:
+                x, y = positions[category_name]
+                self.window.blit(graph_surface, (x, y))
+        
+        # Add title at the top
+        title_font = pygame.font.Font(None, 36)
+        title_text = title_font.render("Real-time Observations (Press O to toggle)", True, (255, 255, 255))
+        title_rect = title_text.get_rect(center=(self.window_size[0]//2, 30))
+        self.window.blit(title_text, title_rect)

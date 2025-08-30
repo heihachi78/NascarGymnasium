@@ -120,3 +120,13 @@ CAR_SELECT_KEYS = [
     pygame.K_0, pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4,
     pygame.K_5, pygame.K_6, pygame.K_7, pygame.K_8, pygame.K_9
 ]
+
+# Observation Visualization Constants
+OBSERVATION_TOGGLE_KEY = 'o'  # Key to toggle observation display
+OBSERVATION_HISTORY_LENGTH = 300  # Number of data points to keep in rolling history
+OBSERVATION_GRAPH_MARGIN = 20  # Margin around graphs in pixels
+OBSERVATION_GRAPH_SPACING = 10  # Spacing between graphs in pixels
+OBSERVATION_OVERLAY_BG_COLOR = (0, 0, 0)  # Black background for overlay
+OBSERVATION_OVERLAY_BG_ALPHA = 220  # Semi-transparent background for overlay
+OBSERVATION_GRAPH_COLS = 2  # Number of graph columns in layout
+OBSERVATION_GRAPH_ROWS = 3  # Number of graph rows in layout
