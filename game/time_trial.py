@@ -101,7 +101,6 @@ def main():
         ("game/control/models/a2c_best_model.zip", "A2C-B"),
         ("game/control/models/td3_best_model.zip", "TD3-B"),
         (None, "RB"),
-        (None, "RB"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
@@ -170,7 +169,7 @@ def main():
     print("=" * 60)
     
     # Initialize environment
-    env = CarEnv(track_file="tracks/nascar.track",
+    env = CarEnv(track_file="tracks/nascar_banked.track",
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
                  render_mode=None,#"human",

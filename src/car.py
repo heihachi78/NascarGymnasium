@@ -114,6 +114,12 @@ from .constants import (
     CORNERING_SPEED_THRESHOLD,
     CORNERING_OUTER_TYRE_HEATING_FACTOR,
     CORNERING_INNER_TYRE_HEATING_FACTOR,
+    # Banking physics constants
+    BANKING_LATERAL_ASSIST_FACTOR,
+    BANKING_MINIMUM_ANGLE_THRESHOLD,
+    BANKING_MINIMUM_SPEED_THRESHOLD,
+    BANKING_LATERAL_SPEED_THRESHOLD,
+    GRAVITY_ACCELERATION,
 )
 
 
@@ -174,6 +180,9 @@ class Car:
         # Lateral force and slip angle tracking for tyre heating
         self.lateral_force_magnitude = 0.0  # Total lateral force applied for slip correction
         self.slip_angle_degrees = 0.0  # Current slip angle between velocity and car orientation
+        
+        # Banking angle tracking
+        self.current_banking_angle = 0.0  # Current banking angle in degrees
         
         if self.world:
             # Create Box2D car body
@@ -241,6 +250,14 @@ class Car:
         self.throttle_input = max(THROTTLE_MIN, min(THROTTLE_MAX, throttle))
         self.brake_input = max(BRAKE_MIN, min(BRAKE_MAX, brake))
         self.steering_input = max(STEERING_MIN, min(STEERING_MAX, steering))
+    
+    def set_current_banking_angle(self, banking_angle: float) -> None:
+        """Sets the current banking angle for the car.
+        
+        Args:
+            banking_angle (float): The banking angle in degrees.
+        """
+        self.current_banking_angle = banking_angle
         
     def _calculate_engine_torque(self, rpm: float, throttle: float) -> float:
         """
@@ -346,6 +363,9 @@ class Car:
         
         # Always apply angular damping for stability
         self._apply_angular_damping()
+        
+        # Apply banking forces if on a banked segment
+        self._apply_banking_forces()
         
         # Apply steering torque (separate from lateral grip forces)
         if abs(self.steering_angle) > MINIMUM_STEERING_THRESHOLD:
@@ -485,6 +505,65 @@ class Car:
         # This provides stability at all times, not just when steering
         damping_torque = -self.body.angularVelocity * CAR_MASS * STEERING_ANGULAR_DAMPING
         self.body.ApplyTorque(damping_torque, True)
+    
+    def _apply_banking_forces(self) -> None:
+        """Applies banking forces based on current track banking angle."""
+        # More strict validation to prevent unwanted forces from floating-point precision errors
+        if abs(self.current_banking_angle) < BANKING_MINIMUM_ANGLE_THRESHOLD:  # Skip if no banking
+            return
+        
+        # Get car's current velocity
+        velocity = self.body.linearVelocity
+        speed = velocity.length
+        
+        if speed < BANKING_MINIMUM_SPEED_THRESHOLD:  # Skip if too slow for banking to matter
+            return
+        
+        # Calculate banking force components
+        banking_angle_rad = math.radians(self.current_banking_angle)
+        
+        # Banking provides additional "downforce" that helps with cornering
+        # This simulates how banked surfaces redirect gravity to help hold the car
+        gravity_component = CAR_MASS * GRAVITY_ACCELERATION  # Weight of car
+        
+        # Normal force from banking (helps with traction)
+        normal_force_gain = gravity_component * math.sin(abs(banking_angle_rad))
+        
+        # Lateral component that assists cornering
+        lateral_assist = normal_force_gain * BANKING_LATERAL_ASSIST_FACTOR  # Configurable fraction of normal force
+        
+        # Early exit if lateral assist force is negligible to prevent tiny unwanted forces
+        if abs(lateral_assist) < 1.0:  # Less than 1N lateral force is negligible
+            return
+        
+        # Determine lateral force direction based on car's motion
+        if speed > BANKING_LATERAL_SPEED_THRESHOLD:  # Only apply if moving fast enough
+            # Normalize velocity manually since b2Vec2 doesn't have normalized() method
+            if speed > 0:
+                velocity_dir_x = velocity.x / speed
+                velocity_dir_y = velocity.y / speed
+            else:
+                velocity_dir_x = 1.0
+                velocity_dir_y = 0.0
+            
+            # Cross product gives perpendicular force direction
+            force_direction_x = -velocity_dir_y  # Perpendicular to velocity
+            force_direction_y = velocity_dir_x
+            
+            # Apply the banking assist force perpendicular to velocity
+            # This simulates how banking helps keep the car "stuck" to the track
+            banking_force = (
+                force_direction_x * lateral_assist * math.copysign(1.0, self.current_banking_angle),
+                force_direction_y * lateral_assist * math.copysign(1.0, self.current_banking_angle)
+            )
+            
+            # Debug logging (can be enabled for troubleshooting)
+            # if abs(self.current_banking_angle) > 0.1:  # Only log when banking is significant
+            #     print(f"[DEBUG] Banking force applied: angle={self.current_banking_angle:.2f}°, "
+            #           f"speed={speed:.1f}m/s, force=({banking_force[0]:.1f}, {banking_force[1]:.1f})N")
+            
+            # Apply the banking force at the car's center of mass
+            self.body.ApplyForceToCenter(banking_force, True)
     
     def _apply_steering_torque(self) -> None:
         """Applies steering torque for vehicle rotation, separate from lateral grip forces."""
@@ -830,6 +909,15 @@ class Car:
             self.body.angle,
             self.body.angularVelocity
         )
+        
+    def get_position(self) -> Tuple[float, float]:
+        """Gets the current position of the car.
+
+        Returns:
+            Tuple[float, float]: The current position (x, y) in meters.
+        """
+        position = self.body.position
+        return (position.x, position.y)
         
     def get_velocity_magnitude(self) -> float:
         """Gets the current speed of the car in m/s.

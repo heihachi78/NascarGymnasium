@@ -1,0 +1,8 @@
+WIDTH 25
+GRID
+STARTLINE
+STRAIGHT 200 0     # 200m straight with 5° banking
+LEFT 180 300 31    # 180° left turn, 300m radius, 15° banking
+STRAIGHT 400 0     # 400m straight with 8° banking
+LEFT 180 300 31    # 180° left turn, 300m radius, 15° banking
+STRAIGHT 95 0      # 95m straight with 5° banking

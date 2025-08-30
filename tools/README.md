@@ -105,11 +105,11 @@ Track files use a simple command-based format:
 WIDTH 25
 GRID
 STARTLINE  
-STRAIGHT 200
-LEFT 180 300    # 180° left turn, 300m radius
-STRAIGHT 400
-RIGHT 90 250    # 90° right turn, 250m radius
-STRAIGHT 95
+STRAIGHT 200 5      # 200m straight with 5° banking
+LEFT 180 300 15     # 180° left turn, 300m radius, 15° banking
+STRAIGHT 400 8      # 400m straight with 8° banking  
+RIGHT 90 250        # 90° right turn, 250m radius (no banking)
+STRAIGHT 95 5       # 95m straight with 5° banking
 ```
 
 ### Commands
@@ -117,9 +117,9 @@ STRAIGHT 95
 - `GRID` - Add grid/staging area
 - `STARTLINE` - Add start line
 - `FINISHLINE` - Add finish line (optional)
-- `STRAIGHT <length>` - Add straight segment
-- `LEFT <angle> <radius>` - Add left turn
-- `RIGHT <angle> <radius>` - Add right turn
+- `STRAIGHT <length> [banking]` - Add straight segment (optional banking in degrees)
+- `LEFT <angle> <radius> [banking]` - Add left turn (optional banking in degrees)
+- `RIGHT <angle> <radius> [banking]` - Add right turn (optional banking in degrees)
 
 ## Requirements
 

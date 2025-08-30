@@ -42,6 +42,12 @@ class TrackStatistics:
     max_curve_radius: float
     sharpest_turn_angle: float
     
+    # Banking analysis
+    banked_segments_count: int
+    average_banking_angle: float
+    max_banking_angle: float
+    min_banking_angle: float
+    
     # Track bounds
     track_bounds: Tuple[Tuple[float, float], Tuple[float, float]]
     track_area: float
@@ -98,6 +104,9 @@ class TrackAnalyzer:
         # Curve analysis
         curve_stats = self._analyze_curves(track)
         
+        # Banking analysis
+        banking_stats = self._analyze_banking(track)
+        
         # Track bounds and area
         bounds = track.get_track_bounds()
         area = self._calculate_track_area(track)
@@ -126,6 +135,12 @@ class TrackAnalyzer:
             min_curve_radius=curve_stats['min_radius'],
             max_curve_radius=curve_stats['max_radius'],
             sharpest_turn_angle=curve_stats['sharpest_angle'],
+            
+            # Banking analysis
+            banked_segments_count=banking_stats['banked_count'],
+            average_banking_angle=banking_stats['average_banking'],
+            max_banking_angle=banking_stats['max_banking'],
+            min_banking_angle=banking_stats['min_banking'],
             
             # Track bounds
             track_bounds=bounds,
@@ -193,6 +208,34 @@ class TrackAnalyzer:
             'min_radius': min(radii),
             'max_radius': max(radii),
             'sharpest_angle': max(angles)
+        }
+    
+    def _analyze_banking(self, track: Track) -> Dict[str, float]:
+        """Analyze banking characteristics."""
+        if not track.segments:
+            return {
+                'banked_count': 0,
+                'average_banking': 0.0,
+                'max_banking': 0.0,
+                'min_banking': 0.0
+            }
+        
+        banking_angles = [seg.banking_angle for seg in track.segments]
+        banked_segments = [angle for angle in banking_angles if abs(angle) > 0.1]
+        
+        if not banked_segments:
+            return {
+                'banked_count': 0,
+                'average_banking': 0.0,
+                'max_banking': 0.0,
+                'min_banking': 0.0
+            }
+        
+        return {
+            'banked_count': len(banked_segments),
+            'average_banking': sum(banked_segments) / len(banked_segments),
+            'max_banking': max(banked_segments),
+            'min_banking': min(banked_segments)
         }
     
     def _calculate_track_area(self, track: Track) -> float:
@@ -338,6 +381,14 @@ class TrackAnalyzer:
             report.append(f"  Average Radius: {stats.average_curve_radius:.1f} m")
             report.append(f"  Radius Range: {stats.min_curve_radius:.1f} - {stats.max_curve_radius:.1f} m")
             report.append(f"  Sharpest Turn: {stats.sharpest_turn_angle:.1f}°")
+            report.append("")
+        
+        # Banking Analysis
+        if stats.banked_segments_count > 0:
+            report.append("BANKING ANALYSIS:")
+            report.append(f"  Banked Segments: {stats.banked_segments_count}/{stats.segment_count}")
+            report.append(f"  Average Banking: {stats.average_banking_angle:.1f}°")
+            report.append(f"  Banking Range: {stats.min_banking_angle:.1f}° - {stats.max_banking_angle:.1f}°")
             report.append("")
         
         # Performance Estimates

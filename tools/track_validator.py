@@ -233,9 +233,9 @@ class TrackValidator:
                     warnings.append(f"Curve segment {i} has high turn rate: {turn_rate:.2f}°/m "
                                   f"(maximum recommended: {self.max_turn_rate}°/m)")
                 
-                # Suggest banking for high-speed turns
-                if seg.curve_radius > 200 and seg.curve_angle > 45:
-                    suggestions.append(f"Consider banking for high-speed turn at segment {i}")
+                # Suggest banking for high-speed turns (only if not already banked)
+                if seg.curve_radius > 200 and seg.curve_angle > 45 and abs(seg.banking_angle) < 1.0:
+                    suggestions.append(f"Consider banking for high-speed turn at segment {i} (suggested: {min(15, seg.curve_angle / 10):.1f}°)")
         
         # Check overall track characteristics
         total_curves = sum(1 for seg in track.segments if seg.segment_type == "CURVE")

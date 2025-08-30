@@ -25,6 +25,7 @@ class TrackSegment:
         curve_direction (str): The direction of the curve ("LEFT", "RIGHT", or "").
         start_heading (float): The starting direction of the segment in degrees.
         end_heading (float): The ending direction of the segment in degrees.
+        banking_angle (float): The banking angle of the segment in degrees (0 for flat, positive for banked inward).
     """
     segment_type: str  # "GRID", "STARTLINE", "STRAIGHT", "FINISHLINE", "CURVE"
     length: float
@@ -36,6 +37,7 @@ class TrackSegment:
     curve_direction: str = ""  # "LEFT", "RIGHT", or ""
     start_heading: float = 0.0  # Start direction in degrees
     end_heading: float = 0.0  # End direction in degrees
+    banking_angle: float = 0.0  # Banking angle in degrees (positive = banked inward)
 
 
 class Track:
@@ -61,7 +63,7 @@ class Track:
         self.current_position = (0.0, 0.0)
         self.current_heading = 0.0  # Track direction in degrees (0 = positive x)
     
-    def add_segment(self, segment_type: str, length: float, curve_angle: float = 0.0, curve_radius: float = 0.0, curve_direction: str = ""):
+    def add_segment(self, segment_type: str, length: float, curve_angle: float = 0.0, curve_radius: float = 0.0, curve_direction: str = "", banking_angle: float = 0.0):
         """Adds a new segment to the track.
 
         Args:
@@ -70,6 +72,7 @@ class Track:
             curve_angle (float): The angle of the curve in degrees (for curved segments).
             curve_radius (float): The radius of the curve in meters (for curved segments).
             curve_direction (str): The direction of the curve ("LEFT" or "RIGHT").
+            banking_angle (float): The banking angle in degrees (positive = banked inward).
         """
         start_pos = self.current_position
         start_heading = self.current_heading
@@ -96,7 +99,8 @@ class Track:
             curve_radius=curve_radius,
             curve_direction=curve_direction,
             start_heading=start_heading,
-            end_heading=end_heading
+            end_heading=end_heading,
+            banking_angle=banking_angle
         )
         
         self.segments.append(segment)
@@ -353,34 +357,45 @@ class TrackLoader:
                 track.add_segment("STARTLINE", STARTLINE_LENGTH)
                 
             elif command == "STRAIGHT":
-                if len(parts) != 2:
-                    raise ValueError(f"STRAIGHT command requires exactly one argument: {line}")
+                if len(parts) < 2 or len(parts) > 3:
+                    raise ValueError(f"STRAIGHT command requires 1-2 arguments (length [, banking]): {line}")
                 try:
                     length = float(parts[1])
-                    track.add_segment("STRAIGHT", length)
-                except ValueError:
-                    raise ValueError(f"Invalid straight length value: {parts[1]}")
+                    banking = float(parts[2]) if len(parts) == 3 else 0.0
+                    
+                    if banking < -45 or banking > 45:
+                        raise ValueError(f"Banking angle must be between -45 and 45 degrees: {banking}")
+                    
+                    track.add_segment("STRAIGHT", length, banking_angle=banking)
+                except ValueError as e:
+                    if "invalid literal" in str(e):
+                        raise ValueError(f"Invalid numeric values for STRAIGHT command: {parts[1:]}")
+                    else:
+                        raise
                     
             elif command == "FINISHLINE":
                 track.add_segment("FINISHLINE", FINISHLINE_LENGTH)
                 
             elif command in ["LEFT", "RIGHT"]:
-                if len(parts) != 3:
-                    raise ValueError(f"{command} command requires exactly two arguments (angle, radius): {line}")
+                if len(parts) < 3 or len(parts) > 4:
+                    raise ValueError(f"{command} command requires 2-3 arguments (angle, radius [, banking]): {line}")
                 try:
                     angle = float(parts[1])
                     radius = float(parts[2])
+                    banking = float(parts[3]) if len(parts) == 4 else 0.0
                     
                     # Validate parameters
                     if angle <= 0 or angle > 360:
                         raise ValueError(f"Curve angle must be between 0 and 360 degrees: {angle}")
                     if radius <= 0:
                         raise ValueError(f"Curve radius must be positive: {radius}")
+                    if banking < -45 or banking > 45:
+                        raise ValueError(f"Banking angle must be between -45 and 45 degrees: {banking}")
                     
-                    track.add_segment("CURVE", 0, curve_angle=angle, curve_radius=radius, curve_direction=command)
+                    track.add_segment("CURVE", 0, curve_angle=angle, curve_radius=radius, curve_direction=command, banking_angle=banking)
                 except ValueError as e:
                     if "invalid literal" in str(e):
-                        raise ValueError(f"Invalid numeric values for {command} command: {parts[1]}, {parts[2]}")
+                        raise ValueError(f"Invalid numeric values for {command} command: {parts[1:]}")
                     else:
                         raise
                 

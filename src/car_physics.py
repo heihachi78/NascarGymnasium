@@ -24,6 +24,8 @@ from .constants import (
     # Collision filtering constants
     COLLISION_CATEGORY_TRACK_WALLS,
     COLLISION_MASK_TRACK_WALLS,
+    # Collision threshold constants
+    COLLISION_FORCE_THRESHOLD,
     # Physics detail constants
     PHYSICS_CURVE_DEGREES_PER_SEGMENT,
     PHYSICS_CURVE_MIN_SEGMENTS,
@@ -359,6 +361,15 @@ class CarPhysics:
         # Step the physics world
         self.world.Step(dt, BOX2D_VELOCITY_ITERATIONS, BOX2D_POSITION_ITERATIONS)
         
+        # Update car with current track information (for banking forces)
+        # Only calculate banking if track has any banked segments to improve performance
+        if self.track and self._track_has_banking():
+            banking_angle = self.get_banking_angle_at_position(self.car.get_position())
+            self.car.set_current_banking_angle(banking_angle)
+        elif self.track:
+            # Set to 0.0 for flat tracks to ensure no residual banking values
+            self.car.set_current_banking_angle(0.0)
+        
         # Update performance tracking
         self.physics_steps += 1
         # Update FPS calculation every second worth of steps
@@ -389,7 +400,7 @@ class CarPhysics:
         # Get current collision impulse from listener
         current_impulse = self.collision_listener.get_car_collision_impulse(car_id)
         
-        if current_impulse < 50.0:  # Minimum threshold for significant collision
+        if current_impulse < COLLISION_FORCE_THRESHOLD:  # Minimum threshold for significant collision
             return (0.0, 0.0)
             
         # For angle, use the most recent collision data if available
@@ -660,6 +671,67 @@ class CarPhysics:
         except Exception as e:
             print(f"Warning: Error during reference cleanup: {e}")
             pass
+    
+    def get_banking_angle_at_position(self, position: Tuple[float, float]) -> float:
+        """
+        Determine the banking angle at a given position on the track.
+        
+        Args:
+            position: The (x, y) position to check
+            
+        Returns:
+            The banking angle in degrees at that position
+        """
+        if not self.track or not self.track.segments:
+            return 0.0
+        
+        # Find the closest track segment to the given position
+        min_distance = float('inf')
+        closest_segment = None
+        
+        car_x, car_y = position
+        
+        for segment in self.track.segments:
+            # Calculate distance to segment centerline
+            start_x, start_y = segment.start_position
+            end_x, end_y = segment.end_position
+            
+            # Distance from point to line segment
+            seg_len_sq = (end_x - start_x) ** 2 + (end_y - start_y) ** 2
+            if seg_len_sq == 0:
+                # Segment is a point
+                distance = math.sqrt((car_x - start_x) ** 2 + (car_y - start_y) ** 2)
+            else:
+                # Project point onto line segment
+                t = max(0, min(1, ((car_x - start_x) * (end_x - start_x) + 
+                                  (car_y - start_y) * (end_y - start_y)) / seg_len_sq))
+                proj_x = start_x + t * (end_x - start_x)
+                proj_y = start_y + t * (end_y - start_y)
+                distance = math.sqrt((car_x - proj_x) ** 2 + (car_y - proj_y) ** 2)
+            
+            if distance < min_distance:
+                min_distance = distance
+                closest_segment = segment
+        
+        return closest_segment.banking_angle if closest_segment else 0.0
+    
+    def _track_has_banking(self) -> bool:
+        """
+        Check if any track segment has banking to optimize performance.
+        
+        Returns:
+            True if any segment has significant banking, False otherwise.
+        """
+        if not self.track or not self.track.segments:
+            return False
+        
+        # Check if any segment has significant banking (> threshold)
+        from .constants import BANKING_MINIMUM_ANGLE_THRESHOLD
+        for segment in self.track.segments:
+            if abs(segment.banking_angle) >= BANKING_MINIMUM_ANGLE_THRESHOLD:
+                return True
+        
+        return False
 
 
 class CarCollisionListener(Box2D.b2ContactListener):

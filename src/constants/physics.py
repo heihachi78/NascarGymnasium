@@ -24,3 +24,10 @@ PHYSICS_CURVE_MAX_SEGMENTS = 180  # Maximum segments to prevent excessive detail
 # Physics Timing Constants
 MAX_PHYSICS_TIMESTEP = 1.0 / 30.0  # Maximum timestep to prevent instability (33.33ms)
 MIN_PHYSICS_TIMESTEP = 1.0 / 1000.0  # Minimum timestep to prevent division issues (1ms)
+
+# Banking Physics Constants
+BANKING_LATERAL_ASSIST_FACTOR = 0.3        # Fraction of normal force that becomes lateral assist (30%)
+BANKING_MINIMUM_ANGLE_THRESHOLD = 0.1      # Degrees - minimum banking angle to apply forces
+BANKING_MINIMUM_SPEED_THRESHOLD = 1.0      # m/s - minimum speed for banking effects
+BANKING_LATERAL_SPEED_THRESHOLD = 5.0      # m/s - minimum speed for lateral banking forces
+GRAVITY_ACCELERATION = 9.81                # m/s² - Earth's gravitational acceleration
