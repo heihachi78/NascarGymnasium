@@ -21,7 +21,7 @@ CAR_OBSERVATION_SHAPE = (22 + SENSOR_NUM_DIRECTIONS,)  # Total observation eleme
 
 # Observation bounds
 MAX_POSITION_VALUE = 10000.0  # maximum world position coordinate
-MAX_VELOCITY_VALUE = 200.0    # maximum velocity (m/s, well above max car speed)  
+MAX_VELOCITY_VALUE = 111.1    # maximum velocity (m/s, well above max car speed)  
 MAX_ANGULAR_VELOCITY = 10.0   # maximum angular velocity (rad/s)
 
 # Normalization factors for observation space

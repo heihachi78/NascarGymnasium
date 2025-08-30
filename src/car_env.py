@@ -614,10 +614,17 @@ class CarEnv(BaseEnv):
         terminated, truncated = self._check_multi_termination()
         infos = self._get_multi_info()
         
-        # Update observation history for visualization (for followed car)
-        if self.followed_car_index < len(observations):
-            followed_car_obs = observations[self.followed_car_index] if self.num_cars > 1 else observations
-            self.observation_visualizer.add_observation(followed_car_obs, self.simulation_time)
+        # Update observation history for visualization (for all cars)
+        if self.num_cars > 1:
+            # Multi-car: add observations for all cars
+            for car_id, obs in enumerate(observations):
+                self.observation_visualizer.add_observation(obs, self.simulation_time, car_id)
+        else:
+            # Single car: add observation for car 0
+            self.observation_visualizer.add_observation(observations, self.simulation_time, 0)
+        
+        # Set which car's data to display
+        self.observation_visualizer.set_displayed_car(self.followed_car_index)
         
         # Reset collision impulses after observations are gathered
         # This prevents double-counting while allowing observations to see current collisions
@@ -1123,6 +1130,9 @@ class CarEnv(BaseEnv):
                         old_car_index = self.followed_car_index
                         self.followed_car_index = key_index
                         logger.info(f"Switched from Car {old_car_index} to Car {key_index}")
+                        
+                        # Switch to display the new car's observation history
+                        self.observation_visualizer.set_displayed_car(key_index)
                         
                         # Update legacy car reference for backward compatibility
                         if self.cars and key_index < len(self.cars):

@@ -30,11 +30,12 @@ class ObservationVisualizerOptimized:
         self.graph_width = graph_width
         self.graph_height = graph_height
         
-        # Data storage - keep ALL observations from episode start (no rolling buffer)
-        self.observation_history = []  # Changed from deque to list to keep all data
-        self.time_history = []  # Changed from deque to list to keep all data
+        # Data storage - per-car observation histories
+        self.car_observation_histories = {}  # Dict[car_id, List[observation]]
+        self.car_time_histories = {}  # Dict[car_id, List[time]]
         self.max_display_points = history_length  # Still limit what we display for performance
         self.current_time = 0.0
+        self.current_car_id = 0  # Track which car's data to display
         
         # Graph categories and their observation indices
         self.graph_categories = {
@@ -84,17 +85,32 @@ class ObservationVisualizerOptimized:
         self.font = pygame.font.Font(None, 18)
         self.title_font = pygame.font.Font(None, 22)
         
-    def add_observation(self, observation: np.ndarray, time: float) -> None:
+    def add_observation(self, observation: np.ndarray, time: float, car_id: int = 0) -> None:
         """
-        Add a new observation to the history (keeps ALL data from episode start).
+        Add a new observation to the history for a specific car.
         
         Args:
             observation: Normalized observation array from car environment
             time: Current simulation time
+            car_id: ID of the car this observation belongs to
         """
-        self.observation_history.append(observation.copy())
-        self.time_history.append(time)
+        # Initialize history for this car if it doesn't exist
+        if car_id not in self.car_observation_histories:
+            self.car_observation_histories[car_id] = []
+            self.car_time_histories[car_id] = []
+        
+        self.car_observation_histories[car_id].append(observation.copy())
+        self.car_time_histories[car_id].append(time)
         self.current_time = time
+    
+    def set_displayed_car(self, car_id: int) -> None:
+        """
+        Set which car's observation history to display.
+        
+        Args:
+            car_id: ID of the car whose data should be displayed
+        """
+        self.current_car_id = car_id
         
     def _draw_graph_fast(self, surface: pygame.Surface, category_name: str, category_data: dict) -> None:
         """
@@ -108,9 +124,14 @@ class ObservationVisualizerOptimized:
         # Clear surface with dark background
         surface.fill((20, 20, 20))
         
-        if len(self.observation_history) < 2:
-            # Not enough data - show loading text
-            text = self.font.render("Collecting data...", True, (255, 255, 255))
+        # Get data for the current car
+        observation_history = self.car_observation_histories.get(self.current_car_id, [])
+        time_history = self.car_time_histories.get(self.current_car_id, [])
+        
+        if len(observation_history) < 2:
+            # Not enough data - show loading text with car info
+            car_text = f"Car {self.current_car_id}: Collecting data..."
+            text = self.font.render(car_text, True, (255, 255, 255))
             text_rect = text.get_rect(center=(self.graph_width//2, self.graph_height//2))
             surface.blit(text, text_rect)
             return
@@ -134,7 +155,7 @@ class ObservationVisualizerOptimized:
             return
         
         # Extract time data
-        times = np.array(list(self.time_history))
+        times = np.array(list(time_history))
         
         # Fix time range calculation - ensure we always show meaningful range
         if len(times) > 1:
@@ -156,7 +177,7 @@ class ObservationVisualizerOptimized:
             colors = colors[::4]
         
         # Intelligently sample data points if we have too many for good performance
-        total_points = len(self.observation_history)
+        total_points = len(observation_history)
         if total_points > self.max_display_points:
             # Sample evenly across the full timeline to show the complete episode
             step = total_points // self.max_display_points
@@ -170,7 +191,7 @@ class ObservationVisualizerOptimized:
 
         # Draw each data series
         for i, (obs_index, color) in enumerate(zip(indices, colors)):
-            if obs_index >= len(self.observation_history[0]):
+            if not observation_history or obs_index >= len(observation_history[0]):
                 continue
                 
             # Extract data for this observation component using sampled indices
@@ -178,7 +199,7 @@ class ObservationVisualizerOptimized:
             time_points = []
             
             for j in sample_indices:
-                obs = self.observation_history[j]
+                obs = observation_history[j]
                 if obs_index < len(obs):
                     data_points.append(obs[obs_index])
                     time_points.append(times[j])
@@ -242,6 +263,59 @@ class ObservationVisualizerOptimized:
         pygame.draw.line(surface, (80, 80, 80), 
                         (margin_left, center_y), 
                         (margin_left + graph_area_width, center_y), 1)
+        
+        # Draw legend if we have space and multiple data series
+        labels = category_data["labels"]
+        if len(indices) > 1 and self.graph_height > 200:  # Only show legend if graph is tall enough
+            self._draw_legend(surface, labels[:len(indices)], colors[:len(indices)])
+    
+    def _draw_legend(self, surface: pygame.Surface, labels: List[str], colors: List[Tuple[int, int, int]]) -> None:
+        """
+        Draw legend for the graph showing color-coded labels.
+        
+        Args:
+            surface: pygame Surface to draw on
+            labels: List of data series labels
+            colors: List of colors corresponding to each label
+        """
+        if not labels or not colors:
+            return
+        
+        # Legend positioning - bottom right corner of graph
+        legend_width = 150
+        legend_item_height = 16
+        legend_height = len(labels) * legend_item_height + 10
+        legend_x = self.graph_width - legend_width - 5
+        legend_y = self.graph_height - legend_height - 5
+        
+        # Don't draw legend if it would overlap with graph area too much
+        if legend_y < 50:
+            return
+        
+        # Draw legend background (semi-transparent dark background)
+        legend_bg = pygame.Surface((legend_width, legend_height))
+        legend_bg.set_alpha(180)
+        legend_bg.fill((0, 0, 0))
+        surface.blit(legend_bg, (legend_x, legend_y))
+        
+        # Draw legend border
+        pygame.draw.rect(surface, (100, 100, 100), 
+                        (legend_x, legend_y, legend_width, legend_height), 1)
+        
+        # Draw each legend item
+        for i, (label, color) in enumerate(zip(labels, colors)):
+            item_y = legend_y + 5 + i * legend_item_height
+            
+            # Draw color indicator (small line)
+            line_start_x = legend_x + 5
+            line_end_x = legend_x + 20
+            line_y = item_y + legend_item_height // 2
+            pygame.draw.line(surface, color, (line_start_x, line_y), (line_end_x, line_y), 3)
+            
+            # Draw label text (truncate if too long)
+            label_text = label[:18] + "..." if len(label) > 18 else label
+            text_surface = self.font.render(label_text, True, (255, 255, 255))
+            surface.blit(text_surface, (legend_x + 25, item_y))
             
     def update_graphs(self, screen_width: int = None, screen_height: int = None) -> None:
         """Update all graph surfaces with current data (throttled for performance)."""
@@ -269,7 +343,8 @@ class ObservationVisualizerOptimized:
     def _update_graph_sizes(self, screen_width: int, screen_height: int) -> None:
         """Update graph dimensions based on screen size and recreate surfaces."""
         # Recalculate optimal graph size for current screen
-        positions = self.get_layout_positions(screen_width, screen_height)
+        # This also updates self.graph_width and self.graph_height
+        self.get_layout_positions(screen_width, screen_height)
         
         # Recreate surfaces with new dimensions
         for category_name in self.graph_categories:
@@ -284,10 +359,24 @@ class ObservationVisualizerOptimized:
         """
         return self.graph_surfaces.copy()
         
-    def clear_history(self) -> None:
-        """Clear all observation history."""
-        self.observation_history.clear()
-        self.time_history.clear()
+    def clear_history(self, car_id: int = None) -> None:
+        """
+        Clear observation history for a specific car or all cars.
+        
+        Args:
+            car_id: ID of car to clear history for. If None, clears all cars.
+        """
+        if car_id is None:
+            # Clear all cars' histories
+            self.car_observation_histories.clear()
+            self.car_time_histories.clear()
+        else:
+            # Clear specific car's history
+            if car_id in self.car_observation_histories:
+                self.car_observation_histories[car_id].clear()
+            if car_id in self.car_time_histories:
+                self.car_time_histories[car_id].clear()
+        
         self.current_time = 0.0
         self.frame_counter = 0
         

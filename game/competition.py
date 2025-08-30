@@ -173,7 +173,7 @@ def main():
         track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -262,7 +262,7 @@ def main():
                 action = np.array(car_actions[0], dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
-            
+           
             # Update collision tracking using environment's accumulated damage system
             for car_idx in range(num_cars):
                 # Get accumulated damage from environment (single source of truth)
