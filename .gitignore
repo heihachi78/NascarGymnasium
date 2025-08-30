@@ -1,5 +1,7 @@
+.claude
 .venv
 .pytest_cache
+.vscode
 __pycache__
 CLAUDE.md
 GEMINI.md
