@@ -128,7 +128,7 @@ from .constants import (
 class Car:
     """Realistic car physics simulation with Box2D"""
     
-    def __init__(self, world: Box2D.b2World, start_position: Tuple[float, float] = (0.0, 0.0), start_angle: float = 0.0, car_id: str = "car"):
+    def __init__(self, world: Optional[Box2D.b2World], start_position: Tuple[float, float] = (0.0, 0.0), start_angle: float = 0.0, car_id: str = "car"):
         """
         Initialize car with Box2D physics.
         
@@ -172,7 +172,13 @@ class Car:
         self.lateral_force_magnitude = 0.0  # Total lateral force applied for slip correction
         self.slip_angle_degrees = 0.0  # Current slip angle between velocity and car orientation
         
-        # Create Box2D car body
+        if self.world:
+            # Create Box2D car body
+            self._create_car_body()
+
+    def set_world(self, world: Box2D.b2World):
+        """Set the Box2D world for the car and create the car body."""
+        self.world = world
         self._create_car_body()
         
     def _create_car_body(self) -> None:

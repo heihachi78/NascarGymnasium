@@ -11,6 +11,7 @@ import numpy as np
 import pygame
 from typing import Optional, Tuple, Dict, Any
 from .base_env import BaseEnv
+from .car import Car
 from .car_physics import CarPhysics
 from .collision import CollisionReporter
 from .track_generator import TrackLoader
@@ -126,7 +127,7 @@ class CarEnv(BaseEnv):
             self._load_track(track_file)
             
         # Create physics system
-        self.car_physics = CarPhysics(self.track)
+        self.car_physics_worlds = []
         self.cars = []   # List of all cars in the simulation
         
         # Collision system
@@ -187,7 +188,7 @@ class CarEnv(BaseEnv):
         # Reward display control
         self._show_reward = False
         self._current_reward = 0.0
-        self._cumulative_rewards = [0.0]  # Use array for consistency with multi-car
+        self._cumulative_rewards = [0.0] * self.num_cars # Use array for consistency with multi-car
         
         # Termination reason tracking
         self.termination_reason = None
@@ -245,10 +246,15 @@ class CarEnv(BaseEnv):
         # Create or reset cars
         if not self.cars:
             # Create multiple cars
-            self.cars = self.car_physics.create_cars(self.num_cars, self.start_position, self.start_angle)
+            for i in range(self.num_cars):
+                car = Car(world=None, start_position=self.start_position, start_angle=self.start_angle, car_id=f"car_{i}")
+                self.cars.append(car)
+                physics_world = CarPhysics(car, self.track)
+                self.car_physics_worlds.append(physics_world)
         else:
             # Reset existing cars
-            self.car_physics.reset_cars(self.start_position, self.start_angle)
+            for i in range(self.num_cars):
+                self.car_physics_worlds[i].reset_car(self.start_position, self.start_angle)
             
         # Reset systems
         self.collision_reporter.reset()
@@ -292,7 +298,7 @@ class CarEnv(BaseEnv):
         self._previous_car_position = {}
         if self.cars:
             for i in range(self.num_cars):
-                car_state = self.car_physics.get_car_state(i)
+                car_state = self.car_physics_worlds[i].get_car_state()
                 if car_state:
                     self._previous_car_position[i] = (car_state[0], car_state[1])
 
@@ -300,7 +306,7 @@ class CarEnv(BaseEnv):
         
         # Initialize position tracking for distance calculations
         if self.cars and len(self.cars) > 0:
-            car_state = self.car_physics.get_car_state(0)
+            car_state = self.car_physics_worlds[0].get_car_state()
             if car_state:
                 # Also update per-car position tracker for consistency
                 setattr(self, '_previous_car_position_0', (car_state[0], car_state[1]))
@@ -328,7 +334,7 @@ class CarEnv(BaseEnv):
         self._track_progress_history = []
         for car_index in range(self.num_cars):
             if car_index < len(self.cars):
-                car_state = self.car_physics.get_car_state(car_index)
+                car_state = self.car_physics_worlds[car_index].get_car_state()
                 if car_state:
                     current_position = (car_state[0], car_state[1])
                     initial_progress = self._calculate_track_progress(current_position)
@@ -416,84 +422,82 @@ class CarEnv(BaseEnv):
 
         # Fixed physics timestep (60Hz) - consistent across all modes
         physics_dt = 1.0 / 60.0
+        self.simulation_time += physics_dt
         
         # Always run exactly one physics step per env.step() call
         # This ensures 1:1 action-to-physics ratio regardless of rendering mode
-        self._run_single_physics_step(physics_actions, physics_dt)
+        for i in range(self.num_cars):
+            self._run_single_physics_step(i, physics_actions[i], physics_dt)
 
-    def _run_single_physics_step(self, physics_actions, dt):
+    def _run_single_physics_step(self, car_idx, physics_action, dt):
         """Run a single physics step with the given timestep"""
         
         # Update collision reporter time
         self.collision_reporter.update_time(self.simulation_time)
         
         # Perform physics step with given timestep
-        self.car_physics.step(physics_actions, dt)
-        
-        # Update simulation time
-        self.simulation_time += dt
+        self.car_physics_worlds[car_idx].step(physics_action, dt)
         
         # Accumulate collision impacts and stuck durations for each car during physics steps only
-        for car_idx in range(self.num_cars):
-            if car_idx not in self.disabled_cars:
-                # Check collision impulse for this car using continuous collision data
-                collision_impulse = self.car_physics.get_continuous_collision_impulse(car_idx)
+        if car_idx not in self.disabled_cars:
+            # Check collision impulse for this car using continuous collision data
+            collision_impulse = self.car_physics_worlds[car_idx].get_continuous_collision_impulse()
+            
+            # Accumulate impact force for this car (only when above threshold)
+            if collision_impulse > COLLISION_FORCE_THRESHOLD:
+                self.total_impact_force_for_info[car_idx] += collision_impulse * dt
+            
+            # Check for instant disable on severe single impact
+            if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
+                if car_idx not in self.disabled_cars:
+                    self.disabled_cars.add(car_idx)
+                    if not hasattr(self, '_just_disabled_cars'):
+                        self._just_disabled_cars = set()
+                    self._just_disabled_cars.add(car_idx)
+                    car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
+                    print(f"🚫 {car_name} disabled due to CATASTROPHIC IMPACT ({collision_impulse:.0f} N⋅s > {INSTANT_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+            
+            # Track cumulative collision impacts for gradual disabling
+            if collision_impulse > 0:
+                if car_idx not in self.cumulative_collision_impacts:
+                    self.cumulative_collision_impacts[car_idx] = 0.0
+                self.cumulative_collision_impacts[car_idx] += collision_impulse * dt
                 
-                # Accumulate impact force for this car (only when above threshold)
-                if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                    self.total_impact_force_for_info[car_idx] += collision_impulse * dt
-                
-                # Check for instant disable on severe single impact
-                if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
+                # Check for cumulative disable threshold
+                if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
                     if car_idx not in self.disabled_cars:
                         self.disabled_cars.add(car_idx)
                         if not hasattr(self, '_just_disabled_cars'):
                             self._just_disabled_cars = set()
                         self._just_disabled_cars.add(car_idx)
                         car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
-                        print(f"🚫 {car_name} disabled due to CATASTROPHIC IMPACT ({collision_impulse:.0f} N⋅s > {INSTANT_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+                        print(f"🚫 {car_name} disabled due to ACCUMULATED DAMAGE ({self.cumulative_collision_impacts[car_idx]:.0f} N⋅s > {CUMULATIVE_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+            
+            # Update stuck duration tracking during physics steps only
+            if car_idx < len(self.cars) and self.cars[car_idx]:
+                car = self.cars[car_idx]
+                speed = car.get_velocity_magnitude()
                 
-                # Track cumulative collision impacts for gradual disabling
-                if collision_impulse > 0:
-                    if car_idx not in self.cumulative_collision_impacts:
-                        self.cumulative_collision_impacts[car_idx] = 0.0
-                    self.cumulative_collision_impacts[car_idx] += collision_impulse * dt
-                    
-                    # Check for cumulative disable threshold
-                    if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
-                        if car_idx not in self.disabled_cars:
-                            self.disabled_cars.add(car_idx)
-                            if not hasattr(self, '_just_disabled_cars'):
-                                self._just_disabled_cars = set()
-                            self._just_disabled_cars.add(car_idx)
-                            car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
-                            print(f"🚫 {car_name} disabled due to ACCUMULATED DAMAGE ({self.cumulative_collision_impacts[car_idx]:.0f} N⋅s > {CUMULATIVE_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+                # Initialize stuck duration tracking if needed
+                stuck_duration_attr = f'_stuck_duration_{car_idx}'
+                if not hasattr(self, stuck_duration_attr):
+                    setattr(self, stuck_duration_attr, 0.0)
                 
-                # Update stuck duration tracking during physics steps only
-                if car_idx < len(self.cars) and self.cars[car_idx]:
-                    car = self.cars[car_idx]
-                    speed = car.get_velocity_magnitude()
-                    
-                    # Initialize stuck duration tracking if needed
-                    stuck_duration_attr = f'_stuck_duration_{car_idx}'
-                    if not hasattr(self, stuck_duration_attr):
-                        setattr(self, stuck_duration_attr, 0.0)
-                    
-                    # Check if car is moving slowly and accumulate stuck duration
-                    if speed < STUCK_SPEED_THRESHOLD:
-                        prev_stuck_duration = getattr(self, stuck_duration_attr)
-                        current_stuck_duration = prev_stuck_duration + dt  # Use physics dt, not frame dt
-                        setattr(self, stuck_duration_attr, current_stuck_duration)
-                    else:
-                        # Reset stuck duration if car is moving fast enough
-                        setattr(self, stuck_duration_attr, 0.0)
-                        # Also reset the stuck start position and printed flag
-                        stuck_start_pos_attr = f'_stuck_start_position_{car_idx}'
-                        stuck_printed_attr = f'_stuck_printed_{car_idx}'
-                        if hasattr(self, stuck_start_pos_attr):
-                            setattr(self, stuck_start_pos_attr, None)
-                        if hasattr(self, stuck_printed_attr):
-                            setattr(self, stuck_printed_attr, False)
+                # Check if car is moving slowly and accumulate stuck duration
+                if speed < STUCK_SPEED_THRESHOLD:
+                    prev_stuck_duration = getattr(self, stuck_duration_attr)
+                    current_stuck_duration = prev_stuck_duration + dt  # Use physics dt, not frame dt
+                    setattr(self, stuck_duration_attr, current_stuck_duration)
+                else:
+                    # Reset stuck duration if car is moving fast enough
+                    setattr(self, stuck_duration_attr, 0.0)
+                    # Also reset the stuck start position and printed flag
+                    stuck_start_pos_attr = f'_stuck_start_position_{car_idx}'
+                    stuck_printed_attr = f'_stuck_printed_{car_idx}'
+                    if hasattr(self, stuck_start_pos_attr):
+                        setattr(self, stuck_start_pos_attr, None)
+                    if hasattr(self, stuck_printed_attr):
+                        setattr(self, stuck_printed_attr, False)
         
         # Update episode stats tracking during physics steps only (for followed car)
         if hasattr(self, 'episode_stats') and self.followed_car_index < len(self.cars):
@@ -505,7 +509,7 @@ class CarEnv(BaseEnv):
                 self.episode_stats["distance_traveled"] += speed * dt
                 
                 # Track time on track
-                if self.car_physics.is_car_on_track(self.followed_car_index):
+                if self.car_physics_worlds[self.followed_car_index].is_car_on_track():
                     self.episode_stats["time_on_track"] += dt
                     
                 # Check for collisions using physics dt
@@ -514,27 +518,25 @@ class CarEnv(BaseEnv):
         
         # Update survival time tracking during physics steps only
         if hasattr(self, '_survival_time'):
-            for car_index in range(self.num_cars):
-                if car_index not in self.disabled_cars and car_index < len(self._survival_time):
-                    self._survival_time[car_index] += dt
+            if car_idx not in self.disabled_cars and car_idx < len(self._survival_time):
+                self._survival_time[car_idx] += dt
         
         # Update lap timers for all cars
-        for car_index in range(len(self.cars)):
-            if car_index < len(self.car_lap_timers):
-                car_state = self.car_physics.get_car_state(car_index)
-                if car_state:
-                    car_position = (car_state[0], car_state[1])  # x, y position
+        if car_idx < len(self.car_lap_timers):
+            car_state = self.car_physics_worlds[car_idx].get_car_state()
+            if car_state:
+                car_position = (car_state[0], car_state[1])  # x, y position
+                
+                # Update this car's lap timer with simulation time
+                lap_timer = self.car_lap_timers[car_idx]
+                lap_completed = lap_timer.update(car_position, self.simulation_time)
+                
+                if lap_completed:
+                    logger.info(f"Car {car_idx} lap completed! Time: {lap_timer.format_time(lap_timer.get_last_lap_time())}")
                     
-                    # Update this car's lap timer with simulation time
-                    lap_timer = self.car_lap_timers[car_index]
-                    lap_completed = lap_timer.update(car_position, self.simulation_time)
-                    
-                    if lap_completed:
-                        logger.info(f"Car {car_index} lap completed! Time: {lap_timer.format_time(lap_timer.get_last_lap_time())}")
-                        
-                        # Mark reset as pending if reset_on_lap is enabled and this is the followed car
-                        if self.reset_on_lap and car_index == self.followed_car_index:
-                            self._lap_reset_pending = True
+                    # Mark reset as pending if reset_on_lap is enabled and this is the followed car
+                    if self.reset_on_lap and car_idx == self.followed_car_index:
+                        self._lap_reset_pending = True
         
     def step(self, action):
         """
@@ -607,7 +609,8 @@ class CarEnv(BaseEnv):
         self._check_and_disable_cars()
         
         # Update physics system with disabled cars info (to suppress collision messages)
-        self.car_physics.set_disabled_cars(self.disabled_cars)
+        for i in range(self.num_cars):
+            self.car_physics_worlds[i].set_disabled_cars(self.disabled_cars)
         
         # Update episode statistics (for followed car)
         self._update_episode_stats()
@@ -675,7 +678,7 @@ class CarEnv(BaseEnv):
                 # Track position when stuck detection starts (only for slow cars)
                 if speed < STUCK_SPEED_THRESHOLD and current_stuck_duration > 0:
                     # Get current car position
-                    car_state = self.car_physics.get_car_state(car_idx)
+                    car_state = self.car_physics_worlds[car_idx].get_car_state()
                     current_position = (car_state[0], car_state[1]) if car_state else (0, 0)
                     
                     # Save starting position when stuck detection begins
@@ -735,7 +738,7 @@ class CarEnv(BaseEnv):
         for car_index in range(self.num_cars):
             if car_index < len(self.cars) and self.cars[car_index]:
                 # Get car state
-                car_state = self.car_physics.get_car_state(car_index)
+                car_state = self.car_physics_worlds[car_index].get_car_state()
                 if car_state:
                     pos_x, pos_y, vel_x, vel_y, orientation, angular_vel = car_state
                     
@@ -750,14 +753,14 @@ class CarEnv(BaseEnv):
                     norm_angular_vel = np.clip(angular_vel / NORM_MAX_ANGULAR_VEL, -1.0, 1.0)
                     
                     # Get tyre data
-                    tyre_data = self.car_physics.get_tyre_data(car_index)
+                    tyre_data = self.car_physics_worlds[car_index].get_tyre_data()
                     tyre_loads, tyre_temps, tyre_wear = tyre_data
                     norm_tyre_loads = [np.clip(load / NORM_MAX_TYRE_LOAD, 0.0, 1.0) for load in tyre_loads]
                     norm_tyre_temps = [np.clip(temp / NORM_MAX_TYRE_TEMP, 0.0, 1.0) for temp in tyre_temps]
                     norm_tyre_wear = [np.clip(wear / NORM_MAX_TYRE_WEAR, 0.0, 1.0) for wear in tyre_wear]
                     
                     # Get collision data (simplified for multi-car)
-                    collision_impulse, collision_angle = self.car_physics.get_collision_data(car_index)
+                    collision_impulse, collision_angle = self.car_physics_worlds[car_index].get_collision_data()
                     norm_collision_impulse = np.clip(collision_impulse / INSTANT_DISABLE_IMPACT_THRESHOLD, 0.0, 1.0)
                     norm_collision_angle = np.clip(collision_angle / np.pi, -1.0, 1.0)
                     
@@ -766,7 +769,7 @@ class CarEnv(BaseEnv):
                     cumulative_impact_percentage = np.clip(cumulative_impact / CUMULATIVE_DISABLE_IMPACT_THRESHOLD, 0.0, 1.0)
                     
                     # Get sensor distances
-                    world = self.car_physics.world if self.car_physics else None
+                    world = self.car_physics_worlds[car_index].world
                     sensor_distances = self.distance_sensor.get_sensor_distances(
                         world, (pos_x, pos_y), orientation
                     )
@@ -841,7 +844,7 @@ class CarEnv(BaseEnv):
                 # Wall collision penalty based on accumulated impulse ratio
                 if car_index not in self.disabled_cars:
                     # Get collision impulse for this car
-                    collision_impulse = self.car_physics.get_continuous_collision_impulse(car_index)
+                    collision_impulse = self.car_physics_worlds[car_index].get_continuous_collision_impulse()
                     # Get accumulated impulse for this car (if tracked)
                     if hasattr(self, 'cumulative_collision_impacts') and car_index in self.cumulative_collision_impacts:
                         accumulated_impulse = self.cumulative_collision_impacts[car_index]
@@ -853,7 +856,7 @@ class CarEnv(BaseEnv):
                             reward -= collision_penalty
                 
                 # Distance reward (track per car if needed)
-                car_state = self.car_physics.get_car_state(car_index)
+                car_state = self.car_physics_worlds[car_index].get_car_state()
                 if car_state:
                     current_position = (car_state[0], car_state[1])
                     
@@ -1018,14 +1021,14 @@ class CarEnv(BaseEnv):
             
             if car_index < len(self.cars) and self.cars[car_index]:
                 car = self.cars[car_index]
-                car_state = self.car_physics.get_car_state(car_index)
+                car_state = self.car_physics_worlds[car_index].get_car_state()
                 
                 if car_state:
                     car_info.update({
                         "car_position": (car_state[0], car_state[1]),
                         "car_speed_kmh": car.get_velocity_kmh(),
                         "car_speed_ms": car.get_velocity_magnitude(),
-                        "on_track": self.car_physics.is_car_on_track(car_index),
+                        "on_track": self.car_physics_worlds[car_index].is_car_on_track(),
                     })
                 
                 # Add performance info
@@ -1062,8 +1065,7 @@ class CarEnv(BaseEnv):
             car_infos.append(car_info)
         
         # Create single info dictionary following Gymnasium standard
-        collision_stats = self.collision_reporter.get_collision_statistics()
-        physics_stats = self.car_physics.get_performance_stats()
+        physics_stats = [p.get_performance_stats() for p in self.car_physics_worlds]
         
         info = {
             "simulation_time": self.simulation_time,
@@ -1071,7 +1073,6 @@ class CarEnv(BaseEnv):
             "followed_car_index": self.followed_car_index,
             "termination_reason": self.termination_reason,
             "cars": car_infos,  # All per-car info nested here
-            "collisions": collision_stats,
             "physics": physics_stats,
         }
         
@@ -1146,7 +1147,7 @@ class CarEnv(BaseEnv):
             if self.cars:
                 for i, car in enumerate(self.cars):
                     if car:
-                        car_state = self.car_physics.get_car_state(i)
+                        car_state = self.car_physics_worlds[i].get_car_state()
                         if car_state:
                             car_data = {
                                 'position': (car_state[0], car_state[1]),
@@ -1174,7 +1175,7 @@ class CarEnv(BaseEnv):
                 if self.num_cars == 1:
                     # Current followed car
                     current_reward = self._current_reward
-                    cumulative_reward = self._cumulative_reward
+                    cumulative_reward = self._cumulative_rewards[self.followed_car_index]
                 else:
                     # Multi-car mode - get followed car's rewards
                     current_reward = 0.0
@@ -1241,7 +1242,10 @@ class CarEnv(BaseEnv):
         
     def is_position_on_track(self, position: Tuple[float, float]) -> bool:
         """Check if position is on track (for compatibility)"""
-        return self.car_physics._is_position_on_track(position) if self.car_physics else True
+        # This method is problematic with multiple worlds. For now, just check the first world.
+        if self.car_physics_worlds:
+            return self.car_physics_worlds[0]._is_position_on_track(position)
+        return True
         
     def close(self) -> None:
         """Clean up environment resources safely to prevent segfaults"""
@@ -1259,13 +1263,13 @@ class CarEnv(BaseEnv):
         
         # Step 2: Clean up physics world (most critical for segfault prevention)
         try:
-            if hasattr(self, 'car_physics') and self.car_physics and time.time() - cleanup_start < CLEANUP_TIMEOUT:
-                self.car_physics.cleanup()
-                self.car_physics = None
+            for world in self.car_physics_worlds:
+                world.cleanup()
+            self.car_physics_worlds = []
         except Exception as e:
             logger.warning(f"Error cleaning up physics: {e}")
             # Force clear reference to prevent further access
-            self.car_physics = None
+            self.car_physics_worlds = []
         
         # Step 3: Clean up other resources with timeout protection
         try:
@@ -1312,7 +1316,7 @@ class CarEnv(BaseEnv):
             if not car or car_index in self.disabled_cars:
                 continue
                 
-            car_state = self.car_physics.get_car_state(car_index)
+            car_state = self.car_physics_worlds[car_index].get_car_state()
             if not car_state:
                 continue
                 
@@ -1485,7 +1489,7 @@ class CarEnv(BaseEnv):
         tyre_pressures = followed_car.tyre_manager.get_tyre_pressures()
         
         # Sensor data
-        world = self.car_physics.world if self.car_physics else None
+        world = self.car_physics_worlds[self.followed_car_index].world
         sensor_distances = self.distance_sensor.get_sensor_distances(
             world, (car_position.x, car_position.y), car_angle
         )

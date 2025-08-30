@@ -96,6 +96,15 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -161,7 +170,7 @@ def main():
         track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -254,7 +263,7 @@ def main():
             # Collect raw physics collision data each timestep
             for car_idx in range(num_cars):
                 # Get current collision impulse directly from physics
-                collision_impulse = env.car_physics.get_continuous_collision_impulse(car_idx)
+                collision_impulse = env.car_physics_worlds[car_idx].get_continuous_collision_impulse()
                 
                 if collision_impulse > 0:
                     # Count this as a collision event

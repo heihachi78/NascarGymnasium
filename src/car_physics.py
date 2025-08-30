@@ -44,15 +44,20 @@ class CollisionData:
 class CarPhysics:
     """Complete physics simulation with car dynamics and track collision detection"""
     
-    def __init__(self, track: Optional[Track] = None):
+    def __init__(self, car: Car, track: Optional[Track] = None):
         """
-        Initialize car physics system.
+        Initialize car physics system for a single car.
         
         Args:
+            car: The car instance to be managed by this physics world.
             track: Track for collision detection (optional)
         """
         # Create Box2D world
         self.world = Box2D.b2World(gravity=(0, 0))  # Top-down view, no gravity
+        
+        # Assign the car to this physics world
+        self.car = car
+        self.car.set_world(self.world)
         
         # Track integration - walls created directly in our world
         self.track = track
@@ -64,10 +69,6 @@ class CarPhysics:
             # Create track walls directly in our physics world
             self._create_track_walls()
         
-        # Car instances (support for multiple cars)
-        self.car = None  # Legacy single car reference (for backward compatibility)
-        self.cars = []  # List of all cars in the simulation
-        
         # Collision tracking
         self.collision_listener = CarCollisionListener(self)
         self.world.contactListener = self.collision_listener
@@ -77,60 +78,7 @@ class CarPhysics:
         self.physics_steps = 0
         self.average_fps = 60.0
         self.last_fps_update_time = 0.0
-        
-    def create_car(self, start_position: Tuple[float, float] = (0.0, 0.0), 
-                   start_angle: float = 0.0) -> Car:
-        """
-        Create a car in the physics world (legacy single-car method).
-        
-        Args:
-            start_position: Initial position (x, y) in meters
-            start_angle: Initial orientation in radians
-            
-        Returns:
-            Car instance
-        """
-        if self.car is not None:
-            # Remove existing car
-            self.world.DestroyBody(self.car.body)
-            
-        self.car = Car(self.world, start_position, start_angle, "car_0")
-        self.cars = [self.car]  # Update cars list for compatibility
-        return self.car
-    
-    def create_cars(self, num_cars: int, start_position: Tuple[float, float] = (0.0, 0.0), 
-                    start_angle: float = 0.0) -> List[Car]:
-        """
-        Create multiple cars in the physics world at the same starting position.
-        
-        Args:
-            num_cars: Number of cars to create (1-10)
-            start_position: Initial position (x, y) in meters for all cars
-            start_angle: Initial orientation in radians for all cars
-            
-        Returns:
-            List of Car instances
-        """
-        from .constants import MAX_CARS
-        
-        if num_cars < 1 or num_cars > MAX_CARS:
-            raise ValueError(f"Number of cars must be between 1 and {MAX_CARS}")
-        
-        # Clear existing cars
-        self.clear_cars()
-        
-        # Create new cars
-        self.cars = []
-        for i in range(num_cars):
-            # All cars start at exactly the same position
-            car = Car(self.world, start_position, start_angle, f"car_{i}")
-            self.cars.append(car)
-        
-        # Set first car as legacy reference
-        self.car = self.cars[0] if self.cars else None
-        
-        return self.cars
-    
+
     def set_disabled_cars(self, disabled_cars: set) -> None:
         """
         Update the set of disabled cars to suppress collision messages.
@@ -139,28 +87,7 @@ class CarPhysics:
             disabled_cars: Set of car indices that are disabled
         """
         self.disabled_cars = disabled_cars.copy()
-    
-    def clear_cars(self) -> None:
-        """
-        Remove all cars from the physics world.
-        """
-        # Check if world is locked first
-        if hasattr(self.world, 'IsLocked') and self.world.IsLocked():
-            return
-            
-        for car in self.cars:
-            if car and hasattr(car, 'body') and car.body:
-                try:
-                    # Check if body is still valid before destroying
-                    if car.body in self.world.bodies:
-                        self.world.DestroyBody(car.body)
-                    car.body = None  # Clear reference
-                except:
-                    pass  # Body may already be destroyed
-        
-        self.cars = []
-        self.car = None
-        
+
     def _create_track_walls(self) -> None:
         """Create track collision walls directly in our physics world"""
         if not self.track:
@@ -354,51 +281,28 @@ class CarPhysics:
         
         return body
         
-    def step(self, actions, dt: float = BOX2D_TIME_STEP) -> None:
+    def step(self, action, dt: float = BOX2D_TIME_STEP) -> None:
         """
-        Perform one physics simulation step with multi-car actions.
+        Perform one physics simulation step.
         
         Args:
-            actions: Either single action (throttle, brake, steering) for backward compatibility
-                    or array of actions [(throttle, brake, steering), ...] for multi-car
+            action: (throttle, brake, steering)
             dt: Time step in seconds
         """
-        if not self.cars:
-            raise ValueError("No cars created. Call create_cars() or create_car() first.")
+        if not self.car:
+            raise ValueError("No car created. Call create_car() or create_cars() first.")
 
-        # Reset collision impulses for all cars
-        for car in self.cars:
-            if car:
-                car_id = car.car_id
-                self.collision_listener.car_collision_impulses[car_id] = 0.0
+        # Reset collision impulses for the car
+        car_id = self.car.car_id
+        self.collision_listener.car_collision_impulses[car_id] = 0.0
             
         # Note: simulation_time is updated in car_env.py to avoid double increment
         
-        # Handle both single action and multi-action formats
-        if isinstance(actions, (list, tuple)) and len(actions) == 3 and isinstance(actions[0], (int, float)):
-            # Single action format for backward compatibility
-            throttle, brake, steering = actions
-            if len(self.cars) > 0 and self.cars[0]:
-                self.cars[0].set_inputs(throttle, brake, steering)
-        else:
-            # Multi-action format: apply each action to corresponding car
-            if hasattr(actions, 'shape') and len(actions.shape) == 2:
-                # NumPy array format: (num_cars, 3)
-                for i, car in enumerate(self.cars):
-                    if car and i < len(actions):
-                        throttle, brake, steering = actions[i]
-                        car.set_inputs(float(throttle), float(brake), float(steering))
-            else:
-                # List/tuple format: [(throttle, brake, steering), ...]
-                for i, car in enumerate(self.cars):
-                    if car and i < len(actions):
-                        throttle, brake, steering = actions[i]
-                        car.set_inputs(float(throttle), float(brake), float(steering))
+        throttle, brake, steering = action
+        self.car.set_inputs(float(throttle), float(brake), float(steering))
         
-        # Update physics for all cars
-        for car in self.cars:
-            if car:
-                car.update_physics(dt)
+        # Update physics for the car
+        self.car.update_physics(dt)
         
         # Step the physics world
         self.world.Step(dt, BOX2D_VELOCITY_ITERATIONS, BOX2D_POSITION_ITERATIONS)
@@ -415,26 +319,19 @@ class CarPhysics:
                 self.average_fps = 60.0
             self.last_fps_update_time = self.simulation_time
     
-    def get_collision_data(self, car_index: int = 0) -> Tuple[float, float]:
+    def get_collision_data(self) -> Tuple[float, float]:
         """
         Get current collision data for environment observation.
         Now returns CURRENT collision state, not just recent history.
         
-        Args:
-            car_index: Index of the car (0-based)
-        
         Returns:
             Tuple of (collision_impulse, collision_angle_relative_to_car)
         """
-        if not self.cars or car_index < 0 or car_index >= len(self.cars):
-            return (0.0, 0.0)
-            
-        car = self.cars[car_index]
-        if not car:
+        if not self.car:
             return (0.0, 0.0)
             
         # Get car ID for this index
-        car_id = f"car_{car_index}"
+        car_id = self.car.car_id
         
         # Get current collision impulse from listener
         current_impulse = self.collision_listener.get_car_collision_impulse(car_id)
@@ -447,7 +344,7 @@ class CarPhysics:
         for key, collision_data in self.collision_listener.active_collisions.items():
             if key[0] == car_id:
                 # Calculate collision angle relative to car
-                car_angle = car.body.angle
+                car_angle = self.car.body.angle
                 collision_normal = collision_data.normal
                 
                 normal_angle = math.atan2(collision_normal[1], collision_normal[0])
@@ -462,43 +359,36 @@ class CarPhysics:
             
         return (current_impulse, collision_angle)
     
-    def get_continuous_collision_impulse(self, car_index: int = 0) -> float:
+    def get_continuous_collision_impulse(self) -> float:
         """
         Get the current collision impulse for a car (for continuous penalty calculation).
-        
-        Args:
-            car_index: Index of the car (0-based)
         
         Returns:
             Current collision impulse (0 if no collision)
         """
-        if not self.cars or car_index < 0 or car_index >= len(self.cars):
+        if not self.car:
             return 0.0
             
         # Get car ID for this index
-        car_id = f"car_{car_index}"
+        car_id = self.car.car_id
         
         # Get current collision impulse from listener
         return self.collision_listener.get_car_collision_impulse(car_id)
         
-    def is_car_on_track(self, car_index: int = 0) -> bool:
+    def is_car_on_track(self) -> bool:
         """
         Check if specified car is currently on track.
-        
-        Args:
-            car_index: Index of the car (0-based)
         
         Returns:
             True if car is on track, False otherwise
         """
-        if not self.cars or car_index < 0 or car_index >= len(self.cars) or not self.track:
+        if not self.track:
             return True  # No track means always "on track"
             
-        car = self.cars[car_index]
-        if not car:
+        if not self.car:
             return True
             
-        car_position = car.body.position
+        car_position = self.car.body.position
         return self._is_position_on_track((car_position.x, car_position.y))
         
     def _is_position_on_track(self, position: Tuple[float, float]) -> bool:
@@ -553,72 +443,37 @@ class CarPhysics:
         
         return callback.hit
         
-    def get_car_state(self, car_index: int = 0) -> Optional[Tuple[float, float, float, float, float, float]]:
+    def get_car_state(self) -> Optional[Tuple[float, float, float, float, float, float]]:
         """
         Get current car state for specified car.
-        
-        Args:
-            car_index: Index of the car (0-based)
             
         Returns:
             Car state tuple or None if car doesn't exist
         """
-        if not self.cars or car_index < 0 or car_index >= len(self.cars):
+        if not self.car:
             return None
             
-        car = self.cars[car_index]
-        if not car:
-            return None
-            
-        return car.get_state()
+        return self.car.get_state()
         
-    def get_tyre_data(self, car_index: int = 0) -> Optional[Tuple]:
+    def get_tyre_data(self) -> Optional[Tuple]:
         """
         Get tyre data from specified car.
         
-        Args:
-            car_index: Index of the car (0-based)
-            
         Returns:
             Tyre data tuple or None if car doesn't exist
         """
-        if not self.cars or car_index < 0 or car_index >= len(self.cars):
+        if not self.car:
             return None
             
-        car = self.cars[car_index]
-        if not car:
-            return None
-            
-        return car.get_tyre_data()
+        return self.car.get_tyre_data()
         
     def reset_car(self, position: Tuple[float, float] = (0.0, 0.0), angle: float = 0.0) -> None:
-        """Reset car to specified position and angle (legacy single-car method)"""
+        """Reset car to specified position and angle"""
         if self.car:
             self.car.body.position = position
             self.car.body.angle = angle
             self.car.reset()
             
-        # Clear collision tracking
-        if hasattr(self, 'collision_listener') and self.collision_listener:
-            self.collision_listener.active_collisions.clear()
-            self.collision_listener.car_collision_impulses.clear()
-        self.simulation_time = 0.0
-    
-    def reset_cars(self, position: Tuple[float, float] = (0.0, 0.0), angle: float = 0.0) -> None:
-        """
-        Reset all cars to the same starting position and angle.
-        
-        Args:
-            position: Reset position (x, y) in meters for all cars
-            angle: Reset orientation in radians for all cars
-        """
-        for car in self.cars:
-            if car:
-                # All cars reset to exactly the same position
-                car.body.position = position
-                car.body.angle = angle
-                car.reset()
-        
         # Clear collision tracking
         if hasattr(self, 'collision_listener') and self.collision_listener:
             self.collision_listener.active_collisions.clear()
@@ -668,7 +523,14 @@ class CarPhysics:
             
             # Clean up all cars first
             if time.time() - cleanup_start < CLEANUP_TIMEOUT:
-                self.clear_cars()
+                if self.car and hasattr(self.car, 'body') and self.car.body:
+                    try:
+                        # Check if body is still valid before destroying
+                        if self.car.body in self.world.bodies:
+                            self.world.DestroyBody(self.car.body)
+                        self.car.body = None  # Clear reference
+                    except:
+                        pass  # Body may already be destroyed
             
             # Clean up wall bodies
             if hasattr(self, 'wall_bodies') and time.time() - cleanup_start < CLEANUP_TIMEOUT:
@@ -712,8 +574,6 @@ class CarPhysics:
     def _clear_references_only(self):
         """Emergency cleanup that only clears references without destroying Box2D objects"""
         try:
-            if hasattr(self, 'cars'):
-                self.cars.clear()
             if hasattr(self, 'wall_bodies'):
                 self.wall_bodies.clear()
             if hasattr(self, 'collision_listener'):
@@ -770,7 +630,7 @@ class CarCollisionListener(Box2D.b2ContactListener):
                 if bodyA.userData and bodyA.userData.get("type") == "track_wall":
                     wall_body = bodyA
                     # Use a stable wall identifier based on position
-                    pos = wall_body.position
+                    pos = bodyA.position
                     wall_id = f"wall_{pos.x:.1f}_{pos.y:.1f}"
             
             if car_body is None or wall_body is None:
