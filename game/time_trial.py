@@ -94,8 +94,12 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B-1"),
+        ("game/control/models/a2c_best_model.zip", "A2C-B-2"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2-1"),
+        ("game/control/models/a2c_best_model2.zip", "A2C-B2-2"),
+        (None, "RB-1"),
+        (None, "RB-2"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
@@ -143,14 +147,21 @@ def main():
                 print(f"   ✓ Model loaded successfully")
             else:
                 print(f"   ⚠ Using fallback control")
-        else:
-            # Default to TD3 for backward compatibility
+        elif "td3" in model_path.lower():
             print(f"   → Loading TD3 model: {model_path}")
             controller = TD3Controller(model_path, name)
             controllers.append(controller)
             info = controller.get_info()
             if info['model_loaded']:
                 print(f"   ✓ Model loaded successfully")
+            else:
+                print(f"   ⚠ Using fallback control")
+        else:
+            controller = BaseController(model_path, name)
+            controllers.append(controller)
+            info = controller.get_info()
+            if info['model_loaded']:
+                print(f"   ✓ Base control")
             else:
                 print(f"   ⚠ Using fallback control")
     

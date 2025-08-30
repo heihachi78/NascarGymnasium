@@ -188,7 +188,7 @@ class CarEnv(BaseEnv):
         # Reward display control
         self._show_reward = False
         self._current_reward = 0.0
-        self._cumulative_rewards = [0.0] * self.num_cars # Use array for consistency with multi-car
+        self._cumulative_rewards = [0.0]  # Use array for consistency with multi-car
         
         # Termination reason tracking
         self.termination_reason = None
@@ -294,22 +294,11 @@ class CarEnv(BaseEnv):
         self._previous_lap_count = [0] * self.num_cars
         
         # Reset distance tracking for rewards (use followed car)
-        # IMPORTANT: Always initialize _previous_car_position properly for both single and multi-car modes
         self._previous_car_position = {}
         if self.cars:
             for i in range(self.num_cars):
                 car_state = self.car_physics_worlds[i].get_car_state()
-                if car_state:
-                    self._previous_car_position[i] = (car_state[0], car_state[1])
-
-
-        
-        # Initialize position tracking for distance calculations
-        if self.cars and len(self.cars) > 0:
-            car_state = self.car_physics_worlds[0].get_car_state()
-            if car_state:
-                # Also update per-car position tracker for consistency
-                setattr(self, '_previous_car_position_0', (car_state[0], car_state[1]))
+                self._previous_car_position[i] = (car_state[0], car_state[1]) if car_state else None
         
         # Reset collision penalty tracking
         self._last_penalized_collision_time = -float('inf')
@@ -343,12 +332,6 @@ class CarEnv(BaseEnv):
                     self._track_progress_history.append(0.0)
             else:
                 self._track_progress_history.append(0.0)
-        
-        # Reset per-car collision tracking and lap count tracking
-        for car_index in range(self.num_cars):
-            setattr(self, f'_last_penalized_collision_time_{car_index}', -float('inf'))
-            setattr(self, f'_previous_car_position_{car_index}', None)
-            setattr(self, f'_previous_lap_count_{car_index}', 0)
         
         # Reset stuck detection state for all cars (both single and multi-car modes)
         for car_index in range(self.num_cars):
@@ -422,19 +405,23 @@ class CarEnv(BaseEnv):
 
         # Fixed physics timestep (60Hz) - consistent across all modes
         physics_dt = 1.0 / 60.0
-        self.simulation_time += physics_dt
+        
+        # Update collision reporter time once for this step
+        self.collision_reporter.update_time(self.simulation_time)
         
         # Always run exactly one physics step per env.step() call
         # This ensures 1:1 action-to-physics ratio regardless of rendering mode
         for i in range(self.num_cars):
+            # Update physics world time before stepping
+            self.car_physics_worlds[i].simulation_time = self.simulation_time
             self._run_single_physics_step(i, physics_actions[i], physics_dt)
+            
+        # Increment simulation time once per step, after all physics worlds have been stepped
+        self.simulation_time += physics_dt
 
     def _run_single_physics_step(self, car_idx, physics_action, dt):
         """Run a single physics step with the given timestep"""
-        
-        # Update collision reporter time
-        self.collision_reporter.update_time(self.simulation_time)
-        
+                
         # Perform physics step with given timestep
         self.car_physics_worlds[car_idx].step(physics_action, dt)
         
@@ -445,7 +432,7 @@ class CarEnv(BaseEnv):
             
             # Accumulate impact force for this car (only when above threshold)
             if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.total_impact_force_for_info[car_idx] += collision_impulse * dt
+                self.total_impact_force_for_info[car_idx] += collision_impulse
             
             # Check for instant disable on severe single impact
             if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
@@ -461,7 +448,7 @@ class CarEnv(BaseEnv):
             if collision_impulse > 0:
                 if car_idx not in self.cumulative_collision_impacts:
                     self.cumulative_collision_impacts[car_idx] = 0.0
-                self.cumulative_collision_impacts[car_idx] += collision_impulse * dt
+                self.cumulative_collision_impacts[car_idx] += collision_impulse
                 
                 # Check for cumulative disable threshold
                 if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
@@ -860,16 +847,14 @@ class CarEnv(BaseEnv):
                 if car_state:
                     current_position = (car_state[0], car_state[1])
                     
-                    # For simplicity, calculate distance from last position if we had one
-                    # (In full implementation, you'd track previous positions per car)
-                    if self._previous_car_position[car_index]:
-                        prev_pos = self._previous_car_position[car_index]
-                        if prev_pos:
-                            dx = current_position[0] - prev_pos[0]
-                            dy = current_position[1] - prev_pos[1]
-                            distance = (dx**2 + dy**2)**0.5
-                            reward += distance * REWARD_DISTANCE_MULTIPLIER
-                    
+                    # Calculate distance from last position
+                    prev_pos = self._previous_car_position.get(car_index)
+                    if prev_pos:
+                        dx = current_position[0] - prev_pos[0]
+                        dy = current_position[1] - prev_pos[1]
+                        distance = (dx**2 + dy**2)**0.5
+                        reward += distance * REWARD_DISTANCE_MULTIPLIER
+
                     # Update previous position for this car
                     self._previous_car_position[car_index] = current_position
                     
@@ -1171,23 +1156,16 @@ class CarEnv(BaseEnv):
             # Prepare reward info if display is enabled
             reward_info = None
             if self._show_reward:
-                # Get reward for the currently followed car
-                if self.num_cars == 1:
-                    # Current followed car
-                    current_reward = self._current_reward
+                current_reward = 0.0
+                cumulative_reward = 0.0
+                
+                # Get current reward from last step if available
+                if hasattr(self, '_last_rewards') and self._last_rewards is not None and self.followed_car_index < len(self._last_rewards):
+                    current_reward = self._last_rewards[self.followed_car_index]
+                
+                # Get cumulative reward for followed car
+                if hasattr(self, '_cumulative_rewards') and self._cumulative_rewards is not None and self.followed_car_index < len(self._cumulative_rewards):
                     cumulative_reward = self._cumulative_rewards[self.followed_car_index]
-                else:
-                    # Multi-car mode - get followed car's rewards
-                    current_reward = 0.0
-                    cumulative_reward = 0.0
-                    
-                    # Get current reward from last step if available
-                    if hasattr(self, '_last_rewards') and self._last_rewards is not None and self.followed_car_index < len(self._last_rewards):
-                        current_reward = self._last_rewards[self.followed_car_index]
-                    
-                    # Get cumulative reward for followed car
-                    if hasattr(self, '_cumulative_rewards') and self._cumulative_rewards is not None and self.followed_car_index < len(self._cumulative_rewards):
-                        cumulative_reward = self._cumulative_rewards[self.followed_car_index]
                 
                 reward_info = {
                     'current_reward': current_reward,
