@@ -95,6 +95,7 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
+        ("game/control/models/a2c_best_model4.zip", "A2C-B4"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B3"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
         ("game/control/models/a2c_best_model.zip", "A2C-B"),
