@@ -10,11 +10,11 @@ COLLISION_MASK_CARS = 0x0001              # Cars only collide with track walls (
 
 # Box2D Physics Constants
 BOX2D_WALL_DENSITY = 0.0  # Density for track wall fixtures
-BOX2D_WALL_FRICTION = 0.5  # Friction for track wall fixtures (reduced from 0.8 to prevent sticking)
+BOX2D_WALL_FRICTION = 0.333  # Friction for track wall fixtures (reduced from 0.8 to prevent sticking)
 BOX2D_WALL_RESTITUTION = 0.25  # Restitution (bounciness) for track wall fixtures (increased from 0.2 for better bounce-off)
 BOX2D_TIME_STEP = 1.0/DEFAULT_RENDER_FPS  # Physics simulation time step (auto-calculated)
 BOX2D_VELOCITY_ITERATIONS = 6  # Box2D velocity constraint solver iterations
-BOX2D_POSITION_ITERATIONS = 2  # Box2D position constraint solver iterations
+BOX2D_POSITION_ITERATIONS = 4  # Box2D position constraint solver iterations (increased for better stability)
 
 # Box2D Physics Detail Constants
 PHYSICS_CURVE_DEGREES_PER_SEGMENT = 1.0  # Degrees per physics wall segment (lower = more detail)

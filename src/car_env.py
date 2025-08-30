@@ -41,6 +41,7 @@ from .constants import (
     REWARD_FAST_LAP_BONUS,
     PENALTY_PER_STEP,
     PENALTY_WALL_COLLISION_PER_STEP,
+    PENALTY_DISABLED,
     # Collision constants
     COLLISION_FORCE_THRESHOLD,
     INSTANT_DISABLE_IMPACT_THRESHOLD,
@@ -166,6 +167,7 @@ class CarEnv(BaseEnv):
         
         # Track disabled cars (for multi-car collision handling)
         self.disabled_cars = set()  # Set of car indices that are disabled due to collisions
+        self._just_disabled_cars = set() # Set of car indices that were just disabled in the current step
         
         
         # Track cumulative collision impacts for new disabling features
@@ -357,8 +359,7 @@ class CarEnv(BaseEnv):
                 setattr(self, collision_duration_attr, 0.0)
         
         # Reset just disabled cars tracking
-        if hasattr(self, '_just_disabled_cars'):
-            self._just_disabled_cars.clear()
+        self._just_disabled_cars.clear()
         
         # Reset termination reason
         self.termination_reason = None
@@ -442,8 +443,7 @@ class CarEnv(BaseEnv):
             if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
                 if car_idx not in self.disabled_cars:
                     self.disabled_cars.add(car_idx)
-                    if not hasattr(self, '_just_disabled_cars'):
-                        self._just_disabled_cars = set()
+                    
                     self._just_disabled_cars.add(car_idx)
                     car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
                     print(f"🚫 {car_name} disabled due to CATASTROPHIC IMPACT ({collision_impulse:.0f} N⋅s > {INSTANT_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
@@ -454,15 +454,14 @@ class CarEnv(BaseEnv):
                     self.cumulative_collision_impacts[car_idx] = 0.0
                 self.cumulative_collision_impacts[car_idx] += collision_impulse
                 
-                # Check for cumulative disable threshold
-                if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
-                    if car_idx not in self.disabled_cars:
-                        self.disabled_cars.add(car_idx)
-                        if not hasattr(self, '_just_disabled_cars'):
-                            self._just_disabled_cars = set()
-                        self._just_disabled_cars.add(car_idx)
-                        car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
-                        print(f"🚫 {car_name} disabled due to ACCUMULATED DAMAGE ({self.cumulative_collision_impacts[car_idx]:.0f} N⋅s > {CUMULATIVE_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
+            # Check for cumulative disable threshold
+            if self.cumulative_collision_impacts[car_idx] > CUMULATIVE_DISABLE_IMPACT_THRESHOLD:
+                if car_idx not in self.disabled_cars:
+                    self.disabled_cars.add(car_idx)
+                    
+                    self._just_disabled_cars.add(car_idx)
+                    car_name = self.car_names[car_idx] if car_idx < len(self.car_names) else f"Car {car_idx}"
+                    print(f"🚫 {car_name} disabled due to ACCUMULATED DAMAGE ({self.cumulative_collision_impacts[car_idx]:.0f} N⋅s > {CUMULATIVE_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
             
             # Update stuck duration tracking during physics steps only
             if car_idx < len(self.cars) and self.cars[car_idx]:
@@ -647,6 +646,9 @@ class CarEnv(BaseEnv):
             self._lap_reset_pending = False
             terminated = True
         
+        # Clear the set of just disabled cars for the next timestep
+        self._just_disabled_cars.clear()
+
         # For single-car environments, return scalars to maintain Gymnasium compatibility
         if self.num_cars == 1:
             return observations[0], rewards[0], terminated, truncated, infos
@@ -658,10 +660,6 @@ class CarEnv(BaseEnv):
         # Apply stuck detection for all environments (single-car and multi-car)
         
         # Track cars disabled in this timestep for final penalty application
-        if not hasattr(self, '_just_disabled_cars'):
-            self._just_disabled_cars = set()
-        else:
-            self._just_disabled_cars.clear()
             
         for car_idx in range(self.num_cars):
             if car_idx in self.disabled_cars:
@@ -841,12 +839,15 @@ class CarEnv(BaseEnv):
                 # Calculate reward even for disabled cars (to apply final collision penalty)
                 # but only for the timestep they were disabled
                 car_just_disabled = hasattr(self, '_just_disabled_cars') and car_index in getattr(self, '_just_disabled_cars', set())
-                
+
                 if car_index in self.disabled_cars and not car_just_disabled:
                     rewards.append(0.0)
                     continue
-                    
-                reward = 0.0
+                
+                if car_just_disabled:
+                    reward = -PENALTY_DISABLED
+                else:
+                    reward = 0.0
                 
                 # Apply per-step penalty to encourage speed
                 if car_index not in self.disabled_cars:
