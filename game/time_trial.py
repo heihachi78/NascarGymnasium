@@ -101,6 +101,7 @@ def main():
         ("game/control/models/a2c_best_model.zip", "A2C-B"),
         ("game/control/models/td3_best_model.zip", "TD3-B"),
         (None, "RB"),
+        (None, "RB"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
