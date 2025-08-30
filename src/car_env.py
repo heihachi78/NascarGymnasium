@@ -166,8 +166,6 @@ class CarEnv(BaseEnv):
         # Track disabled cars (for multi-car collision handling)
         self.disabled_cars = set()  # Set of car indices that are disabled due to collisions
         
-        # Track cumulative impact force for each car during the entire run
-        self.total_impact_force_for_info = []  # List of total impact forces for info reporting - no decay
         
         # Track cumulative collision impacts for new disabling features
         self.cumulative_collision_impacts = {}  # Dict of car_index -> total accumulated collision impulse
@@ -281,8 +279,6 @@ class CarEnv(BaseEnv):
         self.disabled_cars.clear()
         
         # Reset cumulative impact force tracking for all cars
-        # Reset cumulative impact force for info reporting (no decay)
-        self.total_impact_force_for_info = [0.0] * self.num_cars
         
         # Reset cumulative collision impacts for new disabling features
         self.cumulative_collision_impacts = {i: 0.0 for i in range(self.num_cars)}
@@ -430,9 +426,9 @@ class CarEnv(BaseEnv):
             # Check collision impulse for this car using continuous collision data
             collision_impulse = self.car_physics_worlds[car_idx].get_continuous_collision_impulse()
             
-            # Accumulate impact force for this car (only when above threshold)
-            if collision_impulse > COLLISION_FORCE_THRESHOLD:
-                self.total_impact_force_for_info[car_idx] += collision_impulse
+            # Note: Collision impulse reset moved to after observations are gathered
+            # This ensures observations can see current collision impulses
+            
             
             # Check for instant disable on severe single impact
             if collision_impulse > INSTANT_DISABLE_IMPACT_THRESHOLD:
@@ -445,7 +441,7 @@ class CarEnv(BaseEnv):
                     print(f"🚫 {car_name} disabled due to CATASTROPHIC IMPACT ({collision_impulse:.0f} N⋅s > {INSTANT_DISABLE_IMPACT_THRESHOLD:.0f} N⋅s)")
             
             # Track cumulative collision impacts for gradual disabling
-            if collision_impulse > 0:
+            if collision_impulse > COLLISION_FORCE_THRESHOLD:
                 if car_idx not in self.cumulative_collision_impacts:
                     self.cumulative_collision_impacts[car_idx] = 0.0
                 self.cumulative_collision_impacts[car_idx] += collision_impulse
@@ -607,6 +603,14 @@ class CarEnv(BaseEnv):
         rewards = self._calculate_multi_rewards()
         terminated, truncated = self._check_multi_termination()
         infos = self._get_multi_info()
+        
+        # Reset collision impulses after observations are gathered
+        # This prevents double-counting while allowing observations to see current collisions
+        for car_idx in range(self.num_cars):
+            if car_idx < len(self.cars) and self.cars[car_idx]:
+                car_id = self.cars[car_idx].car_id
+                physics_world = self.car_physics_worlds[car_idx]
+                physics_world.collision_listener.car_collision_impulses[car_id] = 0.0
         
         # Store last rewards for display purposes
         self._last_rewards = rewards
@@ -832,15 +836,10 @@ class CarEnv(BaseEnv):
                 if car_index not in self.disabled_cars:
                     # Get collision impulse for this car
                     collision_impulse = self.car_physics_worlds[car_index].get_continuous_collision_impulse()
-                    # Get accumulated impulse for this car (if tracked)
-                    if hasattr(self, 'cumulative_collision_impacts') and car_index in self.cumulative_collision_impacts:
-                        accumulated_impulse = self.cumulative_collision_impacts[car_index]
-                        # Calculate damage ratio (0 to 1 scale)
-                        #damage_ratio = min(accumulated_impulse / CUMULATIVE_DISABLE_IMPACT_THRESHOLD, 1.0)
-                        # Apply penalty proportional to damage ratio
-                        if collision_impulse > 0:
-                            collision_penalty = PENALTY_WALL_COLLISION_PER_STEP
-                            reward -= collision_penalty
+                    # Apply penalty for current collision
+                    if collision_impulse > 0:
+                        collision_penalty = PENALTY_WALL_COLLISION_PER_STEP
+                        reward -= collision_penalty
                 
                 # Distance reward (track per car if needed)
                 car_state = self.car_physics_worlds[car_index].get_car_state()
@@ -1031,8 +1030,8 @@ class CarEnv(BaseEnv):
                     car_info["cumulative_reward"] = self._cumulative_rewards[car_index]
                 
                 # Add cumulative collision force for this car
-                if hasattr(self, 'total_impact_force_for_info') and car_index < len(self.total_impact_force_for_info):
-                    car_info["cumulative_impact_force"] = self.total_impact_force_for_info[car_index]
+                if hasattr(self, 'cumulative_collision_impacts') and car_index in self.cumulative_collision_impacts:
+                    car_info["cumulative_impact_force"] = self.cumulative_collision_impacts[car_index]
                 
             else:
                 # Car doesn't exist
@@ -1475,7 +1474,7 @@ class CarEnv(BaseEnv):
         
         # Cumulative impact data
         cumulative_impact = self.cumulative_collision_impacts.get(self.followed_car_index, 0.0)
-        cumulative_impact_percentage = cumulative_impact / CUMULATIVE_DISABLE_IMPACT_THRESHOLD
+        cumulative_impact_percentage = np.clip(cumulative_impact / CUMULATIVE_DISABLE_IMPACT_THRESHOLD, 0.0, 1.0)
         
         return {
             'car_position': (car_position.x, car_position.y),

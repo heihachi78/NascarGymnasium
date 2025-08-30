@@ -16,7 +16,7 @@ SENSOR_ANGLE_STEP = 360.0 / SENSOR_NUM_DIRECTIONS  # Degrees between sensors (36
 #                      tyre_wear_fl, tyre_wear_fr, tyre_wear_rl, tyre_wear_rr,
 #                      collision_impulse, collision_angle_relative,
 #                      cumulative_impact_percentage,
-#                      sensor_dist_0, sensor_dist_1, ..., sensor_dist_7]
+#                      sensor_dist_0, sensor_dist_1, ..., sensor_dist_15]
 CAR_OBSERVATION_SHAPE = (22 + SENSOR_NUM_DIRECTIONS,)  # Total observation elements (22 + sensor distances)
 
 # Observation bounds

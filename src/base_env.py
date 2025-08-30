@@ -21,7 +21,9 @@ from .constants import (
     DEFAULT_TRUNCATED,
     # Normalization constants
     NORM_MAX_TYRE_LOAD,
-    NORM_MAX_TYRE_TEMP
+    NORM_MAX_TYRE_TEMP,
+    # Sensor constants
+    SENSOR_NUM_DIRECTIONS
 )
 
 
@@ -129,8 +131,8 @@ class BaseEnv(gym.Env):
         #  tyre_load_fl, tyre_load_fr, tyre_load_rl, tyre_load_rr,
         #  tyre_temp_fl, tyre_temp_fr, tyre_temp_rl, tyre_temp_rr, 
         #  tyre_wear_fl, tyre_wear_fr, tyre_wear_rl, tyre_wear_rr,
-        #  collision_impulse, collision_angle_relative,
-        #  sensor_dist_0, sensor_dist_1, ..., sensor_dist_7]
+        #  collision_impulse, collision_angle_relative, cumulative_impact_percentage,
+        #  sensor_dist_0, sensor_dist_1, ..., sensor_dist_15]
         
         # Initialize with normalized default values (will be replaced by actual car physics)
         static_load = CAR_MASS * GRAVITY_MS2 / 4.0  # Equal weight distribution
@@ -148,7 +150,8 @@ class BaseEnv(gym.Env):
             normalized_start_temp, normalized_start_temp,  # normalized start temperatures
             0.0, 0.0, 0.0, 0.0,  # no tyre wear initially (normalized to [0, 1])
             0.0, 0.0,   # no collision initially (normalized)
-            1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0  # normalized sensor distances (1.0 = max range)
+            0.0,        # no cumulative impact initially (normalized to [0, 1])
+            *[1.0] * SENSOR_NUM_DIRECTIONS  # normalized sensor distances (1.0 = max range)
         ], dtype=np.float32)
         
         return observation

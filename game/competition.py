@@ -96,14 +96,6 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
-        ("game/control/models/a2c_best_model.zip", "A2C-B"),
-        (None, "RB"),
-        (None, "RB"),
-        (None, "RB"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -265,10 +257,18 @@ def main():
                 action = np.array(car_actions[0], dtype=np.float32)
             
             obs, reward, terminated, truncated, info = env.step(action)
+
+            print(obs)
             
-            # Collect raw physics collision data each timestep
+            # Update collision tracking using environment's accumulated damage system
             for car_idx in range(num_cars):
-                # Get current collision impulse directly from physics
+                # Get accumulated damage from environment (single source of truth)
+                if hasattr(env, 'cumulative_collision_impacts') and car_idx in env.cumulative_collision_impacts:
+                    accumulated_damage = env.cumulative_collision_impacts[car_idx]
+                    # Use environment's accumulated damage as total impulse
+                    physics_total_impulses[car_idx] = accumulated_damage
+                
+                # Track current collision impulse for event counting and max tracking
                 collision_impulse = env.car_physics_worlds[car_idx].get_continuous_collision_impulse()
                 
                 if collision_impulse > 0:
@@ -277,9 +277,6 @@ def main():
                     
                     # Update maximum impulse seen
                     physics_max_impulses[car_idx] = max(physics_max_impulses[car_idx], collision_impulse)
-                    
-                    # Add to total impulse sum
-                    physics_total_impulses[car_idx] += collision_impulse
                     
                     # Store event for detailed statistics (keep last 1000 events to prevent memory issues)
                     physics_collision_events[car_idx].append(collision_impulse)

@@ -1,9 +1,9 @@
 """
-Distance sensor implementation for 8-directional boundary detection.
+Distance sensor implementation for multi-directional boundary detection.
 
 This module provides the DistanceSensor class which uses Box2D raycasting
-to detect distances from the car center to track boundaries in 8 directions
-relative to the car's orientation.
+to detect distances from the car center to track boundaries in multiple directions
+relative to the car's orientation (configurable via SENSOR_NUM_DIRECTIONS constant).
 """
 
 import math
@@ -43,7 +43,7 @@ class DistanceSensorCallback(Box2D.b2RayCastCallback):
 
 
 class DistanceSensor:
-    """8-directional distance sensor for track boundary detection"""
+    """Multi-directional distance sensor for track boundary detection"""
     
     def __init__(self):
         """Initialize distance sensor"""
@@ -53,7 +53,7 @@ class DistanceSensor:
                            car_position: Tuple[float, float], 
                            car_angle: float) -> np.ndarray:
         """
-        Get distances to track boundaries in 8 directions relative to car orientation.
+        Get distances to track boundaries in multiple directions relative to car orientation.
         
         Args:
             world: Box2D world containing track walls
@@ -61,7 +61,8 @@ class DistanceSensor:
             car_angle: Car orientation in radians
             
         Returns:
-            numpy array of 8 distances in meters, starting from car front clockwise
+            numpy array of distances in meters (count determined by SENSOR_NUM_DIRECTIONS), 
+            starting from car front clockwise
         """
         if world is None:
             # No track - return max distances

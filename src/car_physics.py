@@ -292,9 +292,7 @@ class CarPhysics:
         if not self.car:
             raise ValueError("No car created. Call create_car() or create_cars() first.")
 
-        # Reset collision impulses for the car
-        car_id = self.car.car_id
-        self.collision_listener.car_collision_impulses[car_id] = 0.0
+        # Collision impulses are now reset by the environment after consumption
             
         # Note: simulation_time is updated in car_env.py to avoid double increment
         
