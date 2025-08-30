@@ -17,21 +17,28 @@ from .constants import (
 
 
 class TrackBoundary:
-    """Calculates track boundaries from centerline"""
+    """Calculates track boundaries from centerline.
+
+    This class generates the left and right boundaries of a track based on a
+    given centerline and track width. It also includes methods for smoothing
+    corners and validating the generated polygons.
+    """
     
     def __init__(self):
+        """Initializes the TrackBoundary."""
         self.centerline_generator = CenterlineGenerator()
     
     def generate_boundaries(self, centerline: List[Tuple[float, float]], track_width: float) -> Tuple[List[Tuple[float, float]], List[Tuple[float, float]]]:
         """
-        Generate left and right track boundaries from centerline.
+        Generates left and right track boundaries from a centerline.
         
         Args:
-            centerline: List of centerline points
-            track_width: Width of the track
+            centerline (List[Tuple[float, float]]): A list of centerline points.
+            track_width (float): The width of the track.
             
         Returns:
-            Tuple of (left_boundary, right_boundary) point lists
+            Tuple[List[Tuple[float, float]], List[Tuple[float, float]]]: A tuple containing
+            two lists of points: (left_boundary, right_boundary).
         """
         if len(centerline) < 2:
             return [], []
@@ -68,27 +75,27 @@ class TrackBoundary:
     
     def _get_normal_vector(self, tangent: Tuple[float, float]) -> Tuple[float, float]:
         """
-        Calculate normal (perpendicular) vector from tangent.
+        Calculates the normal (perpendicular) vector from a tangent vector.
         
         Args:
-            tangent: Normalized tangent vector (dx, dy)
+            tangent (Tuple[float, float]): The normalized tangent vector (dx, dy).
             
         Returns:
-            Normal vector pointing to the left of the tangent
+            Tuple[float, float]: The normal vector pointing to the left of the tangent.
         """
         # Rotate tangent 90 degrees counterclockwise to get left normal
         return (-tangent[1], tangent[0])
     
     def _smooth_boundary_corners(self, boundary: List[Tuple[float, float]], max_angle: float = BOUNDARY_SMOOTHING_MAX_ANGLE) -> List[Tuple[float, float]]:
         """
-        Smooth sharp corners in boundary to prevent self-intersections.
+        Smooths sharp corners in a boundary to prevent self-intersections.
         
         Args:
-            boundary: Input boundary points
-            max_angle: Maximum angle before smoothing kicks in (degrees)
+            boundary (List[Tuple[float, float]]): The input boundary points.
+            max_angle (float): The maximum angle (in degrees) before smoothing kicks in.
             
         Returns:
-            Smoothed boundary points
+            List[Tuple[float, float]]: The smoothed boundary points.
         """
         if len(boundary) < 3:
             return boundary
@@ -127,10 +134,15 @@ class TrackBoundary:
     
     def _calculate_angle(self, p1: Tuple[float, float], p2: Tuple[float, float], p3: Tuple[float, float]) -> float:
         """
-        Calculate angle at p2 formed by p1-p2-p3.
+        Calculates the angle at point p2 formed by the line segments p1-p2 and p2-p3.
         
+        Args:
+            p1 (Tuple[float, float]): The first point.
+            p2 (Tuple[float, float]): The second (middle) point.
+            p3 (Tuple[float, float]): The third point.
+            
         Returns:
-            Angle in radians (0 to π)
+            float: The angle in radians (0 to π).
         """
         # Vectors from p2 to p1 and p2 to p3
         v1 = (p1[0] - p2[0], p1[1] - p2[1])
@@ -152,14 +164,14 @@ class TrackBoundary:
     
     def create_track_polygon(self, left_boundary: List[Tuple[float, float]], right_boundary: List[Tuple[float, float]]) -> List[Tuple[float, float]]:
         """
-        Create a single polygon from left and right boundaries.
+        Creates a single polygon from the left and right boundaries.
         
         Args:
-            left_boundary: Points forming left edge of track
-            right_boundary: Points forming right edge of track
+            left_boundary (List[Tuple[float, float]]): Points forming the left edge of the track.
+            right_boundary (List[Tuple[float, float]]): Points forming the right edge of the track.
             
         Returns:
-            Polygon points suitable for pygame.draw.polygon()
+            List[Tuple[float, float]]: Polygon points suitable for pygame.draw.polygon().
         """
         if not left_boundary or not right_boundary:
             return []
@@ -177,13 +189,13 @@ class TrackBoundary:
     
     def validate_polygon(self, polygon: List[Tuple[float, float]]) -> bool:
         """
-        Validate that polygon is suitable for rendering.
+        Validates that a polygon is suitable for rendering.
         
         Args:
-            polygon: Polygon points to validate
+            polygon (List[Tuple[float, float]]): Polygon points to validate.
             
         Returns:
-            True if polygon is valid for rendering
+            bool: True if the polygon is valid for rendering, False otherwise.
         """
         if len(polygon) < 3:
             return False
@@ -201,11 +213,27 @@ class TrackBoundary:
         return True
     
     def _points_equal(self, p1: Tuple[float, float], p2: Tuple[float, float], tolerance: float = BOUNDARY_POINTS_EQUAL_TOLERANCE) -> bool:
-        """Check if two points are equal within tolerance"""
+        """Checks if two points are equal within a given tolerance.
+
+        Args:
+            p1 (Tuple[float, float]): The first point.
+            p2 (Tuple[float, float]): The second point.
+            tolerance (float): The tolerance for equality.
+
+        Returns:
+            bool: True if the points are equal within the tolerance, False otherwise.
+        """
         return abs(p1[0] - p2[0]) < tolerance and abs(p1[1] - p2[1]) < tolerance
     
     def _calculate_polygon_area(self, polygon: List[Tuple[float, float]]) -> float:
-        """Calculate polygon area using shoelace formula"""
+        """Calculates the area of a polygon using the shoelace formula.
+
+        Args:
+            polygon (List[Tuple[float, float]]): The polygon points.
+
+        Returns:
+            float: The area of the polygon.
+        """
         if len(polygon) < 3:
             return 0.0
         

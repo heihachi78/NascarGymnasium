@@ -18,15 +18,30 @@ from .constants import (
 
 
 class DistanceSensorCallback(Box2D.b2RayCastCallback):
-    """Ray cast callback for distance sensor detection"""
+    """Ray cast callback for distance sensor detection.
+
+    This class is used with Box2D's RayCast method to determine the distance
+    to the nearest track wall.
+    """
     
     def __init__(self):
+        """Initializes the DistanceSensorCallback."""
         super().__init__()
         self.hit_distance = SENSOR_MAX_DISTANCE
         self.hit_point = None
         
     def ReportFixture(self, fixture, point, normal, fraction):
-        """Called when raycast hits a fixture"""
+        """Called by Box2D when a raycast hits a fixture.
+
+        Args:
+            fixture: The fixture that was hit.
+            point: The point of impact.
+            normal: The normal vector of the surface at the point of impact.
+            fraction: The fraction of the ray's length at which the impact occurred.
+
+        Returns:
+            The fraction of the ray's length to continue the raycast.
+        """
         # Only consider track walls (ignore car body)
         if fixture.userData is None or fixture.userData.get('type') != 'track_wall':
             return 1  # Continue ray
@@ -37,32 +52,36 @@ class DistanceSensorCallback(Box2D.b2RayCastCallback):
         return fraction  # Stop ray at this point
         
     def reset(self):
-        """Reset callback for next raycast"""
+        """Resets the callback for the next raycast."""
         self.hit_distance = SENSOR_MAX_DISTANCE
         self.hit_point = None
 
 
 class DistanceSensor:
-    """Multi-directional distance sensor for track boundary detection"""
+    """Multi-directional distance sensor for track boundary detection.
+
+    This class uses Box2D raycasting to measure the distance to track walls
+    in multiple directions relative to the car's orientation.
+    """
     
     def __init__(self):
-        """Initialize distance sensor"""
+        """Initializes the DistanceSensor."""
         self.callback = DistanceSensorCallback()
         
     def get_sensor_distances(self, world: Box2D.b2World, 
                            car_position: Tuple[float, float], 
                            car_angle: float) -> np.ndarray:
         """
-        Get distances to track boundaries in multiple directions relative to car orientation.
+        Gets the distances to track boundaries in multiple directions.
         
         Args:
-            world: Box2D world containing track walls
-            car_position: Car center position (x, y) in meters
-            car_angle: Car orientation in radians
+            world (Box2D.b2World): The Box2D world containing the track walls.
+            car_position (Tuple[float, float]): The car's center position (x, y) in meters.
+            car_angle (float): The car's orientation in radians.
             
         Returns:
-            numpy array of distances in meters (count determined by SENSOR_NUM_DIRECTIONS), 
-            starting from car front clockwise
+            A numpy array of distances in meters, starting from the car's front and
+            proceeding clockwise.
         """
         if world is None:
             # No track - return max distances
@@ -99,13 +118,13 @@ class DistanceSensor:
     
     def get_sensor_angles(self, car_angle: float) -> np.ndarray:
         """
-        Get absolute world angles for all 8 sensor directions.
+        Gets the absolute world angles for all sensor directions.
         
         Args:
-            car_angle: Car orientation in radians
+            car_angle (float): The car's orientation in radians.
             
         Returns:
-            numpy array of 8 absolute angles in radians
+            A numpy array of absolute angles in radians.
         """
         angles = np.zeros(SENSOR_NUM_DIRECTIONS, dtype=np.float32)
         
@@ -125,15 +144,15 @@ class DistanceSensor:
     def get_sensor_end_points(self, car_position: Tuple[float, float],
                             distances: np.ndarray, angles: np.ndarray) -> list:
         """
-        Calculate sensor ray end points for visualization.
+        Calculates the end points of the sensor rays for visualization.
         
         Args:
-            car_position: Car center position (x, y)
-            distances: Array of sensor distances
-            angles: Array of sensor angles in radians
+            car_position (Tuple[float, float]): The car's center position (x, y).
+            distances (np.ndarray): An array of sensor distances.
+            angles (np.ndarray): An array of sensor angles in radians.
             
         Returns:
-            List of (x, y) end points for each sensor ray
+            A list of (x, y) end points for each sensor ray.
         """
         end_points = []
         

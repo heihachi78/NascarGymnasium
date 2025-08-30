@@ -15,7 +15,21 @@ from .constants import (
 
 
 class Camera:
+    """Manages the camera view, including zoom, pan, and different camera modes.
+
+    The Camera class handles the transformation between world coordinates and
+    screen coordinates, and provides different camera modes like track view
+    and car follow view.
+
+    Args:
+        window_size (Tuple[int, int]): The size of the application window in pixels.
+    """
     def __init__(self, window_size: Tuple[int, int]):
+        """Initializes the Camera.
+
+        Args:
+            window_size (Tuple[int, int]): The size of the application window in pixels.
+        """
         self.window_size = window_size
         self.track = None
         self.zoom = DEFAULT_ZOOM
@@ -27,13 +41,21 @@ class Camera:
         self.car_follow_zoom = CAR_FOLLOW_ZOOM_FACTOR  # Configurable zoom for car follow mode
         
     def set_window_size(self, window_size: Tuple[int, int]):
-        """Update window size and recalculate camera parameters"""
+        """Update window size and recalculate camera parameters.
+
+        Args:
+            window_size (Tuple[int, int]): The new size of the window in pixels.
+        """
         self.window_size = window_size
         if self.track:
             self.calculate_auto_fit()
     
     def set_track(self, track: Optional[Track]):
-        """Set the track and calculate optimal camera parameters"""
+        """Set the track and calculate optimal camera parameters.
+
+        Args:
+            track (Optional[Track]): The track to be displayed.
+        """
         self.track = track
         if track:
             self.calculate_auto_fit()
@@ -44,7 +66,7 @@ class Camera:
             self.pixels_per_meter = PIXELS_PER_METER
     
     def calculate_auto_fit(self):
-        """Calculate camera parameters to fit the entire track on screen"""
+        """Calculate camera parameters to fit the entire track on screen."""
         if not self.track or not self.track.segments:
             return
         
@@ -92,23 +114,41 @@ class Camera:
         )
     
     def world_to_screen(self, world_pos: Tuple[float, float]) -> Tuple[int, int]:
-        """Convert world coordinates to screen coordinates"""
+        """Convert world coordinates to screen coordinates.
+
+        Args:
+            world_pos (Tuple[float, float]): The position in world coordinates.
+
+        Returns:
+            Tuple[int, int]: The corresponding position in screen coordinates.
+        """
         screen_x = int(world_pos[0] * self.pixels_per_meter + self.offset[0])
         screen_y = int(-world_pos[1] * self.pixels_per_meter + self.offset[1])
         return (screen_x, screen_y)
     
     def screen_to_world(self, screen_pos: Tuple[int, int]) -> Tuple[float, float]:
-        """Convert screen coordinates to world coordinates"""
+        """Convert screen coordinates to world coordinates.
+
+        Args:
+            screen_pos (Tuple[int, int]): The position in screen coordinates.
+
+        Returns:
+            Tuple[float, float]: The corresponding position in world coordinates.
+        """
         world_x = (screen_pos[0] - self.offset[0]) / self.pixels_per_meter
         world_y = -(screen_pos[1] - self.offset[1]) / self.pixels_per_meter
         return (world_x, world_y)
     
     def get_scale_factor(self) -> float:
-        """Get the current pixels per meter scale factor"""
+        """Get the current pixels per meter scale factor.
+
+        Returns:
+            float: The current pixels per meter scale factor.
+        """
         return self.pixels_per_meter
     
     def toggle_camera_mode(self):
-        """Toggle between track view and car follow modes"""
+        """Toggle between track view and car follow modes."""
         if self.camera_mode == CAMERA_MODE_TRACK_VIEW:
             self.camera_mode = CAMERA_MODE_CAR_FOLLOW
         else:
@@ -118,25 +158,25 @@ class Camera:
                 self.calculate_auto_fit()
     
     def set_car_follow_mode(self, car_position: Tuple[float, float]):
-        """Set camera to follow the car at the specified position
+        """Set camera to follow the car at the specified position.
         
         Args:
-            car_position: (x, y) position of car in world coordinates
+            car_position (Tuple[float, float]): (x, y) position of car in world coordinates.
         """
         self.camera_mode = CAMERA_MODE_CAR_FOLLOW
         self.update_car_follow_camera(car_position)
     
     def set_track_view_mode(self):
-        """Set camera to show the entire track (auto-fit mode)"""
+        """Set camera to show the entire track (auto-fit mode)."""
         self.camera_mode = CAMERA_MODE_TRACK_VIEW
         if self.track:
             self.calculate_auto_fit()
     
     def update_car_follow_camera(self, car_position: Tuple[float, float]):
-        """Update camera position and zoom to follow the car
+        """Update camera position and zoom to follow the car.
         
         Args:
-            car_position: (x, y) position of car in world coordinates
+            car_position (Tuple[float, float]): (x, y) position of car in world coordinates.
         """
         if self.camera_mode != CAMERA_MODE_CAR_FOLLOW:
             return
@@ -157,5 +197,9 @@ class Camera:
         )
     
     def get_camera_mode(self) -> str:
-        """Get the current camera mode"""
+        """Get the current camera mode.
+
+        Returns:
+            str: The current camera mode.
+        """
         return self.camera_mode

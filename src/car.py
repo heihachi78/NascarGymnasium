@@ -118,17 +118,28 @@ from .constants import (
 
 
 class Car:
-    """Realistic car physics simulation with Box2D"""
+    """Represents a car with realistic physics simulation using Box2D.
+
+    This class encapsulates the car's physical properties, including its body,
+    engine, and tyres. It provides methods to update the car's state based on
+    control inputs and to query its current state.
+
+    Args:
+        world (Optional[Box2D.b2World]): The Box2D world instance.
+        start_position (Tuple[float, float]): The initial position (x, y) in meters.
+        start_angle (float): The initial orientation in radians.
+        car_id (str): A unique identifier for this car.
+    """
     
     def __init__(self, world: Optional[Box2D.b2World], start_position: Tuple[float, float] = (0.0, 0.0), start_angle: float = 0.0, car_id: str = "car"):
         """
-        Initialize car with Box2D physics.
+        Initializes the car with Box2D physics.
         
         Args:
-            world: Box2D world instance
-            start_position: Initial position (x, y) in meters
-            start_angle: Initial orientation in radians
-            car_id: Unique identifier for this car
+            world (Optional[Box2D.b2World]): The Box2D world instance.
+            start_position (Tuple[float, float]): The initial position (x, y) in meters.
+            start_angle (float): The initial orientation in radians.
+            car_id (str): A unique identifier for this car.
         """
         self.world = world
         self.start_position = start_position
@@ -169,12 +180,16 @@ class Car:
             self._create_car_body()
 
     def set_world(self, world: Box2D.b2World):
-        """Set the Box2D world for the car and create the car body."""
+        """Sets the Box2D world for the car and creates the car body.
+
+        Args:
+            world (Box2D.b2World): The Box2D world instance.
+        """
         self.world = world
         self._create_car_body()
         
     def _create_car_body(self) -> None:
-        """Create the main car body with Box2D"""
+        """Creates the main car body with Box2D."""
         # Use pre-computed moment of inertia (simplified rectangular body)
         moment_of_inertia = CAR_MOMENT_OF_INERTIA
         
@@ -216,12 +231,12 @@ class Car:
         
     def set_inputs(self, throttle: float, brake: float, steering: float) -> None:
         """
-        Set control inputs with proper clamping.
+        Sets the control inputs for the car with proper clamping.
         
         Args:
-            throttle: Throttle input [0.0, 1.0]
-            brake: Brake input [0.0, 1.0] 
-            steering: Steering input [-1.0, 1.0]
+            throttle (float): The throttle input, in the range [0.0, 1.0].
+            brake (float): The brake input, in the range [0.0, 1.0].
+            steering (float): The steering input, in the range [-1.0, 1.0].
         """
         self.throttle_input = max(THROTTLE_MIN, min(THROTTLE_MAX, throttle))
         self.brake_input = max(BRAKE_MIN, min(BRAKE_MAX, brake))
@@ -229,9 +244,16 @@ class Car:
         
     def _calculate_engine_torque(self, rpm: float, throttle: float) -> float:
         """
-        Calculate engine torque based on RPM and throttle position.
+        Calculates the engine torque based on RPM and throttle position.
         
-        Implements a realistic torque curve for a high-performance engine.
+        This method implements a realistic torque curve for a high-performance engine.
+
+        Args:
+            rpm (float): The current engine RPM.
+            throttle (float): The current throttle position.
+
+        Returns:
+            float: The calculated engine torque.
         """
         # RPM ranges for torque curve
         idle_rpm = ENGINE_IDLE_RPM
@@ -257,7 +279,11 @@ class Car:
         return base_torque * throttle
         
     def _calculate_wheel_rpm(self) -> float:
-        """Calculate wheel RPM based on current velocity"""
+        """Calculates the wheel RPM based on the current velocity.
+
+        Returns:
+            float: The calculated wheel RPM.
+        """
         velocity = self.get_velocity_magnitude()
         wheel_circumference = WHEEL_CIRCUMFERENCE  # Pre-computed circumference
         
@@ -266,7 +292,11 @@ class Car:
         return 0.0
     
     def _update_engine_rpm(self, dt: float) -> None:
-        """Update engine RPM based on throttle and load"""
+        """Updates the engine RPM based on throttle and load.
+
+        Args:
+            dt (float): The time step in seconds.
+        """
         # Simplified engine RPM calculation
         # In reality this would include gear ratios, clutch engagement, etc.
         target_rpm = ENGINE_IDLE_RPM + (ENGINE_REDLINE_RPM_RANGE * self.throttle_input)  # Idle to redline based on throttle
@@ -281,10 +311,10 @@ class Car:
     
     def update_physics(self, dt: float) -> None:
         """
-        Update car physics for one time step.
+        Updates the car's physics for one time step.
         
         Args:
-            dt: Time step in seconds
+            dt (float): The time step in seconds.
         """
         # Store current timestep for use in other methods
         self.current_dt = dt
@@ -337,7 +367,7 @@ class Car:
         # deque automatically maintains maxlen, no manual size management needed
             
     def _apply_engine_force(self) -> None:
-        """Apply engine force to rear wheels with realistic power/torque physics"""
+        """Applies the engine force to the rear wheels with realistic power/torque physics."""
         current_speed = self.get_velocity_magnitude()
         engine_torque = self._calculate_engine_torque(self.engine_rpm, self.throttle)
         
@@ -399,7 +429,7 @@ class Car:
         self.body.ApplyForce(force_vector, rear_axle_pos, True)
         
     def _apply_brake_force(self) -> None:
-        """Apply braking force"""
+        """Applies the braking force to the car."""
         if self.brake > MINIMUM_BRAKE_THRESHOLD:
             # Maximum braking force (distributed across all wheels)
             # Implement friction circle - reduce available braking grip when steering
@@ -419,7 +449,7 @@ class Car:
                 self._update_friction_forces(0.0)  # No driving force, but braking will be calculated
                 
     def _apply_aerodynamic_drag(self) -> None:
-        """Apply aerodynamic drag force"""
+        """Applies the aerodynamic drag force to the car."""
         velocity = self.body.linearVelocity
         speed = velocity.length
         
@@ -434,7 +464,7 @@ class Car:
             self.body.ApplyForceToCenter(drag_force, True)
             
     def _apply_rolling_resistance(self) -> None:
-        """Apply rolling resistance force"""
+        """Applies the rolling resistance force to the car."""
         velocity = self.body.linearVelocity
         speed = velocity.length
         
@@ -450,14 +480,14 @@ class Car:
             self.body.ApplyForceToCenter(resistance_force, True)
             
     def _apply_angular_damping(self) -> None:
-        """Apply angular damping to stabilize rotation (always active)"""
+        """Applies angular damping to stabilize the car's rotation."""
         # Apply angular damping proportional to angular velocity
         # This provides stability at all times, not just when steering
         damping_torque = -self.body.angularVelocity * CAR_MASS * STEERING_ANGULAR_DAMPING
         self.body.ApplyTorque(damping_torque, True)
     
     def _apply_steering_torque(self) -> None:
-        """Apply steering torque for vehicle rotation (separate from lateral grip forces)"""
+        """Applies steering torque for vehicle rotation, separate from lateral grip forces."""
         # Get current velocity
         velocity = self.body.linearVelocity
         speed = velocity.length
@@ -475,7 +505,11 @@ class Car:
             self.body.ApplyTorque(steering_torque, True)
     
     def _is_colliding_with_wall(self) -> bool:
-        """Check if the car is currently colliding with a track wall"""
+        """Checks if the car is currently colliding with a track wall.
+
+        Returns:
+            bool: True if the car is colliding with a wall, False otherwise.
+        """
         if not self.world or not self.body:
             return False
             
@@ -520,7 +554,11 @@ class Car:
         return False
     
     def _apply_lateral_tire_forces(self, speed: float) -> None:
-        """Apply lateral forces to align car velocity with car orientation and track slip angle"""
+        """Applies lateral forces to align car velocity with car orientation and track slip angle.
+
+        Args:
+            speed (float): The current speed of the car.
+        """
         # Reset tracking variables
         self.lateral_force_magnitude = 0.0
         self.slip_angle_degrees = 0.0
@@ -583,7 +621,11 @@ class Car:
         self.body.ApplyForceToCenter(corrective_force, True)
     
     def _update_friction_forces(self, driving_force: float) -> None:
-        """Update friction forces for tyre heating calculations"""
+        """Updates the friction forces for tyre heating calculations.
+
+        Args:
+            driving_force (float): The current driving force from the engine.
+        """
         # Calculate friction forces for each tyre
         # During acceleration, rear tyres do most work (RWD)
         # During braking, all tyres work
@@ -638,7 +680,12 @@ class Car:
         self.tyre_manager.set_friction_forces(friction_forces)
     
     def _add_lateral_force_heating(self, friction_forces: dict, speed: float) -> None:
-        """Add enhanced lateral force heating from slip angle and cornering forces"""
+        """Adds enhanced lateral force heating from slip angle and cornering forces.
+
+        Args:
+            friction_forces (dict): The current friction forces on the tyres.
+            speed (float): The current speed of the car.
+        """
         if speed < SLIP_ANGLE_SPEED_THRESHOLD:
             return
         
@@ -704,10 +751,13 @@ class Car:
         # For now, let the heating be applied naturally
             
     def _get_acceleration(self, dt: float) -> Tuple[float, float]:
-        """Calculate current acceleration for weight transfer using proper physics
+        """Calculates the current acceleration for weight transfer using proper physics.
         
         Args:
-            dt: Time step in seconds
+            dt (float): The time step in seconds.
+
+        Returns:
+            A tuple containing the longitudinal and lateral acceleration.
         """
         # Get current velocity
         current_velocity = self.body.linearVelocity
@@ -764,10 +814,10 @@ class Car:
         
     def get_state(self) -> Tuple[float, float, float, float, float, float]:
         """
-        Get current car state.
+        Gets the current state of the car.
         
         Returns:
-            Tuple of (pos_x, pos_y, vel_x, vel_y, orientation, angular_velocity)
+            A tuple containing the car's position, velocity, orientation, and angular velocity.
         """
         position = self.body.position
         velocity = self.body.linearVelocity
@@ -782,29 +832,53 @@ class Car:
         )
         
     def get_velocity_magnitude(self) -> float:
-        """Get current speed in m/s"""
+        """Gets the current speed of the car in m/s.
+
+        Returns:
+            float: The current speed in m/s.
+        """
         return self.body.linearVelocity.length
         
     def get_velocity_kmh(self) -> float:
-        """Get current speed in km/h"""
+        """Gets the current speed of the car in km/h.
+
+        Returns:
+            float: The current speed in km/h.
+        """
         return self.get_velocity_magnitude() * 3.6
         
     def get_tyre_data(self) -> Tuple:
-        """Get tyre data for observation space"""
+        """Gets the tyre data for the observation space.
+
+        Returns:
+            A tuple containing the tyre data.
+        """
         return self.tyre_manager.get_observation_data()
         
     def get_drag_force(self) -> float:
-        """Get current drag force in Newtons"""
+        """Gets the current drag force in Newtons.
+
+        Returns:
+            float: The current drag force.
+        """
         velocity = self.get_velocity_magnitude()
         return DRAG_CONSTANT * velocity * velocity
         
     def get_velocity_vector(self) -> Tuple[float, float]:
-        """Get current velocity vector in m/s"""
+        """Gets the current velocity vector in m/s.
+
+        Returns:
+            A tuple representing the velocity vector.
+        """
         velocity = self.body.linearVelocity
         return (velocity.x, velocity.y)
         
     def get_acceleration_vector(self) -> Tuple[float, float]:
-        """Get current acceleration vector in m/s² (world coordinates)"""
+        """Gets the current acceleration vector in m/s² (world coordinates).
+
+        Returns:
+            A tuple representing the acceleration vector.
+        """
         # Get car-relative acceleration (longitudinal, lateral)
         longitudinal, lateral = self.last_acceleration
         
@@ -819,7 +893,11 @@ class Car:
         return (world_accel_x, world_accel_y)
         
     def get_last_acceleration_vector(self) -> Tuple[float, float]:
-        """Get last computed acceleration vector without side effects (for debug display)"""
+        """Gets the last computed acceleration vector without side effects (for debug display).
+
+        Returns:
+            A tuple representing the last acceleration vector.
+        """
         # Get cached car-relative acceleration (longitudinal, lateral)
         longitudinal, lateral = self.last_acceleration
         
@@ -835,10 +913,10 @@ class Car:
         
     def get_steering_vectors(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
         """
-        Get steering vectors for debug visualization.
+        Gets the steering vectors for debug visualization.
         
         Returns:
-            Tuple of (input_vector, actual_vector) representing steering input and actual angle
+            A tuple of (input_vector, actual_vector) representing steering input and actual angle.
         """
         # Input steering vector (normalized to -1 to 1 range)
         input_magnitude = abs(self.steering_input)
@@ -859,7 +937,7 @@ class Car:
         return (input_vector, actual_vector)
         
     def reset(self) -> None:
-        """Reset car to initial state"""
+        """Resets the car to its initial state."""
         self.body.position = self.start_position
         self.body.angle = self.start_angle
         self.body.linearVelocity = COORDINATE_ZERO
@@ -893,10 +971,10 @@ class Car:
         
     def validate_performance(self) -> dict:
         """
-        Validate car performance against specifications.
+        Validates the car's performance against its specifications.
         
         Returns:
-            Dictionary with validation results
+            A dictionary with the validation results.
         """
         results = {
             "max_speed_ms": CAR_MAX_SPEED_MS,
@@ -932,7 +1010,11 @@ class Car:
         return results
         
     def __str__(self) -> str:
-        """String representation of car state"""
+        """Returns a string representation of the car's state.
+
+        Returns:
+            str: A string representation of the car's state.
+        """
         pos_x, pos_y, vel_x, vel_y, angle, angular_vel = self.get_state()
         speed_kmh = self.get_velocity_kmh()
         

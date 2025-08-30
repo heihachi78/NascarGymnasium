@@ -12,6 +12,20 @@ from .constants import (
 
 @dataclass
 class TrackSegment:
+    """Represents a single segment of a race track.
+
+    Attributes:
+        segment_type (str): The type of the segment (e.g., "GRID", "STARTLINE", "STRAIGHT", "FINISHLINE", "CURVE").
+        length (float): The length of the segment in meters.
+        start_position (Tuple[float, float]): The (x, y) coordinates of the segment's start.
+        end_position (Tuple[float, float]): The (x, y) coordinates of the segment's end.
+        width (float): The width of the track at this segment.
+        curve_angle (float): The angle of the curve in degrees (0 for straight segments).
+        curve_radius (float): The radius of the curve in meters (0 for straight segments).
+        curve_direction (str): The direction of the curve ("LEFT", "RIGHT", or "").
+        start_heading (float): The starting direction of the segment in degrees.
+        end_heading (float): The ending direction of the segment in degrees.
+    """
     segment_type: str  # "GRID", "STARTLINE", "STRAIGHT", "FINISHLINE", "CURVE"
     length: float
     start_position: Tuple[float, float]
@@ -25,7 +39,20 @@ class TrackSegment:
 
 
 class Track:
+    """Represents a complete race track composed of multiple segments.
+
+    This class allows for the programmatic construction of tracks by adding
+    various types of segments (straight, curved, start/finish lines).
+
+    Args:
+        width (float): The default width of the track segments.
+    """
     def __init__(self, width: float = DEFAULT_TRACK_WIDTH):
+        """Initializes the Track.
+
+        Args:
+            width (float): The default width of the track segments.
+        """
         self.width = width
         self.segments: List[TrackSegment] = []
         self.total_length = 0.0
@@ -35,6 +62,15 @@ class Track:
         self.current_heading = 0.0  # Track direction in degrees (0 = positive x)
     
     def add_segment(self, segment_type: str, length: float, curve_angle: float = 0.0, curve_radius: float = 0.0, curve_direction: str = ""):
+        """Adds a new segment to the track.
+
+        Args:
+            segment_type (str): The type of the segment.
+            length (float): The length of the segment.
+            curve_angle (float): The angle of the curve in degrees (for curved segments).
+            curve_radius (float): The radius of the curve in meters (for curved segments).
+            curve_direction (str): The direction of the curve ("LEFT" or "RIGHT").
+        """
         start_pos = self.current_position
         start_heading = self.current_heading
         
@@ -75,7 +111,16 @@ class Track:
             self.has_finishline = True
     
     def _calculate_straight_end_position(self, start_pos: Tuple[float, float], heading: float, length: float) -> Tuple[float, float]:
-        """Calculate end position for a straight segment"""
+        """Calculates the end position for a straight segment.
+
+        Args:
+            start_pos (Tuple[float, float]): The starting position (x, y).
+            heading (float): The heading in degrees.
+            length (float): The length of the segment.
+
+        Returns:
+            Tuple[float, float]: The end position (x, y).
+        """
         heading_rad = math.radians(heading)
         end_x = start_pos[0] + length * math.cos(heading_rad)
         end_y = start_pos[1] + length * math.sin(heading_rad)
@@ -83,7 +128,18 @@ class Track:
     
     def _calculate_curve_geometry(self, start_pos: Tuple[float, float], start_heading: float, 
                                  curve_angle: float, curve_radius: float, curve_direction: str) -> Tuple[Tuple[float, float], float]:
-        """Calculate end position and heading for a curved segment"""
+        """Calculates the end position and heading for a curved segment.
+
+        Args:
+            start_pos (Tuple[float, float]): The starting position (x, y).
+            start_heading (float): The starting heading in degrees.
+            curve_angle (float): The angle of the curve in degrees.
+            curve_radius (float): The radius of the curve in meters.
+            curve_direction (str): The direction of the curve ("LEFT" or "RIGHT").
+
+        Returns:
+            Tuple[Tuple[float, float], float]: A tuple containing the end position (x, y) and the end heading in degrees.
+        """
         # Convert to radians
         start_heading_rad = math.radians(start_heading)
         curve_angle_rad = math.radians(curve_angle)
@@ -114,6 +170,12 @@ class Track:
         return ((end_x, end_y), end_heading)
     
     def get_track_bounds(self) -> Tuple[Tuple[float, float], Tuple[float, float]]:
+        """Calculates the minimum and maximum (x, y) coordinates that define the track's bounding box.
+
+        Returns:
+            Tuple[Tuple[float, float], Tuple[float, float]]: A tuple containing two tuples:
+            ((min_x, min_y), (max_x, max_y)).
+        """
         if not self.segments:
             return ((0, 0), (0, 0))
         
@@ -138,7 +200,14 @@ class Track:
         return ((min_x, min_y), (max_x, max_y))
     
     def _get_curve_bounds(self, segment: TrackSegment) -> List[Tuple[float, float]]:
-        """Get additional points for curve bounds calculation"""
+        """Gets additional points for curve bounds calculation.
+
+        Args:
+            segment (TrackSegment): The curved track segment.
+
+        Returns:
+            List[Tuple[float, float]]: A list of points defining the curve's bounds.
+        """
         if segment.curve_radius <= 0:
             return []
         
@@ -170,11 +239,19 @@ class Track:
         return curve_points
     
     def get_total_track_length(self) -> float:
-        """Get the total length of the track including all segments"""
+        """Gets the total length of the track, including all segments.
+
+        Returns:
+            float: The total length of the track in meters.
+        """
         return self.total_length
     
     def get_start_to_finish_length(self) -> float:
-        """Get the length from start of STARTLINE to end of FINISHLINE"""
+        """Gets the length from the start of the STARTLINE to the end of the FINISHLINE.
+
+        Returns:
+            float: The length of the track from start to finish in meters.
+        """
         if not self.has_startline:
             return 0.0
         
@@ -212,10 +289,28 @@ class Track:
 
 
 class TrackLoader:
+    """Loads track definitions from a file and constructs a Track object.
+
+    This class parses track definition files, which specify the segments
+    (straight, curved, start/finish lines) that make up a race track.
+    """
     def __init__(self):
+        """Initializes the TrackLoader."""
         pass
     
     def load_track(self, file_path: str) -> Track:
+        """Loads a track from the specified file path.
+
+        Args:
+            file_path (str): The path to the track definition file.
+
+        Returns:
+            Track: The loaded Track object.
+
+        Raises:
+            FileNotFoundError: If the track file does not exist.
+            ValueError: If the track file contains invalid commands or values.
+        """
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"Track file not found: {file_path}")
         
@@ -295,6 +390,17 @@ class TrackLoader:
         return track
     
     def validate_track(self, track: Track) -> bool:
+        """Validates the loaded track for basic structural integrity.
+
+        Args:
+            track (Track): The Track object to validate.
+
+        Returns:
+            bool: True if the track is valid, False otherwise.
+
+        Raises:
+            ValueError: If the track fails validation rules.
+        """
         if not track.segments:
             raise ValueError("Track must have at least one segment")
         

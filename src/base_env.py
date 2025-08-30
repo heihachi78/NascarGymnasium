@@ -27,10 +27,27 @@ from .constants import (
 
 
 class BaseEnv(gym.Env):
-    """Base environment for car simulation with continuous or discrete action space"""
+    """Base environment for car simulation with continuous or discrete action space.
+
+    This class provides the basic structure for a Gymnasium environment, including
+    action and observation space definitions, and default implementations for
+    `reset` and `step` methods. It is intended to be subclassed by more
+    specific environment implementations.
+
+    Args:
+        discrete_action_space (bool): If True, the action space is discrete (5 actions).
+            If False, the action space is continuous ([throttle_brake, steering]).
+        num_cars (int): The number of cars in the environment.
+    """
     metadata = {"render_modes": [RENDER_MODE_HUMAN], "render_fps": DEFAULT_RENDER_FPS}
     
     def __init__(self, discrete_action_space=False, num_cars=1):
+        """Initializes the BaseEnv.
+
+        Args:
+            discrete_action_space (bool): If True, the action space is discrete.
+            num_cars (int): The number of cars in the environment.
+        """
         super().__init__()
         
         self.discrete_action_space = discrete_action_space
@@ -86,6 +103,15 @@ class BaseEnv(gym.Env):
         self.last_action = np.zeros(CAR_ACTION_SHAPE_INTERNAL, dtype=np.float32)  # Internal 3-element format
         
     def reset(self, seed=None, options=None):
+        """Resets the environment to its initial state.
+
+        Args:
+            seed (int, optional): The seed for the random number generator. Defaults to None.
+            options (dict, optional): Additional options for resetting the environment. Defaults to None.
+
+        Returns:
+            tuple: A tuple containing the initial observation and a dictionary of info.
+        """
         super().reset(seed=seed)
         
         self.start_time = time.time()
@@ -98,6 +124,14 @@ class BaseEnv(gym.Env):
         return observation, info
     
     def step(self, action):
+        """Executes one time step within the environment.
+
+        Args:
+            action: The action to take in the environment.
+
+        Returns:
+            tuple: A tuple containing the observation, reward, terminated, truncated, and info.
+        """
         # Validate action
         assert self.action_space.contains(action), f"Invalid action {action}"
         
@@ -124,6 +158,15 @@ class BaseEnv(gym.Env):
         return observation, reward, terminated, truncated, info
     
     def _get_obs(self):
+        """Returns the current observation of the environment.
+
+        The observation is a normalized vector containing the car's state,
+        including position, velocity, orientation, tyre data, collision data,
+        and sensor data.
+
+        Returns:
+            np.ndarray: The observation vector.
+        """
         # Normalized car state observation vector
         # All values are normalized to [-1, 1] or [0, 1] ranges
         # [pos_x, pos_y, vel_x, vel_y, speed_magnitude, orientation, angular_vel,
@@ -164,7 +207,7 @@ class BaseEnv(gym.Env):
                     steering: -1.0 (left) to 1.0 (right)
             
         Returns:
-            3-element action [throttle, brake, steering]
+            list: 3-element action [throttle, brake, steering]
         """
         throttle_brake = action[0]
         steering = action[1]
@@ -185,10 +228,10 @@ class BaseEnv(gym.Env):
         """Convert discrete action to 2-element continuous action values.
         
         Args:
-            action: Discrete action (0-4)
+            action (int): Discrete action (0-4).
             
         Returns:
-            2-element continuous action [throttle_brake, steering]
+            list: 2-element continuous action [throttle_brake, steering].
         """
         if action == 0:
             # Do nothing
@@ -209,6 +252,11 @@ class BaseEnv(gym.Env):
             raise ValueError(f"Invalid discrete action: {action}")
     
     def _get_info(self):
+        """Returns a dictionary of information about the environment's state.
+
+        Returns:
+            dict: A dictionary containing the elapsed time and the last action taken.
+        """
         return {
             "elapsed_time": self.elapsed_time,
             "last_action": self.last_action.tolist(),

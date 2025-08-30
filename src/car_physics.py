@@ -32,9 +32,24 @@ from .constants import (
 
 
 class CollisionData:
-    """Simple data structure for active collision tracking in CarCollisionListener"""
+    """Simple data structure for active collision tracking in CarCollisionListener.
+
+    Args:
+        position (Tuple[float, float]): The world position of the collision.
+        impulse (float): The magnitude of the collision impulse.
+        normal (Tuple[float, float]): The normal vector of the collision.
+        car_id (str): The ID of the car involved in the collision.
+    """
     
     def __init__(self, position: Tuple[float, float], impulse: float, normal: Tuple[float, float], car_id: str = "unknown"):
+        """Initializes the CollisionData.
+
+        Args:
+            position (Tuple[float, float]): The world position of the collision.
+            impulse (float): The magnitude of the collision impulse.
+            normal (Tuple[float, float]): The normal vector of the collision.
+            car_id (str): The ID of the car involved in the collision.
+        """
         self.position = position  # World collision point
         self.impulse = impulse  # Collision impulse magnitude  
         self.normal = normal  # Collision normal vector
@@ -42,15 +57,24 @@ class CollisionData:
 
 
 class CarPhysics:
-    """Complete physics simulation with car dynamics and track collision detection"""
+    """Complete physics simulation with car dynamics and track collision detection.
+
+    This class manages the Box2D physics world, including the car and track walls.
+    It handles physics updates, collision detection, and provides methods to query
+    the state of the car and the environment.
+
+    Args:
+        car (Car): The car instance to be managed by this physics world.
+        track (Optional[Track]): The track for collision detection.
+    """
     
     def __init__(self, car: Car, track: Optional[Track] = None):
         """
         Initialize car physics system for a single car.
         
         Args:
-            car: The car instance to be managed by this physics world.
-            track: Track for collision detection (optional)
+            car (Car): The car instance to be managed by this physics world.
+            track (Optional[Track]): Track for collision detection (optional).
         """
         # Create Box2D world
         self.world = Box2D.b2World(gravity=(0, 0))  # Top-down view, no gravity
@@ -84,12 +108,12 @@ class CarPhysics:
         Update the set of disabled cars to suppress collision messages.
         
         Args:
-            disabled_cars: Set of car indices that are disabled
+            disabled_cars (set): Set of car indices that are disabled.
         """
         self.disabled_cars = disabled_cars.copy()
 
     def _create_track_walls(self) -> None:
-        """Create track collision walls directly in our physics world"""
+        """Create track collision walls directly in our physics world."""
         if not self.track:
             return
             
@@ -97,14 +121,22 @@ class CarPhysics:
             self._create_segment_walls(segment)
             
     def _create_segment_walls(self, segment) -> None:
-        """Create walls for a single track segment"""
+        """Create walls for a single track segment.
+
+        Args:
+            segment: The track segment to create walls for.
+        """
         if segment.segment_type == "CURVE":
             self._create_curved_walls(segment)
         else:
             self._create_straight_walls(segment)
                 
     def _create_straight_walls(self, segment) -> None:
-        """Create walls for straight track segments"""
+        """Create walls for straight track segments.
+
+        Args:
+            segment: The straight track segment.
+        """
         start_x, start_y = segment.start_position
         end_x, end_y = segment.end_position
         half_width = segment.width / 2
@@ -148,7 +180,11 @@ class CarPhysics:
             self.wall_bodies.append(right_wall)
             
     def _create_curved_walls(self, segment) -> None:
-        """Create walls for curved track segments"""
+        """Create walls for curved track segments.
+
+        Args:
+            segment: The curved track segment.
+        """
         if segment.curve_radius <= 0 or segment.curve_angle <= 0:
             return
         
@@ -179,7 +215,14 @@ class CarPhysics:
                 self.wall_bodies.append(wall)
             
     def _generate_curve_wall_points(self, segment):
-        """Generate points for inner and outer curve walls"""
+        """Generate points for inner and outer curve walls.
+
+        Args:
+            segment: The curved track segment.
+
+        Returns:
+            A tuple containing two lists of points for the inner and outer walls.
+        """
         
         half_width = segment.width / 2
         start_heading_rad = math.radians(segment.start_heading)
@@ -232,7 +275,18 @@ class CarPhysics:
         return inner_points, outer_points
             
     def _create_wall_body_from_line(self, x1: float, y1: float, x2: float, y2: float, thickness: float) -> Box2D.b2Body:
-        """Create a Box2D body for a wall segment"""
+        """Create a Box2D body for a wall segment.
+
+        Args:
+            x1 (float): The x-coordinate of the start point.
+            y1 (float): The y-coordinate of the start point.
+            x2 (float): The x-coordinate of the end point.
+            y2 (float): The y-coordinate of the end point.
+            thickness (float): The thickness of the wall.
+
+        Returns:
+            Box2D.b2Body: The created wall body.
+        """
         # Calculate wall center and dimensions
         center_x = (x1 + x2) / 2
         center_y = (y1 + y2) / 2
@@ -286,8 +340,8 @@ class CarPhysics:
         Perform one physics simulation step.
         
         Args:
-            action: (throttle, brake, steering)
-            dt: Time step in seconds
+            action: A tuple of (throttle, brake, steering).
+            dt (float): The time step in seconds.
         """
         if not self.car:
             raise ValueError("No car created. Call create_car() or create_cars() first.")
@@ -320,10 +374,11 @@ class CarPhysics:
     def get_collision_data(self) -> Tuple[float, float]:
         """
         Get current collision data for environment observation.
-        Now returns CURRENT collision state, not just recent history.
+
+        This method returns the current collision state, not just recent history.
         
         Returns:
-            Tuple of (collision_impulse, collision_angle_relative_to_car)
+            A tuple containing the collision impulse and the collision angle relative to the car.
         """
         if not self.car:
             return (0.0, 0.0)
@@ -362,7 +417,7 @@ class CarPhysics:
         Get the current collision impulse for a car (for continuous penalty calculation).
         
         Returns:
-            Current collision impulse (0 if no collision)
+            The current collision impulse, or 0 if no collision.
         """
         if not self.car:
             return 0.0
@@ -378,7 +433,7 @@ class CarPhysics:
         Check if specified car is currently on track.
         
         Returns:
-            True if car is on track, False otherwise
+            True if the car is on the track, False otherwise.
         """
         if not self.track:
             return True  # No track means always "on track"
@@ -390,11 +445,26 @@ class CarPhysics:
         return self._is_position_on_track((car_position.x, car_position.y))
         
     def _is_position_on_track(self, position: Tuple[float, float]) -> bool:
-        """Check if a position is within the track boundaries (not colliding with walls)"""
+        """Check if a position is within the track boundaries (not colliding with walls).
+
+        Args:
+            position (Tuple[float, float]): The position to check.
+
+        Returns:
+            True if the position is on the track, False otherwise.
+        """
         return not self._check_wall_collision(position)
         
     def _check_wall_collision(self, position: Tuple[float, float], radius: float = 0.5) -> bool:
-        """Check if a circular object at position collides with track walls"""
+        """Check if a circular object at position collides with track walls.
+
+        Args:
+            position (Tuple[float, float]): The position of the object.
+            radius (float): The radius of the object.
+
+        Returns:
+            True if there is a collision, False otherwise.
+        """
         # Use AABB query to check for overlaps without stepping the simulation
         
         # Create AABB (Axis-Aligned Bounding Box) for the query
@@ -446,7 +516,7 @@ class CarPhysics:
         Get current car state for specified car.
             
         Returns:
-            Car state tuple or None if car doesn't exist
+            A tuple representing the car's state, or None if the car doesn't exist.
         """
         if not self.car:
             return None
@@ -458,7 +528,7 @@ class CarPhysics:
         Get tyre data from specified car.
         
         Returns:
-            Tyre data tuple or None if car doesn't exist
+            A tuple of tyre data, or None if the car doesn't exist.
         """
         if not self.car:
             return None
@@ -466,7 +536,12 @@ class CarPhysics:
         return self.car.get_tyre_data()
         
     def reset_car(self, position: Tuple[float, float] = (0.0, 0.0), angle: float = 0.0) -> None:
-        """Reset car to specified position and angle"""
+        """Reset car to specified position and angle.
+
+        Args:
+            position (Tuple[float, float]): The new position of the car.
+            angle (float): The new angle of the car.
+        """
         if self.car:
             self.car.body.position = position
             self.car.body.angle = angle
@@ -484,7 +559,11 @@ class CarPhysics:
         self.last_fps_update_time = 0.0
         
     def get_performance_stats(self) -> Dict[str, Any]:
-        """Get physics performance statistics"""
+        """Get physics performance statistics.
+
+        Returns:
+            A dictionary of performance statistics.
+        """
         # Validate FPS value to ensure it's realistic
         validated_fps = max(MIN_REALISTIC_FPS, min(self.average_fps, MAX_REALISTIC_FPS))
         
@@ -501,7 +580,7 @@ class CarPhysics:
         return stats
         
     def cleanup(self) -> None:
-        """Clean up physics world safely to prevent segfaults"""
+        """Clean up physics world safely to prevent segfaults."""
         # Check if world exists and is not locked
         if not self.world:
             return
@@ -570,7 +649,7 @@ class CarPhysics:
             self._clear_references_only()
     
     def _clear_references_only(self):
-        """Emergency cleanup that only clears references without destroying Box2D objects"""
+        """Emergency cleanup that only clears references without destroying Box2D objects."""
         try:
             if hasattr(self, 'wall_bodies'):
                 self.wall_bodies.clear()
@@ -584,9 +663,21 @@ class CarPhysics:
 
 
 class CarCollisionListener(Box2D.b2ContactListener):
-    """Collision listener for car-track collisions"""
+    """Collision listener for car-track collisions.
+
+    This class listens for collisions between the car and the track walls,
+    and stores information about the collisions.
+
+    Args:
+        car_physics (CarPhysics): A reference to the parent CarPhysics instance.
+    """
     
     def __init__(self, car_physics=None):
+        """Initializes the CarCollisionListener.
+
+        Args:
+            car_physics (CarPhysics, optional): A reference to the parent CarPhysics instance. Defaults to None.
+        """
         super().__init__()
         # Track active collisions: key is (car_id, wall_id), value is CollisionData
         self.active_collisions: Dict[Tuple[str, str], CollisionData] = {}
@@ -596,7 +687,11 @@ class CarCollisionListener(Box2D.b2ContactListener):
         self.car_physics = car_physics
         
     def BeginContact(self, contact):
-        """Called when collision begins"""
+        """Called when a collision begins.
+
+        Args:
+            contact: The contact object.
+        """
         # Get collision details
         world_manifold = contact.worldManifold
         
@@ -655,7 +750,11 @@ class CarCollisionListener(Box2D.b2ContactListener):
                 self.car_collision_impulses[car_id] = 0.0
             
     def EndContact(self, contact):
-        """Called when collision ends"""
+        """Called when a collision ends.
+
+        Args:
+            contact: The contact object.
+        """
         # Identify which bodies were in contact
         bodyA = contact.fixtureA.body
         bodyB = contact.fixtureB.body
@@ -689,7 +788,12 @@ class CarCollisionListener(Box2D.b2ContactListener):
                 self.car_collision_impulses[car_id] = 0.0
     
     def PostSolve(self, contact, impulse):
-        """Called after collision resolution with impulse data"""
+        """Called after collision resolution with impulse data.
+
+        Args:
+            contact: The contact object.
+            impulse: The impulse of the collision.
+        """
         # Get the normal impulse (force of collision)
         normal_impulses = impulse.normalImpulses
         if len(normal_impulses) > 0:
@@ -716,10 +820,17 @@ class CarCollisionListener(Box2D.b2ContactListener):
     
     
     def get_car_collision_impulse(self, car_id: str) -> float:
-        """Get current collision impulse for a specific car"""
+        """Get current collision impulse for a specific car.
+
+        Args:
+            car_id (str): The ID of the car.
+
+        Returns:
+            The current collision impulse for the car.
+        """
         return self.car_collision_impulses.get(car_id, 0.0)
     
     def reset_impulses(self):
-        """Reset impulse tracking for next physics step"""
+        """Reset impulse tracking for next physics step."""
         # This method is no longer used. Impulses are accumulated in the CarEnv.
         pass

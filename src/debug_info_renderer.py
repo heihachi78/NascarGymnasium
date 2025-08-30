@@ -38,20 +38,28 @@ from .constants import (
 
 
 class DebugInfoRenderer:
-    """Renders detailed debug information for car simulation"""
+    """Renders detailed debug information for the car simulation.
+
+    This class is responsible for rendering various debug information, including
+    a text panel with vehicle telemetry, and graphical representations of
+    vectors like velocity, acceleration, and sensor rays.
+
+    Args:
+        camera: The camera object for world-to-screen coordinate conversion.
+    """
     
     def __init__(self, camera):
         """
-        Initialize debug info renderer.
+        Initializes the DebugInfoRenderer.
         
         Args:
-            camera: Camera object for world-to-screen coordinate conversion
+            camera: The camera object for world-to-screen coordinate conversion.
         """
         self.camera = camera
         self.font = None
     
     def _ensure_font(self):
-        """Ensure font is initialized with monospace font"""
+        """Ensures that the font for rendering text is initialized."""
         if self.font is None:
             # Try to load a monospace font, fall back to system default if not available
             try:
@@ -88,14 +96,14 @@ class DebugInfoRenderer:
     
     def render_debug_info(self, window: pygame.Surface, debug_data: dict) -> bool:
         """
-        Render complete debug information.
+        Renders the complete debug information.
         
         Args:
-            window: pygame surface to draw on
-            debug_data: Debug data dictionary from CarEnv.get_debug_data()
+            window (pygame.Surface): The pygame surface to draw on.
+            debug_data (dict): A dictionary of debug data from CarEnv.get_debug_data().
             
         Returns:
-            True if rendering succeeded, False otherwise
+            bool: True if rendering succeeded, False otherwise.
         """
         if not debug_data:
             return False
@@ -118,7 +126,12 @@ class DebugInfoRenderer:
             return False
     
     def _render_info_panel(self, window: pygame.Surface, debug_data: dict) -> None:
-        """Render the debug info panel with text information"""
+        """Renders the debug info panel with text information.
+
+        Args:
+            window (pygame.Surface): The pygame surface to draw on.
+            debug_data (dict): A dictionary of debug data.
+        """
         # Prepare text lines first to calculate required height
         lines = self._prepare_text_lines(debug_data)
         
@@ -140,7 +153,14 @@ class DebugInfoRenderer:
             y_offset += DEBUG_INFO_LINE_HEIGHT
     
     def _prepare_text_lines(self, debug_data: dict) -> list:
-        """Prepare text lines for debug info panel"""
+        """Prepares the text lines for the debug info panel.
+
+        Args:
+            debug_data (dict): A dictionary of debug data.
+
+        Returns:
+            list: A list of strings to be rendered.
+        """
         lines = []
         
         # Header section
@@ -254,7 +274,14 @@ class DebugInfoRenderer:
         return lines
     
     def _get_temperature_indicator(self, temp: float) -> str:
-        """Get temperature status indicator"""
+        """Gets a status indicator for the given temperature.
+
+        Args:
+            temp (float): The temperature value.
+
+        Returns:
+            str: A string indicating the temperature status.
+        """
         # Use the actual constants for ideal temperature range
         if TYRE_IDEAL_TEMPERATURE_MIN <= temp <= TYRE_IDEAL_TEMPERATURE_MAX:  # Ideal range (85-105°C)
             return " OPT"
@@ -264,7 +291,14 @@ class DebugInfoRenderer:
             return " CRIT"
     
     def _get_pressure_indicator(self, pressure: float) -> str:
-        """Get pressure status indicator"""
+        """Gets a status indicator for the given pressure.
+
+        Args:
+            pressure (float): The pressure value.
+
+        Returns:
+            str: A string indicating the pressure status.
+        """
         if 30.0 <= pressure <= 34.0:  # Optimal range
             return " OPT"
         elif 25.0 <= pressure <= 40.0:  # Warning range
@@ -273,7 +307,14 @@ class DebugInfoRenderer:
             return " CRIT"
     
     def _get_wear_indicator(self, wear: float) -> str:
-        """Get wear status indicator"""
+        """Gets a status indicator for the given wear level.
+
+        Args:
+            wear (float): The wear value.
+
+        Returns:
+            str: A string indicating the wear status.
+        """
         if wear <= 20.0:  # Good condition
             return " GOOD"
         elif wear <= 50.0:  # Moderate wear
@@ -282,7 +323,14 @@ class DebugInfoRenderer:
             return " HIGH WEAR"
     
     def _get_damage_status_indicator(self, percentage: float) -> str:
-        """Get damage status indicator for cumulative collision impact"""
+        """Gets a status indicator for the cumulative collision impact.
+
+        Args:
+            percentage (float): The damage percentage.
+
+        Returns:
+            str: A string indicating the damage status.
+        """
         if percentage <= 0.5:  # 0-50%
             return "SAFE"
         elif percentage <= 0.8:  # 50-80%
@@ -293,7 +341,12 @@ class DebugInfoRenderer:
             return "FAIL"
     
     def _render_vectors(self, window: pygame.Surface, debug_data: dict) -> None:
-        """Render velocity, acceleration, and steering vectors"""
+        """Renders velocity, acceleration, and steering vectors.
+
+        Args:
+            window (pygame.Surface): The pygame surface to draw on.
+            debug_data (dict): A dictionary of debug data.
+        """
         car_position = debug_data.get('car_position', (0, 0))
         car_angle = debug_data.get('car_angle', 0.0)
         
@@ -321,7 +374,15 @@ class DebugInfoRenderer:
     def _render_vector(self, window: pygame.Surface, start_pos: Tuple[int, int], 
                       vector: Tuple[float, float], color: Tuple[int, int, int],
                       scale_factor: float = 1.0) -> None:
-        """Render a single vector as an arrow"""
+        """Renders a single vector as an arrow.
+
+        Args:
+            window (pygame.Surface): The pygame surface to draw on.
+            start_pos (Tuple[int, int]): The starting position of the vector.
+            vector (Tuple[float, float]): The vector to render.
+            color (Tuple[int, int, int]): The color of the vector.
+            scale_factor (float): The scaling factor for the vector's length.
+        """
         if not vector or (vector[0] == 0 and vector[1] == 0):
             return
         
@@ -353,7 +414,14 @@ class DebugInfoRenderer:
     
     def _draw_arrow_head(self, window: pygame.Surface, tip_pos: Tuple[int, int], 
                         angle: float, color: Tuple[int, int, int]) -> None:
-        """Draw arrow head at the tip of a vector"""
+        """Draws an arrow head at the tip of a vector.
+
+        Args:
+            window (pygame.Surface): The pygame surface to draw on.
+            tip_pos (Tuple[int, int]): The position of the arrow's tip.
+            angle (float): The angle of the arrow.
+            color (Tuple[int, int, int]): The color of the arrow head.
+        """
         head_size = DEBUG_VECTOR_ARROW_HEAD_SIZE
         
         # Calculate arrow head points
@@ -374,7 +442,12 @@ class DebugInfoRenderer:
         pygame.draw.line(window, color, tip_pos, head_point2, DEBUG_VECTOR_ARROW_WIDTH)
     
     def _render_sensor_vectors(self, window: pygame.Surface, debug_data: dict) -> None:
-        """Render distance sensor vectors"""
+        """Renders the distance sensor vectors.
+
+        Args:
+            window (pygame.Surface): The pygame surface to draw on.
+            debug_data (dict): A dictionary of debug data.
+        """
         car_position = debug_data.get('car_position', (0, 0))
         sensor_data = debug_data.get('sensor_data', {})
         sensor_distances = sensor_data.get('distances', [])

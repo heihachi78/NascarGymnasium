@@ -67,7 +67,7 @@ class BaseController:
         current_speed = observation[4] # Speed from observation
 
         if self.control_state['last_forward'] >= forward:
-            self.control_state['speed_limit'] = forward / 2.0
+            self.control_state['speed_limit'] = forward
         if self.control_state['last_forward'] < forward:
             self.control_state['speed_limit'] = 1
         
@@ -90,7 +90,7 @@ class BaseController:
             self.control_state['steering'] *= 0.9  # Gradual return to center
 
         if abs(self.control_state['steering']) > 0.25:
-            self.control_state['throttle_brake'] *= 0.9
+            self.control_state['throttle_brake'] *= 0.5
         
         # Apply limits and adjustments
         self.control_state['throttle_brake'] = max(min(self.control_state['throttle_brake'], 1), -1)

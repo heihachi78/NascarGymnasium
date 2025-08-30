@@ -26,9 +26,22 @@ logger = logging.getLogger(__name__)
 
 
 class TrackPolygonRenderer:
-    """High-quality polygon-based track renderer"""
+    """High-quality polygon-based track renderer.
+
+    This class renders the track as filled polygons, providing a smooth and
+    visually appealing representation. It utilizes caching to optimize rendering
+    performance.
+
+    Args:
+        camera: The camera object used for coordinate transformations.
+    """
     
     def __init__(self, camera):
+        """Initializes the TrackPolygonRenderer.
+
+        Args:
+            camera: The camera object used for coordinate transformations.
+        """
         self.camera = camera
         self.centerline_generator = CenterlineGenerator(adaptive_sampling=True)
         self.track_boundary = TrackBoundary()
@@ -51,14 +64,14 @@ class TrackPolygonRenderer:
     
     def render_track_polygon(self, window: pygame.Surface, track: Track) -> bool:
         """
-        Render track as smooth filled polygons with caching.
+        Renders the track as smooth filled polygons with caching.
         
         Args:
-            window: Pygame surface to render on
-            track: Track object to render
+            window (pygame.Surface): The Pygame surface to render on.
+            track (Track): The Track object to render.
             
         Returns:
-            True if rendering succeeded, False otherwise
+            bool: True if rendering succeeded, False otherwise.
         """
         if not track or not track.segments:
             return False
@@ -145,7 +158,14 @@ class TrackPolygonRenderer:
             return False
     
     def _convert_polygon_to_screen(self, world_polygon: List[Tuple[float, float]]) -> List[Tuple[int, int]]:
-        """Convert world coordinate polygon to screen coordinates"""
+        """Converts a polygon from world coordinates to screen coordinates.
+
+        Args:
+            world_polygon (List[Tuple[float, float]]): A list of (x, y) points in world coordinates.
+
+        Returns:
+            List[Tuple[int, int]]: A list of (x, y) points in screen coordinates.
+        """
         screen_polygon = []
         
         for world_point in world_polygon:
@@ -156,7 +176,13 @@ class TrackPolygonRenderer:
         return screen_polygon
     
     def _render_polygon(self, window: pygame.Surface, polygon: List[Tuple[int, int]], color: Tuple[int, int, int]) -> None:
-        """Render a filled polygon with optional anti-aliasing"""
+        """Renders a filled polygon with optional anti-aliasing.
+
+        Args:
+            window (pygame.Surface): The Pygame surface to render on.
+            polygon (List[Tuple[int, int]]): A list of (x, y) points defining the polygon in screen coordinates.
+            color (Tuple[int, int, int]): The color of the polygon.
+        """
         if len(polygon) < 3:
             return
         
@@ -181,7 +207,15 @@ class TrackPolygonRenderer:
             pass
     
     def _prepare_special_segments(self, track: Track, centerline: List[Tuple[float, float]]) -> List[dict]:
-        """Prepare special segment overlays for caching"""
+        """Prepares special segment overlays for caching.
+
+        Args:
+            track (Track): The Track object.
+            centerline (List[Tuple[float, float]]): The centerline points.
+
+        Returns:
+            List[dict]: A list of dictionaries, each containing a 'polygon' and 'color' for a special segment.
+        """
         special_segments = []
         
         # Build mapping of world positions to centerline indices
@@ -215,7 +249,17 @@ class TrackPolygonRenderer:
     
     def _prepare_segment_overlay(self, centerline: List[Tuple[float, float]], 
                                 start_idx: int, end_idx: int, track_width: float) -> Optional[List[Tuple[int, int]]]:
-        """Prepare a segment overlay polygon for caching"""
+        """Prepares a segment overlay polygon for caching.
+
+        Args:
+            centerline (List[Tuple[float, float]]): The centerline points.
+            start_idx (int): The starting index of the segment in the centerline.
+            end_idx (int): The ending index of the segment in the centerline.
+            track_width (float): The width of the track.
+
+        Returns:
+            Optional[List[Tuple[int, int]]]: A list of screen coordinates forming the segment overlay polygon, or None if invalid.
+        """
         if start_idx >= end_idx or end_idx >= len(centerline):
             return None
         
@@ -240,7 +284,7 @@ class TrackPolygonRenderer:
         return self._convert_polygon_to_screen(segment_polygon)
     
     def _clear_cache(self):
-        """Clear all cached data"""
+        """Clears all cached data, forcing regeneration on the next render."""
         self._cached_track = None
         self._cached_centerline = None
         self._cached_boundaries = None
@@ -255,7 +299,13 @@ class TrackPolygonRenderer:
         self._cached_camera_mode = None
     
     def _render_special_segments(self, window: pygame.Surface, track: Track, centerline: List[Tuple[float, float]]) -> None:
-        """Render colored overlays for special track segments"""
+        """Renders colored overlays for special track segments.
+
+        Args:
+            window (pygame.Surface): The Pygame surface to render on.
+            track (Track): The Track object.
+            centerline (List[Tuple[float, float]]): The centerline points.
+        """
         
         # Build mapping of world positions to centerline indices
         position_to_index = self._build_position_index_map(track, centerline)
@@ -280,7 +330,15 @@ class TrackPolygonRenderer:
                 self._render_segment_overlay(window, centerline, start_idx, end_idx, track.width, color)
     
     def _build_position_index_map(self, track: Track, centerline: List[Tuple[float, float]]) -> dict:
-        """Build mapping from segment positions to centerline indices"""
+        """Builds a mapping from segment positions to centerline indices.
+
+        Args:
+            track (Track): The Track object.
+            centerline (List[Tuple[float, float]]): The centerline points.
+
+        Returns:
+            dict: A dictionary mapping segment positions to their closest centerline index.
+        """
         position_map = {}
         tolerance = POLYGON_POSITION_MATCHING_TOLERANCE
         

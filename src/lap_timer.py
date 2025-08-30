@@ -15,15 +15,23 @@ from .track_generator import Track
 
 
 class LapTimer:
-    """Manages lap timing and lap completion detection"""
+    """Manages lap timing and lap completion detection.
+
+    This class tracks the car's progress around the track, detects when a lap
+    is completed, and records the current, last, and best lap times.
+
+    Args:
+        track (Optional[Track]): The track instance for lap detection.
+        car_id (str): An identifier for the car, used for debug messages.
+    """
     
     def __init__(self, track: Optional[Track] = None, car_id: str = "Unknown"):
         """
-        Initialize lap timer.
+        Initializes the LapTimer.
         
         Args:
-            track: Track instance for lap detection, can be None for time-only mode
-            car_id: Identifier for the car (for debug messages)
+            track (Optional[Track]): The track instance for lap detection.
+            car_id (str): An identifier for the car.
         """
         self.track = track
         self.car_id = car_id
@@ -62,7 +70,7 @@ class LapTimer:
             self._find_startline_segment()
     
     def _find_startline_segment(self) -> None:
-        """Find the STARTLINE segment in the track"""
+        """Finds the STARTLINE segment in the track."""
         if not self.track or not self.track.segments:
             return
             
@@ -72,7 +80,11 @@ class LapTimer:
                 break
     
     def start_timing(self, simulation_time: float = None) -> None:
-        """Start timing a new lap"""
+        """Starts timing a new lap.
+
+        Args:
+            simulation_time (float, optional): The current simulation time. Defaults to None.
+        """
         if simulation_time is not None:
             self.current_lap_start_time = simulation_time
         else:
@@ -82,14 +94,14 @@ class LapTimer:
     
     def update(self, car_position: Optional[Tuple[float, float]] = None, simulation_time: float = None) -> bool:
         """
-        Update lap timer for one time step.
+        Updates the lap timer for one time step.
         
         Args:
-            car_position: Current car position (x, y) for lap detection
-            simulation_time: Current simulation time (use instead of wall-clock time)
+            car_position (Optional[Tuple[float, float]]): The current car position (x, y).
+            simulation_time (float, optional): The current simulation time.
             
         Returns:
-            True if a lap was completed this update, False otherwise
+            bool: True if a lap was completed this update, False otherwise.
         """
         # Update current lap time if timing is active
         if self.current_lap_start_time is not None:
@@ -115,10 +127,10 @@ class LapTimer:
     
     def _update_distance_traveled(self, current_position: Tuple[float, float]) -> None:
         """
-        Update the total distance traveled by the car.
+        Updates the total distance traveled by the car.
         
         Args:
-            current_position: Current car position (x, y)
+            current_position (Tuple[float, float]): The current car position (x, y).
         """
         if self.last_car_position:
             dx = current_position[0] - self.last_car_position[0]
@@ -131,14 +143,14 @@ class LapTimer:
     
     def _check_lap_completion(self, car_position: Tuple[float, float], simulation_time: float = None) -> bool:
         """
-        Check if car has completed a lap by crossing the startline.
+        Checks if the car has completed a lap by crossing the startline.
         
         Args:
-            car_position: Current car position (x, y)
-            simulation_time: Current simulation time
+            car_position (Tuple[float, float]): The current car position (x, y).
+            simulation_time (float, optional): The current simulation time.
             
         Returns:
-            True if lap was completed, False otherwise
+            bool: True if a lap was completed, False otherwise.
         """
         if not self.startline_segment or self.last_car_position is None:
             return False
@@ -192,13 +204,13 @@ class LapTimer:
     
     def _is_position_on_startline(self, position: Tuple[float, float]) -> bool:
         """
-        Check if a position is within the startline segment area.
+        Checks if a position is within the startline segment area.
         
         Args:
-            position: Position to check (x, y)
+            position (Tuple[float, float]): The position to check (x, y).
             
         Returns:
-            True if position is on startline, False otherwise
+            bool: True if the position is on the startline, False otherwise.
         """
         if not self.startline_segment:
             return False
@@ -230,7 +242,11 @@ class LapTimer:
         return dist_to_line <= (width / 2.0)
     
     def _complete_lap(self, simulation_time: float = None) -> None:
-        """Complete the current lap and update timing records"""
+        """Completes the current lap and updates timing records.
+
+        Args:
+            simulation_time (float, optional): The current simulation time. Defaults to None.
+        """
         if self.current_lap_start_time is None:
             return
         
@@ -257,7 +273,7 @@ class LapTimer:
     
     
     def reset(self) -> None:
-        """Reset lap timer to initial state"""
+        """Resets the lap timer to its initial state."""
         self.current_lap_start_time = None
         self.current_lap_time = 0.0
         self.last_lap_time = None
@@ -269,35 +285,55 @@ class LapTimer:
         self.last_lap_completion_time = None
     
     def get_current_lap_time(self) -> float:
-        """Get current lap time in seconds"""
+        """Gets the current lap time in seconds.
+
+        Returns:
+            float: The current lap time.
+        """
         return self.current_lap_time
     
     def get_last_lap_time(self) -> Optional[float]:
-        """Get last completed lap time in seconds, None if no laps completed"""
+        """Gets the last completed lap time in seconds.
+
+        Returns:
+            Optional[float]: The last lap time, or None if no laps have been completed.
+        """
         return self.last_lap_time
     
     def get_best_lap_time(self) -> Optional[float]:
-        """Get best lap time in seconds, None if no laps completed"""
+        """Gets the best lap time in seconds.
+
+        Returns:
+            Optional[float]: The best lap time, or None if no laps have been completed.
+        """
         return self.best_lap_time
     
     def get_lap_count(self) -> int:
-        """Get number of completed laps"""
+        """Gets the number of completed laps.
+
+        Returns:
+            int: The number of completed laps.
+        """
         return self.lap_count
     
     def is_timing(self) -> bool:
-        """Check if lap timing is currently active"""
+        """Checks if the lap timer is currently active.
+
+        Returns:
+            bool: True if the timer is active, False otherwise.
+        """
         return self.current_lap_start_time is not None
     
     @staticmethod
     def format_time(time_seconds: Optional[float]) -> str:
         """
-        Format time in seconds to MM:SS.mmm display format.
+        Formats a time in seconds to a MM:SS.mmm string.
         
         Args:
-            time_seconds: Time in seconds, None for no time
+            time_seconds (Optional[float]): The time in seconds.
             
         Returns:
-            Formatted time string, "--:--.---" if None
+            str: The formatted time string, or "--:--.---" if the time is None.
         """
         if time_seconds is None:
             return "--:--.---"
@@ -317,10 +353,10 @@ class LapTimer:
     
     def get_timing_info(self) -> dict:
         """
-        Get comprehensive timing information for display/logging.
+        Gets a dictionary of comprehensive timing information.
         
         Returns:
-            Dictionary with timing information
+            A dictionary containing timing information for display or logging.
         """
         return {
             "current_lap_time": self.current_lap_time,
@@ -336,7 +372,11 @@ class LapTimer:
         }
     
     def __str__(self) -> str:
-        """String representation of lap timer state"""
+        """Returns a string representation of the lap timer's state.
+
+        Returns:
+            A string representation of the lap timer's state.
+        """
         info = self.get_timing_info()
         return (f"LapTimer: Current: {info['formatted_current']}, "
                 f"Last: {info['formatted_last']}, "

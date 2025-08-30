@@ -89,8 +89,28 @@ logger = logging.getLogger(__name__)
 
 
 class Renderer:
+    """Manages the rendering of the car racing simulation using Pygame.
+
+    This class handles window creation, drawing the track, cars, and various
+    debug and information overlays. It also manages fullscreen toggling and
+    FPS display.
+
+    Args:
+        window_size (tuple): The initial size of the simulation window (width, height).
+        render_fps (int): The target frames per second for rendering.
+        track (Optional[Track]): The track object to be rendered.
+        use_antialiasing (bool): Whether to use antialiasing for track rendering.
+    """
     def __init__(self, window_size=DEFAULT_WINDOW_SIZE, render_fps=DEFAULT_RENDER_FPS, track: Optional[Track] = None, 
                  use_antialiasing: bool = True):
+        """Initializes the Renderer.
+
+        Args:
+            window_size (tuple): The initial size of the simulation window (width, height).
+            render_fps (int): The target frames per second for rendering.
+            track (Optional[Track]): The track object to be rendered.
+            use_antialiasing (bool): Whether to use antialiasing for track rendering.
+        """
         self.window_size = window_size
         self.render_fps = render_fps
         self.window = None
@@ -127,12 +147,20 @@ class Renderer:
         
     
     def set_performance_mode(self, use_antialiasing: bool = None):
-        """Dynamically adjust performance settings"""
+        """Dynamically adjusts performance settings.
+
+        Args:
+            use_antialiasing (bool, optional): Whether to use antialiasing. Defaults to None.
+        """
         if use_antialiasing is not None:
             self.polygon_renderer.set_antialiasing(use_antialiasing)
     
     def _is_wsl(self):
-        """Detect if running under WSL"""
+        """Detects if the application is running under WSL.
+
+        Returns:
+            bool: True if running under WSL, False otherwise.
+        """
         try:
             with open('/proc/version', 'r') as f:
                 return 'microsoft' in f.read().lower()
@@ -140,7 +168,7 @@ class Renderer:
             return False
     
     def _set_sdl_hints(self):
-        """Set SDL environment variables for better window behavior"""
+        """Sets SDL environment variables for better window behavior."""
         # Center the window
         os.environ['SDL_VIDEO_WINDOW_POS'] = 'centered'
         
@@ -224,6 +252,7 @@ class Renderer:
         return pygame.display.set_mode(target_size, 0)
     
     def init_pygame(self):
+        """Initializes Pygame modules if they are not already initialized."""
         if not self._initialized_pygame:
             # Only initialize if not already initialized
             if not pygame.get_init():
@@ -235,6 +264,23 @@ class Renderer:
             self._initialized_pygame = True
             
     def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None, observation_info=None):
+        """
+        Renders a single frame of the simulation.
+        
+        Args:
+            car_position (tuple, optional): The position of the car. Defaults to None.
+            car_angle (float, optional): The angle of the car. Defaults to None.
+            debug_data (dict, optional): Debugging information. Defaults to None.
+            current_action (np.ndarray, optional): The current action of the car. Defaults to None.
+            lap_timing_info (dict, optional): Lap timing information. Defaults to None.
+            reward_info (dict, optional): Reward information. Defaults to None.
+            cars_data (list, optional): Data for multiple cars. Defaults to None.
+            followed_car_index (int): The index of the car being followed by the camera. Defaults to 0.
+            race_positions_data (list, optional): Race position data. Defaults to None.
+            best_lap_times_data (list, optional): Best lap times data. Defaults to None.
+            countdown_info (dict, optional): Countdown clock information. Defaults to None.
+            observation_info (dict, optional): Observation visualization information. Defaults to None.
+        """
         self.init_pygame()
         
         if self.window is None:
@@ -335,7 +381,11 @@ class Renderer:
         self.clock.tick(self.render_fps)
     
     def _calculate_manual_fps(self) -> float:
-        """Calculate FPS manually when not using pygame's FPS limiting."""
+        """Calculates the FPS manually when not using pygame's FPS limiting.
+
+        Returns:
+            float: The calculated average FPS.
+        """
         current_time = time.time()
         
         if self.last_frame_time is not None:
@@ -357,7 +407,7 @@ class Renderer:
         return 0.0  # Return 0 if we don't have enough data yet
         
     def close(self):
-        """Clean up renderer resources safely"""
+        """Cleans up renderer resources safely."""
         try:
             if self.window is not None:
                 # Clear references first
@@ -388,7 +438,7 @@ class Renderer:
             self._initialized_pygame = False
     
     def _handle_events(self):
-        """Handle pygame events, particularly fullscreen toggle"""
+        """Handles Pygame events, particularly fullscreen toggle and other key presses."""
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 # Don't handle quit here - let the environment handle it
@@ -410,7 +460,7 @@ class Renderer:
                 pygame.event.post(event)
     
     def _toggle_fullscreen(self):
-        """Toggle between fullscreen and windowed mode with robust handling"""
+        """Toggles between fullscreen and windowed mode with robust handling."""
         self.is_fullscreen = not self.is_fullscreen
         
         if self.is_fullscreen:
@@ -470,16 +520,20 @@ class Renderer:
                     self.camera.set_window_size(self.window_size)
     
     def set_track(self, track: Track):
-        """Set the track to render"""
+        """Sets the track to be rendered.
+
+        Args:
+            track (Track): The track object to render.
+        """
         self.track = track
         self.camera.set_track(track)
     
     def toggle_track_info(self):
-        """Toggle the display of track information"""
+        """Toggles the display of track information."""
         self.show_track_info = not self.show_track_info
     
     def toggle_debug(self):
-        """Toggle debug visualization mode"""
+        """Toggles the debug visualization mode."""
         self.show_debug = not self.show_debug
         if self.show_debug:
             # Enable all debug features when turning on
@@ -489,12 +543,16 @@ class Renderer:
             self.debug_centerline = False
     
     def _toggle_camera_mode(self):
-        """Toggle camera mode between track view and car follow"""
+        """Toggles the camera mode between track view and car follow."""
         self.camera.toggle_camera_mode()
         logger.info(f"Camera mode switched to: {self.camera.get_camera_mode()}")
     
     def get_rendering_info(self) -> dict:
-        """Get information about current rendering system"""
+        """Gets information about the current rendering system.
+
+        Returns:
+            dict: A dictionary containing rendering system information.
+        """
         info = {
             'system': 'polygon',
             'polygon_available': True
@@ -508,7 +566,7 @@ class Renderer:
     
     
     def _render_track(self):
-        """Render the track segments using polygon rendering"""
+        """Renders the track segments using polygon rendering."""
         if not self.track:
             return
         
@@ -520,7 +578,7 @@ class Renderer:
     
     
     def _render_track_info(self):
-        """Render track information in the middle-right portion of the screen"""
+        """Renders track information in the middle-right portion of the screen."""
         if not self.track:
             return
         
@@ -574,7 +632,11 @@ class Renderer:
             self.window.blit(surface, (text_x, text_y))
     
     def _render_debug_info(self, debug_data=None):
-        """Render debug visualizations"""
+        """Renders debug visualizations.
+
+        Args:
+            debug_data (dict, optional): Debugging information. Defaults to None.
+        """
         if not self.track or not self.polygon_renderer:
             return
         
@@ -587,11 +649,11 @@ class Renderer:
             self.debug_info_renderer.render_debug_info(self.window, debug_data)
             
     def _render_car(self, car_position: tuple, car_angle: float):
-        """Render the car at the specified position and angle
+        """Renders a single car at the specified position and angle.
         
         Args:
-            car_position: (x, y) position of car in world coordinates
-            car_angle: Car orientation angle in radians
+            car_position (tuple): (x, y) position of the car in world coordinates.
+            car_angle (float): The car's orientation angle in radians.
         """
         import math
         
@@ -639,12 +701,12 @@ class Renderer:
             pygame.draw.circle(self.window, CAR_COLOR, (int(screen_x), int(screen_y)), 10)
     
     def _render_car_with_color(self, car_position: tuple, car_angle: float, car_color: tuple):
-        """Render a car with a specific color at the specified position and angle
+        """Renders a car with a specific color at the specified position and angle.
         
         Args:
-            car_position: (x, y) position of car in world coordinates
-            car_angle: Car orientation angle in radians
-            car_color: (R, G, B) color tuple for the car
+            car_position (tuple): (x, y) position of the car in world coordinates.
+            car_angle (float): The car's orientation angle in radians.
+            car_color (tuple): (R, G, B) color tuple for the car.
         """
         import math
         
@@ -692,11 +754,11 @@ class Renderer:
             pygame.draw.circle(self.window, car_color, (int(screen_x), int(screen_y)), 10)
     
     def _render_multiple_cars(self, cars_data: list, followed_car_index: int):
-        """Render multiple cars with different colors
+        """Renders multiple cars with different colors.
         
         Args:
-            cars_data: List of car data dictionaries with 'position', 'angle', and 'color' keys
-            followed_car_index: Index of the currently followed car (for special highlighting)
+            cars_data (list): A list of car data dictionaries with 'position', 'angle', and 'color' keys.
+            followed_car_index (int): The index of the currently followed car (for special highlighting).
         """
         if not cars_data:
             return
@@ -742,13 +804,13 @@ class Renderer:
                 self._render_car_name(position, name, color, is_followed=True)
     
     def _render_car_name(self, position: tuple, name: str, color: tuple, is_followed: bool = False):
-        """Render car name above the car
+        """Renders the car's name above the car.
         
         Args:
-            position: Car position in world coordinates (x, y)
-            name: Name to display
-            color: Car color for text background
-            is_followed: Whether this is the currently followed car
+            position (tuple): The car's position in world coordinates (x, y).
+            name (str): The name to display.
+            color (tuple): The car's color for the text background.
+            is_followed (bool): Whether this is the currently followed car.
         """
         try:
             # Convert world position to screen coordinates
@@ -792,11 +854,11 @@ class Renderer:
             pass
     
     def _render_action_bars(self, current_action, car_name=None):
-        """Render action input bars at the top center of screen
+        """Renders action input bars at the top center of the screen.
         
         Args:
-            current_action: numpy array [throttle, brake, steering] with values in range [0,1], [0,1], [-1,1]
-            car_name: Optional name of the car whose actions are being displayed
+            current_action (np.ndarray): A numpy array [throttle, brake, steering] with values in range [0,1], [0,1], [-1,1].
+            car_name (str, optional): The optional name of the car whose actions are being displayed.
         """
         if not self.window:
             return
@@ -898,10 +960,10 @@ class Renderer:
             self.window.blit(label_text, (text_x, text_y))
     
     def _render_lap_times(self, lap_timing_info):
-        """Render lap timing information at the bottom center of the screen
+        """Renders lap timing information at the bottom center of the screen.
         
         Args:
-            lap_timing_info: Dictionary containing timing information from LapTimer
+            lap_timing_info (dict): A dictionary containing timing information from LapTimer.
         """
         if not self.window or not lap_timing_info:
             return
@@ -966,11 +1028,11 @@ class Renderer:
             self.window.blit(text_surface, text_rect)
     
     def _render_race_tables(self, race_positions_data, best_lap_times_data):
-        """Render race position and best lap times tables in the center of the screen
+        """Renders race position and best lap times tables in the center of the screen.
         
         Args:
-            race_positions_data: List of tuples (car_index, car_name, total_progress, completed_laps) sorted by position
-            best_lap_times_data: List of tuples (car_index, car_name, best_time) sorted by time
+            race_positions_data (list): A list of tuples (car_index, car_name, total_progress, completed_laps) sorted by position.
+            best_lap_times_data (list): A list of tuples (car_index, car_name, best_time) sorted by time.
         """
         if not self.window:
             return
@@ -1002,7 +1064,7 @@ class Renderer:
             self._render_lap_times_table(tables_font, right_table_x, table_y, best_lap_times_data)
     
     def _render_positions_table(self, font, x, y, race_positions_data):
-        """Render the race positions table (left table)"""
+        """Renders the race positions table (left table)."""
         # Draw background
         bg_surface = pygame.Surface((RACE_TABLES_WIDTH, RACE_TABLES_HEIGHT))
         bg_surface.set_alpha(RACE_TABLES_BG_ALPHA)
@@ -1052,9 +1114,11 @@ class Renderer:
             self.window.blit(text_surface, (text_x, current_y))
             
             current_y += RACE_TABLES_LINE_HEIGHT
+            
+            current_y += RACE_TABLES_LINE_HEIGHT
     
     def _render_lap_times_table(self, font, x, y, best_lap_times_data):
-        """Render the best lap times table (right table)"""
+        """Renders the best lap times table (right table)."""
         # Draw background
         bg_surface = pygame.Surface((RACE_TABLES_WIDTH, RACE_TABLES_HEIGHT))
         bg_surface.set_alpha(RACE_TABLES_BG_ALPHA)
@@ -1093,7 +1157,7 @@ class Renderer:
             current_y += RACE_TABLES_LINE_HEIGHT
     
     def _get_position_suffix(self, position):
-        """Get ordinal suffix for position (1st, 2nd, 3rd, 4th, etc.)"""
+        """Gets the ordinal suffix for a given position (e.g., "st", "nd", "rd", "th")."""
         if 10 <= position % 100 <= 20:  # Special case for 11th, 12th, 13th
             return "th"
         else:
@@ -1101,10 +1165,10 @@ class Renderer:
             return suffix_map.get(position % 10, "th")
     
     def _render_reward(self, reward_info):
-        """Render reward information in the bottom right corner of the screen
+        """Renders reward information in the bottom right corner of the screen.
         
         Args:
-            reward_info: Dictionary containing reward information
+            reward_info (dict): A dictionary containing reward information.
         """
         if not self.window or not reward_info:
             return
@@ -1154,10 +1218,10 @@ class Renderer:
             self.window.blit(text_surface, (start_x, text_y))
     
     def _render_countdown_clock(self, countdown_info):
-        """Render countdown clock in the top left corner of the screen
+        """Renders the countdown clock in the top left corner of the screen.
         
         Args:
-            countdown_info: Dictionary containing timing information
+            countdown_info (dict): A dictionary containing timing information.
         """
         if not self.window or not countdown_info:
             return
@@ -1214,10 +1278,10 @@ class Renderer:
         self.window.blit(text_surface, (text_x, text_y))
     
     def _render_observation_overlay(self, observation_info):
-        """Render observation graphs overlay covering most of the screen
+        """Renders the observation graphs overlay covering most of the screen.
         
         Args:
-            observation_info: Dictionary containing observation visualization info
+            observation_info (dict): A dictionary containing observation visualization information.
         """
         if not self.window or not observation_info:
             return

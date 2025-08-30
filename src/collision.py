@@ -13,7 +13,18 @@ from .constants import (
 
 
 class CollisionEvent:
-    """Represents a single collision event with full details"""
+    """Represents a single collision event with full details.
+
+    This class stores information about a single collision, including the
+    position, impulse, normal, car angle, and timestamp.
+
+    Args:
+        position (Tuple[float, float]): The world position of the collision (x, y).
+        impulse (float): The magnitude of the collision impulse.
+        normal (Tuple[float, float]): The normal vector of the collision surface.
+        car_angle (float): The car's orientation at the time of collision in radians.
+        timestamp (float): The simulation time when the collision occurred.
+    """
     
     def __init__(self, 
                  position: Tuple[float, float],
@@ -22,14 +33,14 @@ class CollisionEvent:
                  car_angle: float,
                  timestamp: float):
         """
-        Initialize collision event.
+        Initializes a CollisionEvent.
         
         Args:
-            position: World collision point (x, y)
-            impulse: Collision impulse magnitude (mass * delta_velocity)
-            normal: Collision surface normal vector (x, y)
-            car_angle: Car orientation at time of collision in radians
-            timestamp: Simulation time when collision occurred
+            position (Tuple[float, float]): The world collision point (x, y).
+            impulse (float): The collision impulse magnitude (mass * delta_velocity).
+            normal (Tuple[float, float]): The collision surface normal vector (x, y).
+            car_angle (float): The car's orientation at the time of collision in radians.
+            timestamp (float): The simulation time when the collision occurred.
         """
         self.position = position
         self.impulse = impulse
@@ -42,7 +53,11 @@ class CollisionEvent:
         self.relative_angle = self._calculate_relative_angle()
         
     def _calculate_relative_angle(self) -> float:
-        """Calculate collision angle relative to car orientation"""
+        """Calculates the collision angle relative to the car's orientation.
+
+        Returns:
+            float: The relative collision angle in radians.
+        """
         relative = self.normal_angle - self.car_angle
         
         # Normalize to [-π, π]
@@ -55,7 +70,11 @@ class CollisionEvent:
         
             
     def get_direction_description(self) -> str:
-        """Get human-readable collision direction"""
+        """Gets a human-readable description of the collision direction.
+
+        Returns:
+            str: A string describing the collision direction (e.g., "front-right").
+        """
         angle_deg = math.degrees(self.relative_angle)
         
         # Convert to compass-like directions relative to car
@@ -77,16 +96,25 @@ class CollisionEvent:
             return "front-left"
             
     def __str__(self) -> str:
+        """Returns a string representation of the collision event.
+
+        Returns:
+            str: A string representation of the collision event.
+        """
         return (f"Collision: {self.get_direction_description()} "
                 f"({self.impulse:.0f}N⋅s, "
                 f"t={self.timestamp:.1f}s)")
 
 
 class CollisionReporter:
-    """Manages collision detection, tracking, and reporting"""
+    """Manages collision detection, tracking, and reporting.
+
+    This class collects collision events, maintains a history of collisions,
+    and provides methods for querying collision data and statistics.
+    """
     
     def __init__(self):
-        """Initialize collision reporter"""
+        """Initializes the CollisionReporter."""
         self.collision_history: List[CollisionEvent] = []
         self.current_simulation_time = 0.0
         self.total_collisions = 0
@@ -102,7 +130,11 @@ class CollisionReporter:
         }
         
     def update_time(self, simulation_time: float) -> None:
-        """Update current simulation time"""
+        """Updates the current simulation time.
+
+        Args:
+            simulation_time (float): The current simulation time.
+        """
         self.current_simulation_time = simulation_time
         
     def report_collision(self,
@@ -112,17 +144,17 @@ class CollisionReporter:
                         car_angle: float,
                         car_id: Optional[str] = None) -> bool:
         """
-        Report a new collision event.
+        Reports a new collision event.
         
         Args:
-            position: World collision point
-            impulse: Collision impulse magnitude
-            normal: Collision surface normal
-            car_angle: Car orientation in radians
-            car_id: Optional car identifier
+            position (Tuple[float, float]): The world collision point.
+            impulse (float): The collision impulse magnitude.
+            normal (Tuple[float, float]): The collision surface normal.
+            car_angle (float): The car's orientation in radians.
+            car_id (Optional[str]): An optional identifier for the car.
             
         Returns:
-            True (always records collision)
+            bool: True, as the collision is always recorded.
         """
         # Create collision event - no filtering, report everything
         collision = CollisionEvent(
@@ -158,17 +190,21 @@ class CollisionReporter:
         return True
         
     def get_latest_collision(self) -> Optional[CollisionEvent]:
-        """Get the most recent collision event"""
+        """Gets the most recent collision event.
+
+        Returns:
+            Optional[CollisionEvent]: The most recent collision event, or None if there is no history.
+        """
         if not self.collision_history:
             return None
         return self.collision_history[-1]
         
     def get_collision_for_observation(self) -> Tuple[float, float]:
         """
-        Get collision data formatted for environment observation.
+        Gets collision data formatted for the environment observation.
         
         Returns:
-            Tuple of (collision_impulse, collision_angle_relative_to_car)
+            A tuple containing the collision impulse and the collision angle relative to the car.
         """
         recent_collision = self.get_recent_collision()
         if not recent_collision:
@@ -178,13 +214,13 @@ class CollisionReporter:
         
     def get_recent_collision(self, max_age: float = 1.0) -> Optional[CollisionEvent]:
         """
-        Get most recent collision within specified time window.
+        Gets the most recent collision within a specified time window.
         
         Args:
-            max_age: Maximum age of collision in seconds
+            max_age (float): The maximum age of the collision in seconds.
             
         Returns:
-            Most recent collision within time window, or None
+            The most recent collision within the time window, or None.
         """
         if not self.collision_history:
             return None
@@ -202,12 +238,24 @@ class CollisionReporter:
     def get_collisions_in_timeframe(self, 
                                    start_time: float, 
                                    end_time: float) -> List[CollisionEvent]:
-        """Get all collisions within specified time range"""
+        """Gets all collisions within a specified time range.
+
+        Args:
+            start_time (float): The start of the time range.
+            end_time (float): The end of the time range.
+
+        Returns:
+            A list of collision events within the time range.
+        """
         return [c for c in self.collision_history 
                 if start_time <= c.timestamp <= end_time]
                 
     def clear_old_collisions(self, max_age: float = 10.0) -> None:
-        """Remove collisions older than specified age"""
+        """Removes collisions older than a specified age.
+
+        Args:
+            max_age (float): The maximum age of collisions to keep.
+        """
         cutoff_time = self.current_simulation_time - max_age
         old_count = len(self.collision_history)
         
@@ -221,7 +269,7 @@ class CollisionReporter:
             self._recalculate_statistics()
             
     def _recalculate_statistics(self) -> None:
-        """Recalculate statistics from current collision history"""
+        """Recalculates the statistics from the current collision history."""
         # Reset stats
         self.total_impulse = 0.0
         self.max_impulse = 0.0
@@ -235,7 +283,11 @@ class CollisionReporter:
             self.direction_stats[collision.get_direction_description()] += 1
             
     def get_collision_statistics(self) -> Dict[str, Any]:
-        """Get comprehensive collision statistics"""
+        """Gets comprehensive collision statistics.
+
+        Returns:
+            A dictionary of collision statistics.
+        """
         if not self.collision_history:
             return {
                 "total_collisions": 0,
@@ -275,11 +327,18 @@ class CollisionReporter:
         }
         
     def has_recent_collision(self, max_age: float = 0.5) -> bool:
-        """Check if there was a recent collision"""
+        """Checks if there was a recent collision.
+
+        Args:
+            max_age (float): The maximum age of a collision to be considered recent.
+
+        Returns:
+            True if there was a recent collision, False otherwise.
+        """
         return self.get_recent_collision(max_age) is not None
         
     def reset(self) -> None:
-        """Reset all collision data"""
+        """Resets all collision data."""
         self.collision_history.clear()
         self.current_simulation_time = 0.0
         self.total_collisions = 0
@@ -291,7 +350,11 @@ class CollisionReporter:
             self.direction_stats[key] = 0
             
     def get_debug_info(self) -> str:
-        """Get debug information string"""
+        """Gets a debug information string.
+
+        Returns:
+            A string containing debug information about recent collisions.
+        """
         recent = self.get_recent_collision()
         if recent:
             return (f"Recent collision: {recent.get_direction_description()} "
@@ -299,7 +362,11 @@ class CollisionReporter:
         return f"No recent collisions (Total: {self.total_collisions})"
         
     def __str__(self) -> str:
-        """String representation of collision reporter state"""
+        """Returns a string representation of the collision reporter state.
+
+        Returns:
+            A string representation of the collision reporter state.
+        """
         stats = self.get_collision_statistics()
         return (f"CollisionReporter: {stats['total_collisions']} total, "
                 f"{stats['recent_collisions']} recent, "

@@ -1,1 +1,1 @@
-# src package init file
+"""Initializes the src package."""

@@ -18,21 +18,33 @@ from .constants import (
 
 
 class CenterlineGenerator:
-    """Generates smooth centerlines for track rendering"""
+    """Generates smooth centerlines for track rendering.
+
+    This class takes a Track object and generates a smooth, continuous centerline
+    by interpolating points along the track segments.
+
+    Args:
+        adaptive_sampling (bool): If True, use adaptive sampling for curves.
+    """
     
     def __init__(self, adaptive_sampling: bool = True):
+        """Initializes the CenterlineGenerator.
+
+        Args:
+            adaptive_sampling (bool): If True, use adaptive sampling for curves.
+        """
         self.adaptive_sampling = adaptive_sampling
     
     def generate_centerline(self, track: Track, target_spacing: float = CENTERLINE_DEFAULT_SPACING) -> List[Tuple[float, float]]:
         """
-        Generate a smooth centerline from track segments.
+        Generates a smooth centerline from the track segments.
         
         Args:
-            track: Track object containing segments
-            target_spacing: Target distance between centerline points (world units)
+            track (Track): The track object containing the segments.
+            target_spacing (float): The target distance between centerline points.
             
         Returns:
-            List of (x, y) points forming the centerline
+            A list of (x, y) points forming the centerline.
         """
         if not track or not track.segments:
             return []
@@ -55,7 +67,15 @@ class CenterlineGenerator:
         return smoothed_points
     
     def _generate_segment_centerline(self, segment: TrackSegment, target_spacing: float) -> List[Tuple[float, float]]:
-        """Generate centerline points for a single segment"""
+        """Generates centerline points for a single segment.
+
+        Args:
+            segment (TrackSegment): The track segment.
+            target_spacing (float): The target distance between points.
+
+        Returns:
+            A list of (x, y) points for the segment's centerline.
+        """
         
         if segment.segment_type == "CURVE" and segment.curve_radius > 0:
             return self._generate_curve_centerline(segment, target_spacing)
@@ -63,7 +83,15 @@ class CenterlineGenerator:
             return self._generate_straight_centerline(segment, target_spacing)
     
     def _generate_straight_centerline(self, segment: TrackSegment, target_spacing: float) -> List[Tuple[float, float]]:
-        """Generate centerline for straight segment"""
+        """Generates the centerline for a straight segment.
+
+        Args:
+            segment (TrackSegment): The straight track segment.
+            target_spacing (float): The target distance between points.
+
+        Returns:
+            A list of (x, y) points for the straight centerline.
+        """
         start = segment.start_position
         end = segment.end_position
         
@@ -88,7 +116,15 @@ class CenterlineGenerator:
         return points
     
     def _generate_curve_centerline(self, segment: TrackSegment, target_spacing: float) -> List[Tuple[float, float]]:
-        """Generate centerline for curved segment with adaptive sampling"""
+        """Generates the centerline for a curved segment with adaptive sampling.
+
+        Args:
+            segment (TrackSegment): The curved track segment.
+            target_spacing (float): The target distance between points.
+
+        Returns:
+            A list of (x, y) points for the curved centerline.
+        """
         
         # Calculate curve parameters
         start_heading_rad = math.radians(segment.start_heading)
@@ -136,14 +172,14 @@ class CenterlineGenerator:
     
     def _smooth_centerline(self, points: List[Tuple[float, float]], smoothing_factor: float = CENTERLINE_SMOOTHING_FACTOR) -> List[Tuple[float, float]]:
         """
-        Apply smoothing to centerline to reduce sharp corners.
+        Applies smoothing to the centerline to reduce sharp corners.
         
         Args:
-            points: Input centerline points
-            smoothing_factor: Amount of smoothing (0.0 = no smoothing, 1.0 = maximum)
+            points (List[Tuple[float, float]]): The input centerline points.
+            smoothing_factor (float): The amount of smoothing to apply.
             
         Returns:
-            Smoothed centerline points
+            A list of smoothed centerline points.
         """
         if len(points) < 3 or smoothing_factor <= 0:
             return points
@@ -171,14 +207,14 @@ class CenterlineGenerator:
     
     def get_centerline_tangent(self, points: List[Tuple[float, float]], index: int) -> Tuple[float, float]:
         """
-        Calculate tangent vector at a specific point on the centerline.
+        Calculates the tangent vector at a specific point on the centerline.
         
         Args:
-            points: Centerline points
-            index: Index of point to calculate tangent for
+            points (List[Tuple[float, float]]): The centerline points.
+            index (int): The index of the point to calculate the tangent for.
             
         Returns:
-            Normalized tangent vector (dx, dy)
+            A normalized tangent vector (dx, dy).
         """
         if len(points) < 2:
             return (1.0, 0.0)  # Default to horizontal

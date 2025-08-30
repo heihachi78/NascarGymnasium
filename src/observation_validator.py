@@ -28,7 +28,11 @@ logger = logging.getLogger(__name__)
 
 
 class ObservationValidator:
-    """Validates observation vectors for consistency and bounds."""
+    """Validates observation vectors for consistency and bounds.
+
+    This class provides methods to validate the shape, bounds, and logical
+    consistency of observation vectors from the car environment.
+    """
     
     # Expected observation structure (22 base elements + sensors)
     OBSERVATION_STRUCTURE = {
@@ -59,19 +63,19 @@ class ObservationValidator:
     }
     
     def __init__(self):
-        """Initialize observation validator."""
+        """Initializes the ObservationValidator."""
         self.validation_errors = []
         self.warnings = []
         
     def validate_observation_shape(self, observation: np.ndarray) -> bool:
         """
-        Validate that observation has correct shape.
+        Validates that the observation has the correct shape.
         
         Args:
-            observation: Observation vector to validate
+            observation (np.ndarray): The observation vector to validate.
             
         Returns:
-            True if shape is correct, False otherwise
+            bool: True if the shape is correct, False otherwise.
         """
         expected_shape = CAR_OBSERVATION_SHAPE[0]
         actual_shape = observation.shape
@@ -90,13 +94,13 @@ class ObservationValidator:
     
     def validate_observation_bounds(self, observation: np.ndarray) -> bool:
         """
-        Validate that all observation elements are within expected bounds.
+        Validates that all observation elements are within the expected bounds.
         
         Args:
-            observation: Observation vector to validate
+            observation (np.ndarray): The observation vector to validate.
             
         Returns:
-            True if all elements are within bounds, False otherwise
+            bool: True if all elements are within bounds, False otherwise.
         """
         if not self.validate_observation_shape(observation):
             return False
@@ -117,13 +121,13 @@ class ObservationValidator:
     
     def validate_observation_consistency(self, observation: np.ndarray) -> bool:
         """
-        Validate logical consistency within observation vector.
+        Validates the logical consistency within the observation vector.
         
         Args:
-            observation: Observation vector to validate
+            observation (np.ndarray): The observation vector to validate.
             
         Returns:
-            True if observation is logically consistent, False otherwise
+            bool: True if the observation is logically consistent, False otherwise.
         """
         if not self.validate_observation_shape(observation):
             return False
@@ -167,14 +171,14 @@ class ObservationValidator:
     
     def validate_multi_car_observations(self, observations: np.ndarray, num_cars: int) -> bool:
         """
-        Validate multi-car observation array.
+        Validates a multi-car observation array.
         
         Args:
-            observations: Multi-car observation array of shape (num_cars, obs_size)
-            num_cars: Expected number of cars
+            observations (np.ndarray): The multi-car observation array.
+            num_cars (int): The expected number of cars.
             
         Returns:
-            True if all observations are valid, False otherwise
+            bool: True if all observations are valid, False otherwise.
         """
         if observations.shape[0] != num_cars:
             self.validation_errors.append(
@@ -193,13 +197,13 @@ class ObservationValidator:
     
     def validate_full_observation(self, observation: np.ndarray) -> bool:
         """
-        Run full validation suite on observation.
+        Runs the full validation suite on an observation.
         
         Args:
-            observation: Observation vector to validate
+            observation (np.ndarray): The observation vector to validate.
             
         Returns:
-            True if observation passes all checks, False otherwise
+            bool: True if the observation passes all checks, False otherwise.
         """
         self.reset_validation_state()
         
@@ -211,10 +215,10 @@ class ObservationValidator:
     
     def get_validation_report(self) -> Dict[str, Any]:
         """
-        Get detailed validation report.
+        Gets a detailed validation report.
         
         Returns:
-            Dictionary containing validation errors and warnings
+            A dictionary containing validation errors and warnings.
         """
         return {
             'errors': self.validation_errors.copy(),
@@ -224,12 +228,12 @@ class ObservationValidator:
         }
     
     def reset_validation_state(self) -> None:
-        """Reset validation error and warning lists."""
+        """Resets the validation error and warning lists."""
         self.validation_errors.clear()
         self.warnings.clear()
     
     def _get_element_name(self, index: int) -> str:
-        """Get human-readable name for observation element at given index."""
+        """Gets a human-readable name for an observation element at a given index."""
         for name, (idx, _) in self.OBSERVATION_STRUCTURE.items():
             if idx == index:
                 return name
@@ -243,13 +247,13 @@ class ObservationValidator:
     @staticmethod
     def create_observation_summary(observation: np.ndarray) -> Dict[str, Any]:
         """
-        Create human-readable summary of observation values.
+        Creates a human-readable summary of observation values.
         
         Args:
-            observation: Observation vector to summarize
+            observation (np.ndarray): The observation vector to summarize.
             
         Returns:
-            Dictionary with categorized observation values
+            A dictionary with categorized observation values.
         """
         if len(observation) < 22:
             return {'error': 'Observation too short for summary'}
@@ -295,14 +299,14 @@ class ObservationValidator:
 
 def validate_environment_observations(env, num_steps: int = 10) -> Dict[str, Any]:
     """
-    Run validation tests on environment observations.
+    Runs validation tests on the environment's observations.
     
     Args:
-        env: Environment instance to test
-        num_steps: Number of environment steps to test
+        env: The environment instance to test.
+        num_steps (int): The number of environment steps to test.
         
     Returns:
-        Validation report dictionary
+        A dictionary containing the validation report.
     """
     validator = ObservationValidator()
     report = {

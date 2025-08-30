@@ -15,16 +15,25 @@ import math
 from .constants import SENSOR_NUM_DIRECTIONS
 
 class ObservationVisualizerOptimized:
-    """High-performance real-time visualization of car observations using pure pygame"""
+    """High-performance real-time visualization of car observations using pure pygame.
+
+    This class is responsible for visualizing the car's observation space in real-time.
+    It uses pygame for rendering to ensure high performance.
+
+    Args:
+        history_length (int): The number of data points to keep in the rolling history.
+        graph_width (int): The width of each graph in pixels.
+        graph_height (int): The height of each graph in pixels.
+    """
     
     def __init__(self, history_length: int = 300, graph_width: int = 500, graph_height: int = 350):
         """
-        Initialize optimized observation visualizer.
+        Initializes the optimized observation visualizer.
         
         Args:
-            history_length: Number of data points to keep in rolling history
-            graph_width: Width of each graph in pixels
-            graph_height: Height of each graph in pixels
+            history_length (int): The number of data points to keep in the rolling history.
+            graph_width (int): The width of each graph in pixels.
+            graph_height (int): The height of each graph in pixels.
         """
         self.history_length = history_length
         self.graph_width = graph_width
@@ -87,12 +96,12 @@ class ObservationVisualizerOptimized:
         
     def add_observation(self, observation: np.ndarray, time: float, car_id: int = 0) -> None:
         """
-        Add a new observation to the history for a specific car.
+        Adds a new observation to the history for a specific car.
         
         Args:
-            observation: Normalized observation array from car environment
-            time: Current simulation time
-            car_id: ID of the car this observation belongs to
+            observation (np.ndarray): The normalized observation array from the car environment.
+            time (float): The current simulation time.
+            car_id (int): The ID of the car this observation belongs to.
         """
         # Initialize history for this car if it doesn't exist
         if car_id not in self.car_observation_histories:
@@ -105,21 +114,21 @@ class ObservationVisualizerOptimized:
     
     def set_displayed_car(self, car_id: int) -> None:
         """
-        Set which car's observation history to display.
+        Sets which car's observation history to display.
         
         Args:
-            car_id: ID of the car whose data should be displayed
+            car_id (int): The ID of the car whose data should be displayed.
         """
         self.current_car_id = car_id
         
     def _draw_graph_fast(self, surface: pygame.Surface, category_name: str, category_data: dict) -> None:
         """
-        Draw a graph directly using pygame primitives for maximum performance.
+        Draws a graph directly using pygame primitives for maximum performance.
         
         Args:
-            surface: pygame Surface to draw on
-            category_name: Name of the observation category
-            category_data: Dictionary containing indices, labels, and colors
+            surface (pygame.Surface): The pygame Surface to draw on.
+            category_name (str): The name of the observation category.
+            category_data (dict): A dictionary containing indices, labels, and colors.
         """
         # Clear surface with dark background
         surface.fill((20, 20, 20))
@@ -271,12 +280,12 @@ class ObservationVisualizerOptimized:
     
     def _draw_legend(self, surface: pygame.Surface, labels: List[str], colors: List[Tuple[int, int, int]]) -> None:
         """
-        Draw legend for the graph showing color-coded labels.
+        Draws a legend for the graph showing color-coded labels.
         
         Args:
-            surface: pygame Surface to draw on
-            labels: List of data series labels
-            colors: List of colors corresponding to each label
+            surface (pygame.Surface): The pygame Surface to draw on.
+            labels (List[str]): A list of data series labels.
+            colors (List[Tuple[int, int, int]]): A list of colors corresponding to each label.
         """
         if not labels or not colors:
             return
@@ -318,7 +327,7 @@ class ObservationVisualizerOptimized:
             surface.blit(text_surface, (legend_x + 25, item_y))
             
     def update_graphs(self, screen_width: int = None, screen_height: int = None) -> None:
-        """Update all graph surfaces with current data (throttled for performance)."""
+        """Updates all graph surfaces with the current data (throttled for performance)."""
         self.frame_counter += 1
         
         # Only update every N frames to maintain performance
@@ -341,7 +350,7 @@ class ObservationVisualizerOptimized:
             self._draw_graph_fast(surface, category_name, category_data)
             
     def _update_graph_sizes(self, screen_width: int, screen_height: int) -> None:
-        """Update graph dimensions based on screen size and recreate surfaces."""
+        """Updates the graph dimensions based on the screen size and recreates the surfaces."""
         # Recalculate optimal graph size for current screen
         # This also updates self.graph_width and self.graph_height
         self.get_layout_positions(screen_width, screen_height)
@@ -352,19 +361,19 @@ class ObservationVisualizerOptimized:
             
     def get_graph_surfaces(self) -> dict:
         """
-        Get all graph surfaces for rendering.
+        Gets all the graph surfaces for rendering.
         
         Returns:
-            Dictionary mapping category names to pygame surfaces
+            A dictionary mapping category names to pygame surfaces.
         """
         return self.graph_surfaces.copy()
         
     def clear_history(self, car_id: int = None) -> None:
         """
-        Clear observation history for a specific car or all cars.
+        Clears the observation history for a specific car or all cars.
         
         Args:
-            car_id: ID of car to clear history for. If None, clears all cars.
+            car_id (int, optional): The ID of the car to clear the history for. If None, clears all cars.
         """
         if car_id is None:
             # Clear all cars' histories
@@ -382,14 +391,14 @@ class ObservationVisualizerOptimized:
         
     def get_layout_positions(self, screen_width: int, screen_height: int) -> dict:
         """
-        Calculate optimal positions for arranging graphs on screen.
+        Calculates the optimal positions for arranging the graphs on the screen.
         
         Args:
-            screen_width: Available screen width
-            screen_height: Available screen height
+            screen_width (int): The available screen width.
+            screen_height (int): The available screen height.
             
         Returns:
-            Dictionary mapping category names to (x, y) positions
+            A dictionary mapping category names to (x, y) positions.
         """
         # Arrange graphs in a 2x3 grid
         cols = 2
