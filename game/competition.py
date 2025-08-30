@@ -95,6 +95,7 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
+        ("game/control/models/a2c_best_model5.zip", "A2C-B5"),
         ("game/control/models/a2c_best_model4.zip", "A2C-B4"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B3"),
         ("game/control/models/a2c_best_model2.zip", "A2C-B2"),
@@ -172,7 +173,7 @@ def main():
         track_file="tracks/nascar.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
