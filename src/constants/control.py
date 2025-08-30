@@ -66,10 +66,10 @@ MINIMUM_STEERING_THRESHOLD = 0.01  # Minimum steering angle to consider "steerin
 STEERING_TORQUE_MULTIPLIER = 0.8  # Steering torque multiplier factor (reduced for smoother turns)
 STEERING_ANGULAR_DAMPING = 4.0  # Damping factor for angular velocity (increased to reduce over-rotation)
 LATERAL_FORCE_SPEED_THRESHOLD = 0.05  # Minimum speed (m/s) for lateral tyre forces (reduced from 0.2 to enable steering when stuck)
-MAX_LATERAL_FORCE = 20000.0  # Maximum lateral force from steering (N) - increased from 15000 to help escape walls
+MAX_LATERAL_FORCE = 30000.0  # Maximum lateral force from steering (N) - increased from 15000 to help escape walls
 LATERAL_FORCE_SPEED_MULTIPLIER = 40.0  # Multiplier for speed-dependent lateral force (increased multiplier)
 LATERAL_FORCE_STEERING_MULTIPLIER = 10.0  # Additional multiplier for steering force calculation (increased multiplier)
-VELOCITY_ALIGNMENT_FORCE_FACTOR = 4.0  # Force multiplier for aligning velocity with car orientation (increased from 2.5 for stronger correction)
+VELOCITY_ALIGNMENT_FORCE_FACTOR = 5.0  # Force multiplier for aligning velocity with car orientation (increased from 2.5 for stronger correction)
 
 # Friction Force Constants (for tyre heating)
 MAX_FRICTION_FORCE_CAP = 2000.0  # Maximum friction force per tyre (N)

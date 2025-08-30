@@ -6,7 +6,7 @@ TYRE_IDEAL_TEMPERATURE_MIN = 85.0  # °C
 TYRE_IDEAL_TEMPERATURE_MAX = 105.0  # °C
 
 # Tyre Grip Constants
-TYRE_MAX_GRIP_COEFFICIENT = 1.4  # 1.4 maximum grip coefficient at ideal temperature (optimal baseline)
+TYRE_MAX_GRIP_COEFFICIENT = 1.5  # 1.5 maximum grip coefficient at ideal temperature (optimal baseline)
                                     # NOTE: This is the single source of truth for tire grip in the simulation
 TYRE_MIN_GRIP_COEFFICIENT = 0.8  # 0.8 minimum grip coefficient when far from ideal (realistic degraded performance)
 TYRE_GRIP_FALLOFF_RATE = 0.02  # grip reduction per degree outside ideal range
