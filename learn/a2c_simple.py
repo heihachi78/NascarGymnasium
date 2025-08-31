@@ -227,8 +227,9 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[128, 64],
-        activation_fn=torch.nn.ReLU
+        net_arch=[256, 128],
+        activation_fn=torch.nn.ReLU,
+        ortho_init=True
     )
 
     # A2C modell
@@ -239,6 +240,9 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
+        ent_coef=0.005,
+        gae_lambda=0.95,
+        n_steps=64,
         device="cpu",
         policy_kwargs=policy_kwargs,
     )
