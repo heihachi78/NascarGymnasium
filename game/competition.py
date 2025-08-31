@@ -96,12 +96,8 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
-        ("game/control/models/a2c_best_model2.zip", "A2C-B-2"),
-        ("game/control/models/a2c_best_model1.zip", "A2C-B-1"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
-        ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
-        ("game/control/models/td3_best_model3.zip", "TD3-B-3"),
         (None, "BC"),
     ]
 
@@ -179,6 +175,7 @@ def main():
         discrete_action_space=False,
         car_names=car_names
     )
+    env.seed(42)
     
     print(f"🎮 CONTROLS:")
     print(f"   Keys 0-{min(num_cars-1, 9)}: Switch camera between cars")
