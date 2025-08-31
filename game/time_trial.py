@@ -88,6 +88,7 @@ def main():
     print(f"   • {TOTAL_ATTEMPTS} attempts of {LAPS_PER_ATTEMPT} laps each")
     print(f"   • Total of {TOTAL_ATTEMPTS * LAPS_PER_ATTEMPT} laps per car")
     print(f"   • Fastest single lap time wins")
+    print(f"   • Random track selected for each attempt")
     print(f"   • Environment resets between attempts")
     print("=" * 60)
     
@@ -166,8 +167,9 @@ def main():
     
     print("=" * 60)
     
-    # Initialize environment
-    env = CarEnv(track_file="tracks/nascar_banked.track",
+    # Initialize environment with random tracks
+    env = CarEnv(track_file=None,  # No fixed track
+                 use_random_tracks=True,  # Enable random track selection
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
                  render_mode=None, #"human",
@@ -202,8 +204,10 @@ def main():
             print(f"🏁 ATTEMPT {attempt_num} OF {TOTAL_ATTEMPTS}")
             print(f"{'=' * 60}")
             
-            # Reset environment for new attempt
+            # Reset environment for new attempt (selects new random track)
             obs, info = env.reset()
+            print(f"🏁 Track for attempt {attempt_num}: {env.track_file}")
+            print(f"{'=' * 60}")
             
             # Per-attempt tracking
             attempt_lap_counts = {}  # Lap count in current attempt

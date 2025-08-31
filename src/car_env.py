@@ -9,7 +9,10 @@ import logging
 import math
 import numpy as np
 import pygame
-from typing import Optional, Tuple, Dict, Any
+import os
+import random
+import glob
+from typing import Optional, Tuple, Dict, Any, List
 from .base_env import BaseEnv
 from .car import Car
 from .car_physics import CarPhysics
@@ -83,19 +86,21 @@ class CarEnv(BaseEnv):
                  discrete_action_space: bool = False,
                  num_cars: int = 1,
                  car_names: Optional[list] = None,
+                 use_random_tracks: bool = False,
                 ):
         """
         Initialize car racing environment.
         
         Args:
             render_mode: Rendering mode ("human" or None)
-            track_file: Path to track definition file
+            track_file: Path to track definition file (if None and use_random_tracks=True, a random track will be selected)
             start_position: Car starting position (auto-detected if None)
             start_angle: Car starting angle in radians
             reset_on_lap: If True, reset environment automatically when a lap is completed
             discrete_action_space: If True, use discrete action space (5 actions) instead of continuous
             num_cars: Number of cars to create (1-10)
             car_names: List of names for each car (optional, defaults to "Car 0", "Car 1", etc.)
+            use_random_tracks: If True and track_file is None, randomly select tracks from tracks/ directory
         """
         super().__init__(discrete_action_space=discrete_action_space, num_cars=num_cars)
         
@@ -105,6 +110,10 @@ class CarEnv(BaseEnv):
         
         self.render_mode = render_mode
         self.track_file = track_file
+        self.use_random_tracks = use_random_tracks
+        # Store original track file to prevent random tracks when explicit file provided
+        if track_file:
+            self._original_track_file = track_file
         self.track = None
         self.start_position = start_position or (0.0, 0.0)
         self.start_angle = start_angle
@@ -124,9 +133,11 @@ class CarEnv(BaseEnv):
                 raise ValueError(f"Number of car names ({len(car_names)}) must match number of cars ({num_cars})")
             self.car_names = list(car_names)  # Make a copy
         
-        # Load track if specified
+        # Load track: explicit file, random selection, or none
         if track_file:
             self._load_track(track_file)
+        elif use_random_tracks:
+            self._load_random_track()
             
         # Create physics system
         self.car_physics_worlds = []
@@ -205,7 +216,10 @@ class CarEnv(BaseEnv):
         self._backward_penalty_active = [False] * self.num_cars  # Whether penalty is active for each car
         self._first_step_after_reset = [True] * self.num_cars  # Skip backward penalty on first step
         
-        logger.info(f"CarEnv initialized with {num_cars} car(s) and track: {track_file}")
+        if use_random_tracks and not track_file:
+            logger.info(f"CarEnv initialized with {num_cars} car(s) using random tracks (current: {getattr(self, 'track_file', 'none')})")
+        else:
+            logger.info(f"CarEnv initialized with {num_cars} car(s) and track: {track_file}")
     
     def _initialize_lap_timers(self) -> None:
         """Initialize lap timers for all cars"""
@@ -234,6 +248,59 @@ class CarEnv(BaseEnv):
         except Exception as e:
             logger.error(f"Failed to load track {track_file}: {e}")
             self.track = None
+    
+    def _discover_available_tracks(self) -> List[str]:
+        """Discover all available .track files in the tracks directory"""
+        if not hasattr(self, '_available_tracks'):
+            # Find tracks directory relative to the current module
+            current_dir = os.path.dirname(os.path.abspath(__file__))
+            project_root = os.path.dirname(current_dir)
+            tracks_dir = os.path.join(project_root, 'tracks')
+            
+            # Discover all .track files
+            track_pattern = os.path.join(tracks_dir, '*.track')
+            track_files = glob.glob(track_pattern)
+            
+            # Store relative paths from project root
+            self._available_tracks = []
+            for track_file in track_files:
+                relative_path = os.path.relpath(track_file, project_root)
+                self._available_tracks.append(relative_path)
+            
+            logger.info(f"Discovered {len(self._available_tracks)} available tracks: {self._available_tracks}")
+        
+        return self._available_tracks
+    
+    def _select_random_track(self) -> Optional[str]:
+        """Select a random track file from available tracks"""
+        available_tracks = self._discover_available_tracks()
+        
+        if not available_tracks:
+            logger.warning("No .track files found in tracks directory")
+            return None
+        
+        selected_track = random.choice(available_tracks)
+        logger.info(f"Randomly selected track: {selected_track}")
+        return selected_track
+    
+    def _load_random_track(self) -> None:
+        """Load a randomly selected track"""
+        selected_track = self._select_random_track()
+        if selected_track:
+            self._load_track(selected_track)
+            # Store the selected track file for reference
+            self.track_file = selected_track
+            
+            # Update start position if using default and track has GRID or STARTLINE
+            if self.start_position == (0.0, 0.0) and self.track and self.track.segments:
+                for segment in self.track.segments:
+                    if segment.segment_type in ["GRID", "STARTLINE"]:
+                        self.start_position = segment.start_position
+                        logger.info(f"Updated start position to {self.start_position} from track {selected_track}")
+                        break
+        else:
+            logger.error("Failed to select a random track - no tracks available")
+            self.track = None
             
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
@@ -247,6 +314,18 @@ class CarEnv(BaseEnv):
             Tuple of (observation, info)
         """
         super().reset(seed=seed)
+        
+        # Load a new random track if random tracks are enabled and no explicit track was set
+        if self.use_random_tracks and not hasattr(self, '_original_track_file'):
+            previous_track_file = self.track_file
+            self._load_random_track()
+            
+            # Update renderer with new track if it exists and track changed
+            if (self.renderer and 
+                self.track and 
+                self.track_file != previous_track_file):
+                logger.info(f"Updating renderer with new track: {self.track_file}")
+                self.renderer.set_track(self.track)
         
         # Create or reset cars
         if not self.cars:
@@ -1256,7 +1335,8 @@ class CarEnv(BaseEnv):
                 race_positions_data=race_positions_data,
                 best_lap_times_data=best_lap_times_data,
                 countdown_info=countdown_info,
-                observation_info=observation_info
+                observation_info=observation_info,
+                track_file_name=self.track_file
             )
             
     def get_track(self):

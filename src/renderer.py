@@ -263,7 +263,7 @@ class Renderer:
                 pygame.font.init()
             self._initialized_pygame = True
             
-    def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None, observation_info=None):
+    def render_frame(self, car_position=None, car_angle=None, debug_data=None, current_action=None, lap_timing_info=None, reward_info=None, cars_data=None, followed_car_index=0, race_positions_data=None, best_lap_times_data=None, countdown_info=None, observation_info=None, track_file_name=None):
         """
         Renders a single frame of the simulation.
         
@@ -280,8 +280,12 @@ class Renderer:
             best_lap_times_data (list, optional): Best lap times data. Defaults to None.
             countdown_info (dict, optional): Countdown clock information. Defaults to None.
             observation_info (dict, optional): Observation visualization information. Defaults to None.
+            track_file_name (str, optional): The track file name for display. Defaults to None.
         """
         self.init_pygame()
+        
+        # Store track file name for display
+        self.track_file_name = track_file_name
         
         if self.window is None:
             if self.is_fullscreen:
@@ -596,10 +600,20 @@ class Renderer:
         start_to_finish_length = self.track.get_start_to_finish_length()
         
         # Create info text lines
-        info_lines = [
+        info_lines = []
+        
+        # Add track name if available
+        if self.track_file_name:
+            # Extract just the filename without path and extension
+            import os
+            track_name = os.path.splitext(os.path.basename(self.track_file_name))[0]
+            info_lines.append(f"Track: {track_name}")
+        
+        # Add track metrics
+        info_lines.extend([
             f"Total Track Length: {total_length:.1f}m",
             f"Start to Finish: {start_to_finish_length:.1f}m"
-        ]
+        ])
         
         # Calculate text dimensions
         text_surfaces = []
