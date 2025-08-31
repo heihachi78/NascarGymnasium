@@ -56,7 +56,7 @@ cd claude_car4
 pip install -r requirements.txt
 
 # Test the installation
-python game/random_demo.py
+python demo/random_demo.py
 ```
 
 ## Quick Start
@@ -107,7 +107,7 @@ python game/time_trial.py
 python game/competition.py
 
 # Random demonstration
-python game/random_demo.py
+python demo/random_demo.py
 ```
 
 ## Environment Details
@@ -500,7 +500,7 @@ source .venv/bin/activate          # Activate (Linux/Mac)
 ```bash
 python game/time_trial.py         # Time trial mode
 python game/competition.py        # Competition mode
-python game/random_demo.py        # Random demonstration
+python demo/random_demo.py        # Random demonstration
 python learn/ppo_simple.py        # Train PPO model
 python tools/track_tool.py gui    # Launch track builder
 ```
