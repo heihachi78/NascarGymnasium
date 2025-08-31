@@ -53,13 +53,16 @@ logger = logging.getLogger(__name__)
 
 # ---------- curriculum learning callback ----------
 class CurriculumLearningCallback(BaseCallback):
-    def __init__(self, reward_threshold: float = 200.0, eval_window: int = 50, verbose: int = 0):
+    def __init__(self, reward_threshold: float = 200.0, eval_window: int = 50, 
+                 num_envs: int = 8, verbose: int = 0):
         super().__init__(verbose)
         self.reward_threshold = reward_threshold
         self.eval_window = eval_window
+        self.num_envs = num_envs
         self.reward_history = deque(maxlen=eval_window)
         self.phase = "nascar"  # "nascar" or "random"
-        self.phase_changed = False
+        self.phase_switched = False
+        self.eval_callback = None  # Will be set by parent callback
         
     def _on_step(self) -> bool:
         return True
@@ -75,18 +78,39 @@ class CurriculumLearningCallback(BaseCallback):
             recent_rewards = list(self.reward_history)[-5:]  # Last 5 evaluations
             current_mean = np.mean(recent_rewards)
             
-            if current_mean >= self.reward_threshold:
+            if current_mean >= self.reward_threshold and not self.phase_switched:
                 logger.info(f"🎉 Reward threshold reached! Mean reward: {current_mean:.2f} >= {self.reward_threshold}")
                 logger.info("🔄 Transitioning from NASCAR track to RANDOM tracks")
                 self.phase = "random"
-                self.phase_changed = True
+                self.phase_switched = True
                 
-    def has_phase_changed(self) -> bool:
-        """Check if phase has changed and reset flag"""
-        if self.phase_changed:
-            self.phase_changed = False
-            return True
-        return False
+                # Switch environments immediately
+                self._switch_environments()
+                
+    def _switch_environments(self):
+        """Switch training and evaluation environments to random tracks"""
+        if self.model is None:
+            logger.warning("Cannot switch environments - model not available")
+            return
+            
+        logger.info(f"Switching to {self.num_envs} RANDOM track environments")
+        
+        # Create new environments for random phase
+        old_env = self.model.get_env()
+        new_env = SubprocVecEnv([make_env(i, None) for i in range(self.num_envs)])
+        new_eval_env = DummyVecEnv([make_env("eval", None)])
+        
+        # Set new environment
+        self.model.set_env(new_env)
+        
+        # Update eval callback's environment if available
+        if self.eval_callback is not None:
+            self.eval_callback.eval_env.close()
+            self.eval_callback.eval_env = new_eval_env
+        
+        # Clean up old environment
+        old_env.close()
+        logger.info("Environment switch completed")
         
     def get_current_phase(self) -> str:
         return self.phase
@@ -123,6 +147,8 @@ class CurriculumEvalCallback(EvalCallback):
     def __init__(self, curriculum_callback: CurriculumLearningCallback, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.curriculum_callback = curriculum_callback
+        # Link back to curriculum callback so it can update our eval env
+        self.curriculum_callback.eval_callback = self
         
     def _on_step(self) -> bool:
         # Store previous evaluation count
@@ -159,6 +185,7 @@ if __name__ == "__main__":
     curriculum_callback = CurriculumLearningCallback(
         reward_threshold=curriculum_reward_threshold,
         eval_window=curriculum_eval_window,
+        num_envs=num_envs,
         verbose=verbose
     )
     
@@ -200,66 +227,28 @@ if __name__ == "__main__":
     logger.info(f"A2C model initialized")
     logger.info(f"Learning rate: {learning_rate_initial_value} -> {learning_rate_final_value}")
 
-    # tanulás with curriculum progression
+    # tanulás with curriculum progression - SINGLE CONTINUOUS LEARNING SESSION
     logger.info(f"Starting A2C training with curriculum learning")
     logger.info(f"Phase 1: NASCAR track until mean reward > {curriculum_reward_threshold}")
     logger.info(f"Phase 2: Random tracks for continued learning")
+    logger.info(f"Using SINGLE continuous model.learn() call for {total_timesteps:,} timesteps")
     
-    timesteps_completed = 0
-    phase_switch_timesteps = None
-    
-    while timesteps_completed < total_timesteps:
-        # Check if we need to switch curriculum phase
-        if curriculum_callback.has_phase_changed():
-            current_phase = curriculum_callback.get_current_phase()
-            logger.info(f"🔄 Switching to {current_phase} phase at timestep {timesteps_completed}")
-            phase_switch_timesteps = timesteps_completed
-            
-            # Close old environments
-            env.close()
-            eval_env.close()
-            
-            # Create new environments for random phase
-            env = create_curriculum_env(current_phase, num_envs)
-            eval_env = DummyVecEnv([make_env("eval", None)])  # eval with random tracks
-            
-            # Update eval callback with new eval environment
-            eval_callback = CurriculumEvalCallback(
-                curriculum_callback,
-                eval_env,
-                best_model_save_path=checkpoint_dir,
-                log_path=log_dir,
-                eval_freq=eval_freq,
-                deterministic=True,
-                render=False,
-                n_eval_episodes=5,
-                verbose=verbose,
-            )
-            
-            # Set the model's environment to the new one
-            model.set_env(env)
-            
-        # Train for a batch of timesteps
-        batch_timesteps = min(eval_freq * 4, total_timesteps - timesteps_completed)  # Train for 4 eval cycles at a time
-        
-        model.learn(
-            total_timesteps=batch_timesteps,
-            log_interval=log_interval,
-            progress_bar=True,
-            callback=eval_callback,
-            reset_num_timesteps=False,
-        )
-        
-        timesteps_completed += batch_timesteps
-        logger.info(f"Completed {timesteps_completed}/{total_timesteps} timesteps")
+    # Single model.learn() call - curriculum switching happens via callback
+    model.learn(
+        total_timesteps=total_timesteps,
+        log_interval=log_interval,
+        progress_bar=True,
+        callback=eval_callback,
+    )
     
     # Log curriculum completion summary
-    if phase_switch_timesteps:
+    if curriculum_callback.phase_switched:
         logger.info(f"🏁 Training completed with curriculum progression:")
-        logger.info(f"   NASCAR phase: 0 - {phase_switch_timesteps} timesteps")
-        logger.info(f"   Random phase: {phase_switch_timesteps} - {timesteps_completed} timesteps")
+        logger.info(f"   Successfully switched from NASCAR to RANDOM tracks during training")
+        logger.info(f"   Final phase: {curriculum_callback.get_current_phase()}")
     else:
         logger.info(f"🏁 Training completed entirely in NASCAR phase")
+        logger.info(f"   Reward threshold ({curriculum_reward_threshold}) was not reached")
 
     # mentés
     model.save(f"{checkpoint_dir}/{model_name}_final")
