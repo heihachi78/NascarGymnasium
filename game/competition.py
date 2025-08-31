@@ -96,6 +96,7 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
+        ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
         (None, "BC"),
@@ -171,7 +172,7 @@ def main():
         track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )

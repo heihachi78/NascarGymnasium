@@ -17,4 +17,5 @@
    🥇 A2C-B-3: 0:38.833 - DISABLED
    🥈 TD3-B-2: 0:39.217 - 6 laps completed
    🥉 A2C-O-1: 0:39.400 - DISABLED
-   4. BC: 0:42.567 - 6 laps completed
+   4. TD3-B-1: 0:39.517 - 6 laps completed
+   5. BC: 0:42.567 - 6 laps completed
