@@ -169,10 +169,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file=None,  # No fixed track (automatic random selection)
+        track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
@@ -183,6 +183,8 @@ def main():
     print(f"   D: Toggle debug display")
     print(f"   I: Toggle track info display")
     print(f"   C: Change camera")
+    print(f"   F: Full screen")
+    print(f"   O: Observation graphs")
     print(f"   ESC: Exit")
     print(f"📺 Following {car_names[0]} - Press 0-{min(num_cars-1, 9)} to switch cars")
     print("=" * 60)

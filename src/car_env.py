@@ -230,22 +230,17 @@ class CarEnv(BaseEnv):
         
     def _load_track(self, track_file: str) -> None:
         """Load track from file"""
-        try:
-            track_loader = TrackLoader()
-            self.track = track_loader.load_track(track_file)
-            logger.info(f"Loaded track: {track_file}")
-            
-            # Set start position to track start if not specified
-            if self.start_position == (0.0, 0.0) and self.track.segments:
-                # Find GRID or STARTLINE segment for starting position
-                for segment in self.track.segments:
-                    if segment.segment_type in ["GRID", "STARTLINE"]:
-                        self.start_position = segment.start_position
-                        break
-                        
-        except Exception as e:
-            logger.error(f"Failed to load track {track_file}: {e}")
-            self.track = None
+        track_loader = TrackLoader()
+        self.track = track_loader.load_track(track_file)
+        logger.info(f"Loaded track: {track_file}")
+        
+        # Set start position to track start if not specified
+        if self.start_position == (0.0, 0.0) and self.track.segments:
+            # Find GRID or STARTLINE segment for starting position
+            for segment in self.track.segments:
+                if segment.segment_type in ["GRID", "STARTLINE"]:
+                    self.start_position = segment.start_position
+                    break
     
     def _discover_available_tracks(self) -> List[str]:
         """Discover all available .track files in the tracks directory"""
@@ -330,6 +325,18 @@ class CarEnv(BaseEnv):
                 self.track_file != previous_track_file):
                 logger.info(f"Updating renderer with new track: {self.track_file}")
                 self.renderer.set_track(self.track)
+                
+                # Update lap timers with new track data
+                logger.info(f"Updating lap timers with new track: {self.track_file}")
+                for lap_timer in self.car_lap_timers:
+                    lap_timer.track = self.track
+                    lap_timer._find_startline_segment()  # Re-find startline in new track
+                    # Recalculate minimum lap distance for new track
+                    if self.track:
+                        track_length = self.track.get_total_track_length()
+                        if track_length > 0:
+                            lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
+                            logger.info(f"Updated lap timer minimum distance to {lap_timer.minimum_lap_distance:.1f}m for track length {track_length:.1f}m")
         elif hasattr(self, '_original_track_file') and self.track_file:
             # For explicit tracks, print track name on first reset only
             if not hasattr(self, '_track_name_printed'):
@@ -337,6 +344,18 @@ class CarEnv(BaseEnv):
                 track_name = os.path.splitext(os.path.basename(self.track_file))[0]
                 print(f"🏁 Track: {track_name}")
                 self._track_name_printed = True
+                
+                # Ensure lap timers have correct track data on first reset
+                if self.track:
+                    logger.info(f"Ensuring lap timers have correct track data: {self.track_file}")
+                    for lap_timer in self.car_lap_timers:
+                        lap_timer.track = self.track
+                        lap_timer._find_startline_segment()  # Re-find startline
+                        # Recalculate minimum lap distance
+                        track_length = self.track.get_total_track_length()
+                        if track_length > 0:
+                            lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
+                            logger.info(f"Set lap timer minimum distance to {lap_timer.minimum_lap_distance:.1f}m for track length {track_length:.1f}m")
         
         # Create or reset cars
         if not self.cars:
@@ -354,7 +373,21 @@ class CarEnv(BaseEnv):
         # Reset systems
         self.collision_reporter.reset()
         
-        # Reset all lap timers
+        # Always ensure lap timers have correct track data (regardless of track change detection)
+        if self.track:
+            track_length = self.track.get_total_track_length()
+            logger.info(f"Ensuring all lap timers have current track data: {getattr(self, 'track_file', 'unknown')}")
+            for i, lap_timer in enumerate(self.car_lap_timers):
+                lap_timer.track = self.track
+                lap_timer._find_startline_segment()  # Re-find startline in current track
+                # Recalculate minimum lap distance for current track
+                if track_length > 0:
+                    lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
+                    # Print corrected lap timer info (replaces misleading initialization logs)
+                    print(f"LapTimer: Track length {track_length:.1f}m, minimum lap distance: {lap_timer.minimum_lap_distance:.1f}m ({lap_timer.minimum_lap_distance_percent*100:.0f}%)")
+                    logger.info(f"Updated {lap_timer.car_id} lap timer: track length {track_length:.1f}m, minimum distance {lap_timer.minimum_lap_distance:.1f}m")
+        
+        # Reset all lap timers (after ensuring correct track data)
         for lap_timer in self.car_lap_timers:
             lap_timer.reset()
         
@@ -614,8 +647,8 @@ class CarEnv(BaseEnv):
                 if lap_completed:
                     logger.info(f"Car {car_idx} lap completed! Time: {lap_timer.format_time(lap_timer.get_last_lap_time())}")
                     
-                    # Mark reset as pending if reset_on_lap is enabled and this is the followed car
-                    if self.reset_on_lap and car_idx == self.followed_car_index:
+                    # Mark reset as pending if reset_on_lap is enabled and all active cars have completed a lap
+                    if self.reset_on_lap and self._all_active_cars_completed_lap():
                         self._lap_reset_pending = True
         
     def step(self, action):
@@ -1567,6 +1600,37 @@ class CarEnv(BaseEnv):
         lap_times_data.sort(key=lambda x: x[2])
         
         return lap_times_data
+    
+    def _all_active_cars_completed_lap(self) -> bool:
+        """
+        Check if all active (non-disabled) cars have completed at least one lap.
+        
+        Returns:
+            bool: True if all active cars have completed at least one lap, False otherwise
+        """
+        if not self.car_lap_timers:
+            return False
+        
+        # Find all active (non-disabled) cars
+        active_car_indices = []
+        for car_index in range(self.num_cars):
+            if car_index not in self.disabled_cars:
+                active_car_indices.append(car_index)
+        
+        # If no active cars, return False (shouldn't happen in normal gameplay)
+        if not active_car_indices:
+            return False
+        
+        # Check if all active cars have completed at least one lap
+        for car_index in active_car_indices:
+            if car_index < len(self.car_lap_timers):
+                lap_timer = self.car_lap_timers[car_index]
+                if lap_timer.get_lap_count() < 1:
+                    return False  # This active car hasn't completed a lap yet
+            else:
+                return False  # No lap timer for this car
+        
+        return True  # All active cars have completed at least one lap
         
     def get_debug_info(self) -> str:
         """Get debug information string"""

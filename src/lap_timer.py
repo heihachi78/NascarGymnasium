@@ -63,7 +63,7 @@ class LapTimer:
             track_length = self.track.get_total_track_length()
             if track_length > 0:
                 self.minimum_lap_distance = track_length * self.minimum_lap_distance_percent
-                print(f"LapTimer: Track length {track_length:.1f}m, minimum lap distance: {self.minimum_lap_distance:.1f}m ({self.minimum_lap_distance_percent*100:.0f}%)")
+                # Note: Track info logging moved to car_env.py when track is actually confirmed
         
         # Find startline segment if track is provided
         if self.track:

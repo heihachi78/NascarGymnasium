@@ -114,7 +114,7 @@ python demo/random_demo.py
 
 ### Observation Space
 
-The environment provides a **39-dimensional continuous observation space** with normalized values:
+The environment provides a **38-dimensional continuous observation space** with normalized values:
 
 #### Observation Vector (39 elements):
 
@@ -133,13 +133,13 @@ The environment provides a **39-dimensional continuous observation space** with 
 
 #### Normalization Details
 
-- **Position**: Normalized using `NORM_MAX_POSITION = 1000.0` meters
-- **Velocity**: Normalized using `NORM_MAX_VELOCITY = 50.0` m/s  
+- **Position**: Normalized using `NORM_MAX_POSITION = 10000.0` meters
+- **Velocity**: Normalized using `NORM_MAX_VELOCITY = 111.1` m/s
 - **Tire Load**: Normalized using `NORM_MAX_TYRE_LOAD` based on car weight distribution
-- **Tire Temperature**: Normalized using `NORM_MAX_TYRE_TEMP = 120.0°C`
+- **Tire Temperature**: Normalized using `NORM_MAX_TYRE_TEMP = 200.0°C`
 - **Tire Wear**: Normalized using `NORM_MAX_TYRE_WEAR = 100.0`
-- **Sensors**: Normalized using `SENSOR_MAX_DISTANCE = 100.0` meters
-- **Angular Velocity**: Normalized using `NORM_MAX_ANGULAR_VEL = 5.0` rad/s
+- **Sensors**: Normalized using `SENSOR_MAX_DISTANCE = 250.0` meters
+- **Angular Velocity**: Normalized using `NORM_MAX_ANGULAR_VEL = 10.0` rad/s
 
 ### Action Spaces
 
@@ -200,10 +200,10 @@ Cars can be disabled due to various conditions to simulate realistic racing cons
 
 #### Disabling Conditions
 
-1. **Catastrophic Impact**: Single collision > 5000 N⋅s instant disable
-2. **Cumulative Damage**: Total collision damage > 15000 N⋅s
-3. **Stuck Detection**: Car moving < 1.0 m/s for > 10 seconds with < 5m movement
-4. **Excessive Backward Driving**: > 100 meters of backward movement
+1. **Catastrophic Impact**: Single collision > 50000 N⋅s instant disable
+2. **Cumulative Damage**: Total collision damage > 250000 N⋅s
+3. **Stuck Detection**: Car moving < 0.5 m/s for > 10 seconds with < 1m movement
+4. **Excessive Backward Driving**: > 200 meters of backward movement
 
 #### Disabled Car Behavior
 - Receives zero control input (throttle=0, brake=0, steering=0)
@@ -239,6 +239,7 @@ STRAIGHT 95       # Final straight to complete oval
 | `STRAIGHT` | `<length>` | Straight section in meters |
 | `LEFT` | `<degrees> <radius>` | Left turn with angle and radius |
 | `RIGHT` | `<degrees> <radius>` | Right turn with angle and radius |
+| `FINISHLINE` | - | Finish line marker |
 
 #### Track Parameters
 
