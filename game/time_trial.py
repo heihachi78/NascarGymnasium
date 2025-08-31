@@ -99,7 +99,7 @@ def main():
         ("game/control/models/a2c_best_model1.zip", "A2C-B-1"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
-        (None, "RB"),
+        (None, "BC"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)
@@ -168,8 +168,7 @@ def main():
     print("=" * 60)
     
     # Initialize environment with random tracks
-    env = CarEnv(track_file=None,  # No fixed track
-                 use_random_tracks=True,  # Enable random track selection
+    env = CarEnv(track_file=None,  # No fixed track (automatic random selection)
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
                  render_mode=None, #"human",

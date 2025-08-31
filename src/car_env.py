@@ -86,21 +86,19 @@ class CarEnv(BaseEnv):
                  discrete_action_space: bool = False,
                  num_cars: int = 1,
                  car_names: Optional[list] = None,
-                 use_random_tracks: bool = False,
                 ):
         """
         Initialize car racing environment.
         
         Args:
             render_mode: Rendering mode ("human" or None)
-            track_file: Path to track definition file (if None and use_random_tracks=True, a random track will be selected)
+            track_file: Path to track definition file (if None, a random track will be selected automatically)
             start_position: Car starting position (auto-detected if None)
             start_angle: Car starting angle in radians
             reset_on_lap: If True, reset environment automatically when a lap is completed
             discrete_action_space: If True, use discrete action space (5 actions) instead of continuous
             num_cars: Number of cars to create (1-10)
             car_names: List of names for each car (optional, defaults to "Car 0", "Car 1", etc.)
-            use_random_tracks: If True and track_file is None, randomly select tracks from tracks/ directory
         """
         super().__init__(discrete_action_space=discrete_action_space, num_cars=num_cars)
         
@@ -110,7 +108,6 @@ class CarEnv(BaseEnv):
         
         self.render_mode = render_mode
         self.track_file = track_file
-        self.use_random_tracks = use_random_tracks
         # Store original track file to prevent random tracks when explicit file provided
         if track_file:
             self._original_track_file = track_file
@@ -133,10 +130,11 @@ class CarEnv(BaseEnv):
                 raise ValueError(f"Number of car names ({len(car_names)}) must match number of cars ({num_cars})")
             self.car_names = list(car_names)  # Make a copy
         
-        # Load track: explicit file, random selection, or none
+        # Load track: explicit file or random selection
         if track_file:
             self._load_track(track_file)
-        elif use_random_tracks:
+        else:
+            # Automatically use random tracks when no track file specified
             self._load_random_track()
             
         # Create physics system
@@ -216,7 +214,7 @@ class CarEnv(BaseEnv):
         self._backward_penalty_active = [False] * self.num_cars  # Whether penalty is active for each car
         self._first_step_after_reset = [True] * self.num_cars  # Skip backward penalty on first step
         
-        if use_random_tracks and not track_file:
+        if not track_file:
             logger.info(f"CarEnv initialized with {num_cars} car(s) using random tracks (current: {getattr(self, 'track_file', 'none')})")
         else:
             logger.info(f"CarEnv initialized with {num_cars} car(s) and track: {track_file}")
@@ -315,10 +313,16 @@ class CarEnv(BaseEnv):
         """
         super().reset(seed=seed)
         
-        # Load a new random track if random tracks are enabled and no explicit track was set
-        if self.use_random_tracks and not hasattr(self, '_original_track_file'):
+        # Load a new random track if no explicit track was set
+        if not hasattr(self, '_original_track_file'):
             previous_track_file = self.track_file
             self._load_random_track()
+            
+            # Print track name when track is loaded or changed
+            if self.track_file:
+                import os
+                track_name = os.path.splitext(os.path.basename(self.track_file))[0]
+                print(f"🏁 Track: {track_name}")
             
             # Update renderer with new track if it exists and track changed
             if (self.renderer and 
@@ -326,6 +330,13 @@ class CarEnv(BaseEnv):
                 self.track_file != previous_track_file):
                 logger.info(f"Updating renderer with new track: {self.track_file}")
                 self.renderer.set_track(self.track)
+        elif hasattr(self, '_original_track_file') and self.track_file:
+            # For explicit tracks, print track name on first reset only
+            if not hasattr(self, '_track_name_printed'):
+                import os
+                track_name = os.path.splitext(os.path.basename(self.track_file))[0]
+                print(f"🏁 Track: {track_name}")
+                self._track_name_printed = True
         
         # Create or reset cars
         if not self.cars:

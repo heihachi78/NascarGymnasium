@@ -41,7 +41,7 @@ def make_env(rank):
     def _init():
         env = CarEnv(
             render_mode=None,
-            track_file="tracks/nascar.track",
+            track_file=None,
             discrete_action_space=False,
             reset_on_lap=True,
         )
