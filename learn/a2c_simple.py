@@ -89,28 +89,48 @@ class CurriculumLearningCallback(BaseCallback):
                 
     def _switch_environments(self):
         """Switch training and evaluation environments to random tracks"""
-        if self.model is None:
+        # Access model from callback's training context
+        model = getattr(self, 'model', None) or self.locals.get('self', None)
+        if model is None:
             logger.warning("Cannot switch environments - model not available")
             return
             
-        logger.info(f"Switching to {self.num_envs} RANDOM track environments")
+        logger.info(f"🎯 Switching to {self.num_envs} RANDOM track environments")
         
-        # Create new environments for random phase
-        old_env = self.model.get_env()
-        new_env = SubprocVecEnv([make_env(i, None) for i in range(self.num_envs)])
-        new_eval_env = DummyVecEnv([make_env("eval", None)])
-        
-        # Set new environment
-        self.model.set_env(new_env)
-        
-        # Update eval callback's environment if available
-        if self.eval_callback is not None:
-            self.eval_callback.eval_env.close()
-            self.eval_callback.eval_env = new_eval_env
-        
-        # Clean up old environment
-        old_env.close()
-        logger.info("Environment switch completed")
+        try:
+            # Create new environments for random phase
+            new_env = SubprocVecEnv([make_env(i, None) for i in range(self.num_envs)])
+            new_eval_env = DummyVecEnv([make_env("eval", None)])
+            
+            # Get old environment reference before switching
+            old_env = model.get_env()
+            old_eval_env = None
+            if self.eval_callback is not None:
+                old_eval_env = self.eval_callback.eval_env
+            
+            # Set new environment
+            model.set_env(new_env)
+            logger.info("✅ Training environment switched successfully")
+            
+            # Update eval callback's environment if available
+            if self.eval_callback is not None:
+                self.eval_callback.eval_env = new_eval_env
+                logger.info("✅ Evaluation environment switched successfully")
+            
+            # Clean up old environments after successful switch
+            try:
+                old_env.close()
+                if old_eval_env is not None:
+                    old_eval_env.close()
+                logger.info("✅ Old environments cleaned up successfully")
+            except Exception as e:
+                logger.warning(f"Warning during old environment cleanup: {e}")
+            
+            logger.info("🏁 Environment switch completed successfully")
+            
+        except Exception as e:
+            logger.error(f"❌ Failed to switch environments: {e}")
+            logger.info("🔄 Continuing with current NASCAR track environment")
         
     def get_current_phase(self) -> str:
         return self.phase
