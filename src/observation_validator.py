@@ -6,7 +6,6 @@ and ensure consistency between observation space definitions and actual data.
 """
 
 import numpy as np
-import logging
 from typing import Dict, Any
 from .constants import (
     CAR_OBSERVATION_SHAPE,
@@ -24,7 +23,6 @@ from .constants import (
     SENSOR_MAX_DISTANCE
 )
 
-logger = logging.getLogger(__name__)
 
 
 class ObservationValidator:
@@ -365,7 +363,6 @@ def validate_environment_observations(env, num_steps: int = 10) -> Dict[str, Any
                 
     except Exception as e:
         report['validation_exception'] = str(e)
-        logger.error(f"Observation validation failed with exception: {e}")
         
     # Create summary
     report['summary'] = {

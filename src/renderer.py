@@ -2,7 +2,6 @@ import pygame
 import os
 import time
 import platform
-import logging
 from typing import Optional
 from .constants import (
     DEFAULT_WINDOW_SIZE,
@@ -84,8 +83,6 @@ from .camera import Camera
 from .track_polygon_renderer import TrackPolygonRenderer
 from .debug_info_renderer import DebugInfoRenderer
 
-# Setup module logger
-logger = logging.getLogger(__name__)
 
 
 class Renderer:
@@ -178,7 +175,6 @@ class Renderer:
     
     def _force_display_reset(self):
         """Completely reset pygame display system - Phase 1"""
-        logger.debug("Forcing complete display reset...")
         
         # Store current font for restoration
         font_size = FONT_SIZE if self.font is None else FONT_SIZE
@@ -198,23 +194,19 @@ class Renderer:
         # Restore font
         self.font = pygame.font.Font(None, font_size)
         
-        logger.debug("Display reset complete")
     
     def _create_windowed_window_robust(self, target_size, max_attempts=WINDOW_CREATION_MAX_ATTEMPTS):
         """Robustly create windowed window with multiple strategies - Phase 3"""
         
         for attempt in range(max_attempts):
-            logger.debug(f"Window creation attempt {attempt + 1}/{max_attempts}")
             
             try:
                 if attempt == 0:
                     # Method 1: Direct creation
-                    logger.debug(f"Method 1: Direct window creation {target_size}")
                     window = pygame.display.set_mode(target_size, 0)
                     
                 elif attempt == 1:
                     # Method 2: Multi-step resize
-                    logger.debug("Method 2: Multi-step window creation")
                     # Create small window first
                     window = pygame.display.set_mode(TEMPORARY_WINDOW_SIZE, 0)
                     time.sleep(WINDOW_CREATION_STEP_DELAY)  # Let window manager process
@@ -223,27 +215,21 @@ class Renderer:
                     
                 elif attempt == 2:
                     # Method 3: Force reset + creation
-                    logger.debug("Method 3: Reset + creation")
                     self._force_display_reset()
                     window = pygame.display.set_mode(target_size, 0)
                 
                 # Validate the window size
                 actual_size = window.get_size()
-                logger.debug(f"Requested: {target_size}, Got: {actual_size}")
                 
                 if actual_size == target_size:
-                    logger.debug(f"Window creation successful with method {attempt + 1}")
                     return window
                 else:
-                    logger.warning(f"Method {attempt + 1} failed - wrong size")
                     if attempt < max_attempts - 1:
                         continue
                     else:
-                        logger.warning("All methods failed, using what we got")
                         return window
                         
             except pygame.error as e:
-                logger.warning(f"Method {attempt + 1} failed with error: {e}")
                 if attempt == max_attempts - 1:
                     raise
                 continue
@@ -469,10 +455,8 @@ class Renderer:
         
         if self.is_fullscreen:
             # Switch to fullscreen - this usually works fine
-            logger.info("Switching to fullscreen...")
             self.window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
             fullscreen_size = self.window.get_size()
-            logger.info(f"Fullscreen size: {fullscreen_size}")
             
             # Update camera with fullscreen size
             self.camera.set_window_size(fullscreen_size)
@@ -480,11 +464,9 @@ class Renderer:
             
         else:
             # Switch back to windowed - this is where problems occur
-            logger.info(f"Switching to windowed mode {self.original_window_size}...")
             
             # Phase 1: Force display reset for problematic platforms
             if self.is_wsl or self.is_linux:
-                logger.debug("Linux/WSL detected - using display reset method")
                 self._force_display_reset()
             
             # Phase 2: Set SDL hints
@@ -498,25 +480,20 @@ class Renderer:
                 # Phase 5: Validate and handle success/failure
                 actual_size = self.window.get_size()
                 if actual_size == self.original_window_size:
-                    logger.info("Windowed mode switch successful!")
                     self.window_size = self.original_window_size
                     self.camera.set_window_size(self.original_window_size)
                 else:
-                    logger.warning(f"Partial success - got {actual_size} instead of {self.original_window_size}")
                     # Use whatever size we got
                     self.window_size = actual_size
                     self.camera.set_window_size(actual_size)
                 
             except Exception as e:
-                logger.error(f"Windowed mode switch failed: {e}")
                 # Fallback: try to at least get a working window
                 try:
                     self.window = pygame.display.set_mode(self.original_window_size)
                     self.window_size = self.window.get_size()
                     self.camera.set_window_size(self.window_size)
-                    logger.info(f"Fallback successful: {self.window_size}")
                 except pygame.error as fallback_error:
-                    logger.error(f"Complete failure - fallback window creation failed: {fallback_error}")
                     # Revert to fullscreen to maintain functionality
                     self.is_fullscreen = True
                     self.window = pygame.display.set_mode((0, 0), pygame.FULLSCREEN)
@@ -549,7 +526,6 @@ class Renderer:
     def _toggle_camera_mode(self):
         """Toggles the camera mode between track view and car follow."""
         self.camera.toggle_camera_mode()
-        logger.info(f"Camera mode switched to: {self.camera.get_camera_mode()}")
     
     def get_rendering_info(self) -> dict:
         """Gets information about the current rendering system.
@@ -578,7 +554,7 @@ class Renderer:
         if self.polygon_renderer:
             success = self.polygon_renderer.render_track_polygon(self.window, self.track)
             if not success:
-                logger.warning("Polygon rendering failed")
+                pass  # Polygon rendering failed
     
     
     def _render_track_info(self):

@@ -7,7 +7,6 @@ eliminating visual artifacts and providing production-quality rendering.
 
 import pygame
 import math
-import logging
 from typing import List, Tuple, Optional
 from .track_generator import Track
 from .centerline_generator import CenterlineGenerator
@@ -21,8 +20,6 @@ from .constants import (
     DEBUG_CENTERLINE_WIDTH
 )
 
-# Setup module logger
-logger = logging.getLogger(__name__)
 
 
 class TrackPolygonRenderer:
@@ -147,12 +144,10 @@ class TrackPolygonRenderer:
             return True
             
         except (ValueError, TypeError, AttributeError) as e:
-            logger.error(f"Data error in polygon track rendering: {e}")
             # Clear cache on error
             self._clear_cache()
             return False
         except Exception as e:
-            logger.error(f"Unexpected error in polygon track rendering: {e}")
             # Clear cache on error
             self._clear_cache()
             return False
@@ -196,7 +191,6 @@ class TrackPolygonRenderer:
                     pygame.gfxdraw.aapolygon(window, polygon, color)
                 except (ValueError, OverflowError, AttributeError) as e:
                     # Fall back to regular polygon if gfxdraw fails
-                    logger.debug(f"gfxdraw anti-aliasing failed, using regular polygon: {e}")
                     pygame.draw.polygon(window, color, polygon)
             else:
                 # Regular polygon rendering without anti-aliasing
@@ -453,8 +447,6 @@ class TrackPolygonRenderer:
             return True
             
         except (ValueError, TypeError, AttributeError) as e:
-            logger.error(f"Error rendering centerline: {e}")
             return False
         except Exception as e:
-            logger.error(f"Unexpected error rendering centerline: {e}")
             return False

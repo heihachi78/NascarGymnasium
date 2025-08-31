@@ -5,7 +5,6 @@ This module provides the complete car racing simulation environment with
 realistic physics, track integration, and comprehensive observation space.
 """
 
-import logging
 import math
 import numpy as np
 import pygame
@@ -69,8 +68,6 @@ from .constants import (
     OBSERVATION_HISTORY_LENGTH
 )
 
-# Setup module logger
-logger = logging.getLogger(__name__)
 
 
 
@@ -214,10 +211,7 @@ class CarEnv(BaseEnv):
         self._backward_penalty_active = [False] * self.num_cars  # Whether penalty is active for each car
         self._first_step_after_reset = [True] * self.num_cars  # Skip backward penalty on first step
         
-        if not track_file:
-            logger.info(f"CarEnv initialized with {num_cars} car(s) using random tracks (current: {getattr(self, 'track_file', 'none')})")
-        else:
-            logger.info(f"CarEnv initialized with {num_cars} car(s) and track: {track_file}")
+        # Environment initialized (logging removed)
     
     def _initialize_lap_timers(self) -> None:
         """Initialize lap timers for all cars"""
@@ -232,7 +226,6 @@ class CarEnv(BaseEnv):
         """Load track from file"""
         track_loader = TrackLoader()
         self.track = track_loader.load_track(track_file)
-        logger.info(f"Loaded track: {track_file}")
         
         # Set start position to track start if not specified
         if self.start_position == (0.0, 0.0) and self.track.segments:
@@ -260,7 +253,6 @@ class CarEnv(BaseEnv):
                 relative_path = os.path.relpath(track_file, project_root)
                 self._available_tracks.append(relative_path)
             
-            logger.info(f"Discovered {len(self._available_tracks)} available tracks: {self._available_tracks}")
         
         return self._available_tracks
     
@@ -269,11 +261,9 @@ class CarEnv(BaseEnv):
         available_tracks = self._discover_available_tracks()
         
         if not available_tracks:
-            logger.warning("No .track files found in tracks directory")
             return None
         
         selected_track = random.choice(available_tracks)
-        logger.info(f"Randomly selected track: {selected_track}")
         return selected_track
     
     def _load_random_track(self) -> None:
@@ -289,10 +279,8 @@ class CarEnv(BaseEnv):
                 for segment in self.track.segments:
                     if segment.segment_type in ["GRID", "STARTLINE"]:
                         self.start_position = segment.start_position
-                        logger.info(f"Updated start position to {self.start_position} from track {selected_track}")
                         break
         else:
-            logger.error("Failed to select a random track - no tracks available")
             self.track = None
             
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
@@ -323,11 +311,9 @@ class CarEnv(BaseEnv):
             if (self.renderer and 
                 self.track and 
                 self.track_file != previous_track_file):
-                logger.info(f"Updating renderer with new track: {self.track_file}")
                 self.renderer.set_track(self.track)
                 
                 # Update lap timers with new track data
-                logger.info(f"Updating lap timers with new track: {self.track_file}")
                 for lap_timer in self.car_lap_timers:
                     lap_timer.track = self.track
                     lap_timer._find_startline_segment()  # Re-find startline in new track
@@ -336,7 +322,6 @@ class CarEnv(BaseEnv):
                         track_length = self.track.get_total_track_length()
                         if track_length > 0:
                             lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
-                            logger.info(f"Updated lap timer minimum distance to {lap_timer.minimum_lap_distance:.1f}m for track length {track_length:.1f}m")
         elif hasattr(self, '_original_track_file') and self.track_file:
             # For explicit tracks, print track name on first reset only
             if not hasattr(self, '_track_name_printed'):
@@ -347,7 +332,6 @@ class CarEnv(BaseEnv):
                 
                 # Ensure lap timers have correct track data on first reset
                 if self.track:
-                    logger.info(f"Ensuring lap timers have correct track data: {self.track_file}")
                     for lap_timer in self.car_lap_timers:
                         lap_timer.track = self.track
                         lap_timer._find_startline_segment()  # Re-find startline
@@ -355,7 +339,6 @@ class CarEnv(BaseEnv):
                         track_length = self.track.get_total_track_length()
                         if track_length > 0:
                             lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
-                            logger.info(f"Set lap timer minimum distance to {lap_timer.minimum_lap_distance:.1f}m for track length {track_length:.1f}m")
         
         # Create or reset cars
         if not self.cars:
@@ -376,7 +359,6 @@ class CarEnv(BaseEnv):
         # Always ensure lap timers have correct track data (regardless of track change detection)
         if self.track:
             track_length = self.track.get_total_track_length()
-            logger.info(f"Ensuring all lap timers have current track data: {getattr(self, 'track_file', 'unknown')}")
             for i, lap_timer in enumerate(self.car_lap_timers):
                 lap_timer.track = self.track
                 lap_timer._find_startline_segment()  # Re-find startline in current track
@@ -385,7 +367,6 @@ class CarEnv(BaseEnv):
                     lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
                     # Print corrected lap timer info (replaces misleading initialization logs)
                     print(f"LapTimer: Track length {track_length:.1f}m, minimum lap distance: {lap_timer.minimum_lap_distance:.1f}m ({lap_timer.minimum_lap_distance_percent*100:.0f}%)")
-                    logger.info(f"Updated {lap_timer.car_id} lap timer: track length {track_length:.1f}m, minimum distance {lap_timer.minimum_lap_distance:.1f}m")
         
         # Reset all lap timers (after ensuring correct track data)
         for lap_timer in self.car_lap_timers:
@@ -645,7 +626,6 @@ class CarEnv(BaseEnv):
                 lap_completed = lap_timer.update(car_position, self.simulation_time)
                 
                 if lap_completed:
-                    logger.info(f"Car {car_idx} lap completed! Time: {lap_timer.format_time(lap_timer.get_last_lap_time())}")
                     
                     # Mark reset as pending if reset_on_lap is enabled and all active cars have completed a lap
                     if self.reset_on_lap and self._all_active_cars_completed_lap():
@@ -1032,7 +1012,6 @@ class CarEnv(BaseEnv):
                                 if not self._backward_penalty_active[car_index]:
                                     self._backward_penalty_active[car_index] = True
                                     car_name = self.car_names[car_index] if car_index < len(self.car_names) else f"Car {car_index}"
-                                    logger.debug(f"{car_name} backward penalty activated after {self._backward_distance[car_index]:.1f}m backward")
                                 
                                 # Apply penalty only for NEW backward movement beyond threshold
                                 current_excess = max(0, self._backward_distance[car_index] - BACKWARD_MOVEMENT_THRESHOLD)
@@ -1045,7 +1024,6 @@ class CarEnv(BaseEnv):
                         else:  # Moving forward - reset backward accumulation
                             if self._backward_penalty_active[car_index]:
                                 car_name = self.car_names[car_index] if car_index < len(self.car_names) else f"Car {car_index}"
-                                logger.debug(f"{car_name} backward penalty deactivated after moving forward")
                             self._backward_distance[car_index] = 0.0
                             self._previous_backward_distance[car_index] = 0.0
                             self._backward_penalty_active[car_index] = False
@@ -1124,7 +1102,6 @@ class CarEnv(BaseEnv):
                 if not self.reset_on_lap:
                     car_names = [self.car_names[i] if i < len(self.car_names) else f"Car {i}" 
                                 for i in active_cars_below_threshold]
-                    logger.debug(f"Low reward detected for {car_names} but not all active cars below threshold or demo mode active")
         
         # Time-based termination
         if self.reset_on_lap and self.simulation_time > TERMINATION_MAX_TIME:
@@ -1240,18 +1217,15 @@ class CarEnv(BaseEnv):
                 if event.key == pygame.K_r:
                     # Toggle reward display
                     self._show_reward = not self._show_reward
-                    logger.info(f"Reward display {'enabled' if self._show_reward else 'disabled'}")
                 elif event.key == pygame.K_o:
                     # Toggle observation display
                     self._show_observations = not self._show_observations
-                    logger.info(f"Observation display {'enabled' if self._show_observations else 'disabled'}")
                 elif event.key in CAR_SELECT_KEYS:
                     # Handle car switching (keys 0-9)
                     key_index = CAR_SELECT_KEYS.index(event.key)
                     if key_index < self.num_cars:
                         old_car_index = self.followed_car_index
                         self.followed_car_index = key_index
-                        logger.info(f"Switched from Car {old_car_index} to Car {key_index}")
                         
                         # Switch to display the new car's observation history
                         self.observation_visualizer.set_displayed_car(key_index)
@@ -1260,7 +1234,7 @@ class CarEnv(BaseEnv):
                         if self.cars and key_index < len(self.cars):
                             self.car = self.cars[key_index]
                     else:
-                        logger.warning(f"Car {key_index} does not exist (only {self.num_cars} cars available)")
+                        pass  # Car does not exist
                 else:
                     # Re-post other key events
                     pygame.event.post(event)
@@ -1406,7 +1380,7 @@ class CarEnv(BaseEnv):
                 self.renderer.close()
                 self.renderer = None
         except Exception as e:
-            logger.warning(f"Error closing renderer: {e}")
+            pass  # Error closing renderer
         
         # Step 2: Clean up physics world (most critical for segfault prevention)
         try:
@@ -1414,7 +1388,6 @@ class CarEnv(BaseEnv):
                 world.cleanup()
             self.car_physics_worlds = []
         except Exception as e:
-            logger.warning(f"Error cleaning up physics: {e}")
             # Force clear reference to prevent further access
             self.car_physics_worlds = []
         
@@ -1435,16 +1408,13 @@ class CarEnv(BaseEnv):
                 if hasattr(self, 'distance_sensor'):
                     self.distance_sensor = None
         except Exception as e:
-            logger.warning(f"Error clearing references: {e}")
+            pass  # Error clearing references
         
         # Step 4: Don't call pygame.quit() here during interrupt cleanup
         # pygame.quit() during signal handling can cause segfaults
         # Instead, let Python's cleanup handle it or use atexit
         
-        try:
-            logger.info("CarEnv closed successfully")
-        except:
-            print("CarEnv closed successfully")  # Fallback if logger fails
+        # Environment closed successfully
     
     def _calculate_race_positions(self) -> list:
         """
