@@ -322,9 +322,9 @@ if __name__ == "__main__":
         n_steps=64,  # 64 steps * 8 envs => batch 512, lower variance
         gamma=0.99,
         gae_lambda=0.95,
-        ent_coef=0.002,  # small entropy to keep exploration stable
+        ent_coef=0.0005,  # small entropy to keep exploration stable
         vf_coef=0.5,
-        max_grad_norm=0.4,
+        max_grad_norm=0.35,
         stats_window_size=stats_window_size,
         verbose=verbose,
         device="cpu",
