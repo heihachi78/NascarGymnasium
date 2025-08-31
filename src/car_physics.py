@@ -624,13 +624,20 @@ class CarPhysics:
             print('->2')
             # Clean up wall bodies
             if hasattr(self, 'wall_bodies'):
+                print('->21')
                 for body in self.wall_bodies[:]:  # Use slice to create copy
                     try:
+                        print('->211')
                         if body and hasattr(body, 'userData') and body in self.world.bodies:
+                            print('->2111')
                             self.world.DestroyBody(body)
+                            print('->2112')
                     except Exception:
+                        print('->212')
                         pass  # Body may already be destroyed or invalid
+                print('->22')
                 self.wall_bodies.clear()
+                print('->23')
             print('->3')
             # Clear all remaining bodies from world with timeout protection
             if hasattr(self.world, 'bodies'):
