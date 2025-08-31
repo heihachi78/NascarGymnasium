@@ -20,6 +20,7 @@ learning_rate_initial_value = 1e-3
 learning_rate_final_value = 1e-4
 stats_window_size = 25
 model_name = "ppo_simple"
+nascar_track = "tracks/nascar.track"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -30,7 +31,7 @@ os.makedirs(tensorboard_log, exist_ok=True)
 
 
 # ---------- environment létrehozása ----------
-def make_env(rank):
+def make_env(rank, track=None):
     """
     Függvény, ami visszaadja a CarEnv-et Monitorral,
     a SubprocVecEnv-hez szükséges formátumban.
@@ -38,7 +39,7 @@ def make_env(rank):
     def _init():
         env = CarEnv(
             render_mode=None,
-            track_file=None,
+            track_file=track,
             discrete_action_space=False,
             reset_on_lap=True,
         )
@@ -61,7 +62,7 @@ def linear_schedule(initial_value=1e-3, final_value=1e-4):
 if __name__ == "__main__":
     # párhuzamos környezetek
     env = SubprocVecEnv([make_env(i) for i in range(num_envs)])
-    eval_env = DummyVecEnv([make_env("eval")])  # egyszemélyes eval környezet
+    eval_env = DummyVecEnv([make_env("eval", nascar_track)])  # egyszemélyes eval környezet
 
     # callback
     eval_callback = EvalCallback(
@@ -90,6 +91,7 @@ if __name__ == "__main__":
         batch_size = 128,
         sde_sample_freq = 4,
         use_sde = True,
+        device='cpu',
         policy_kwargs=policy_kwargs,
     )
 
