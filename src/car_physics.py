@@ -602,7 +602,7 @@ class CarPhysics:
         try:
             # Check if world is locked (during simulation step)
             if hasattr(self.world, 'IsLocked') and self.world.IsLocked():
-                print("Warning: Physics world is locked during cleanup, skipping body destruction")
+                print("⚠️ Warning: Physics world is locked during cleanup, skipping body destruction")
                 # Just clear references without destroying bodies
                 self._clear_references_only()
                 return
@@ -610,7 +610,7 @@ class CarPhysics:
             self.world = None
         except Exception as e:
             # Catch any cleanup errors to prevent segfault
-            print(f"Warning: Error during physics cleanup: {e}")
+            print(f"⚠️ Warning: Error during physics cleanup: {e}")
             # Force clear all references to prevent further issues
             self._clear_references_only()
     
@@ -624,9 +624,8 @@ class CarPhysics:
             if hasattr(self, 'collision_listener'):
                 self.collision_listener = None
             # Don't set world to None here as it may still be locked
-            print("Physics cleanup: Cleared references only due to locked world")
         except Exception as e:
-            print(f"Warning: Error during reference cleanup: {e}")
+            print(f"⚠️ Warning: Error during reference cleanup: {e}")
             pass
     
     def get_banking_angle_at_position(self, position: Tuple[float, float]) -> float:
