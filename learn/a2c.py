@@ -147,10 +147,14 @@ class CurriculumLearningCallback(BaseCallback):
         Try to switch environments in-place using env_method('switch_to_random').
         If not supported, recreate VecEnv but preserve VecNormalize statistics.
         """
-        model = getattr(self, "model", None) or self.locals.get("self", None)
-        if model is None:
-            logger.warning("Cannot switch environments - model not available")
+        # Access model directly as per SB3 BaseCallback documentation
+        if self.model is None:
+            logger.error("Cannot switch environments - self.model is None")
+            logger.error(f"Callback state - has model attr: {hasattr(self, 'model')}")
+            logger.error(f"Callback type: {type(self)}")
             return
+        
+        model = self.model
 
         logger.info("Attempting to switch training environments to RANDOM tracks (in-place preferred)")
 
