@@ -381,13 +381,9 @@ class CarEnv(BaseEnv):
             if self.cars and track_changed:
                 print(f"🔄 Track changed ({previous_track_file} → {self.track_file}), recreating physics worlds...")
                 for physics_world in self.car_physics_worlds:
-                    print("before physics_world.cleanup()")
                     physics_world.cleanup()
-                    print("after physics_world.cleanup()")
                 self.car_physics_worlds.clear()
-                print("after self.car_physics_worlds.clear()")
                 self.cars.clear()
-                print("self.cars.clear()")
             
             # Create multiple cars with new physics worlds
             for i in range(self.num_cars):

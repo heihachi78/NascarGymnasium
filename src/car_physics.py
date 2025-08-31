@@ -606,60 +606,8 @@ class CarPhysics:
                 # Just clear references without destroying bodies
                 self._clear_references_only()
                 return
-            print('->1')
-            # Clean up all cars first
-            if self.car and hasattr(self.car, 'body') and self.car.body:
-                print('->11')
-                try:
-                    # Check if body is still valid before destroying
-                    if self.car.body in self.world.bodies:
-                        print('->111')
-                        self.world.DestroyBody(self.car.body)
-                        print('->112')
-                    self.car.body = None  # Clear reference
-                    print('->113')
-                except:
-                    print('->12')
-                    pass  # Body may already be destroyed
-            print('->2')
-            # Clean up wall bodies
-            if hasattr(self, 'wall_bodies'):
-                print('->21')
-                for body in self.wall_bodies[:]:  # Use slice to create copy
-                    try:
-                        print('->211')
-                        if body and hasattr(body, 'userData') and body in self.world.bodies:
-                            print('->2111')
-                            self.world.DestroyBody(body)
-                            print('->2112')
-                    except Exception:
-                        print('->212')
-                        pass  # Body may already be destroyed or invalid
-                print('->22')
-                self.wall_bodies.clear()
-                print('->23')
-            print('->3')
-            # Clear all remaining bodies from world with timeout protection
-            if hasattr(self.world, 'bodies'):
-                try:
-                    bodies_to_destroy = list(self.world.bodies)  # Create a copy
-                    for body in bodies_to_destroy:
-                        try:
-                            # Double-check body is still valid and accessible
-                            if body and hasattr(body, 'userData'):
-                                self.world.DestroyBody(body)
-                        except Exception:
-                            pass  # Body may already be destroyed or invalid
-                except Exception:
-                    pass  # World may be in inconsistent state
-            print('->4')
-            # Clear collision data
-            if hasattr(self, 'collision_listener'):
-                self.collision_listener = None
-            print('->5')
-            # Clear world reference last
+            self._clear_references_only()
             self.world = None
-            print('->6')
         except Exception as e:
             # Catch any cleanup errors to prevent segfault
             print(f"Warning: Error during physics cleanup: {e}")
@@ -669,6 +617,8 @@ class CarPhysics:
     def _clear_references_only(self):
         """Emergency cleanup that only clears references without destroying Box2D objects."""
         try:
+            if self.car and hasattr(self.car, 'body'):
+                self.car.body = None
             if hasattr(self, 'wall_bodies'):
                 self.wall_bodies.clear()
             if hasattr(self, 'collision_listener'):
