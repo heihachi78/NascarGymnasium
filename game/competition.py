@@ -169,10 +169,10 @@ def main():
     
     # Create environment
     env = CarEnv(
-        track_file="tracks/nascar_banked.track",
+        track_file="tracks/martinsville.track",
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
