@@ -12,6 +12,7 @@ import pygame
 import os
 import random
 import glob
+import numpy as np
 from typing import Optional, Tuple, Dict, Any, List
 from .base_env import BaseEnv
 from .car import Car
@@ -311,26 +312,6 @@ class CarEnv(BaseEnv):
         
         # Enable random track mode flag
         self._is_random_track_mode = True
-        
-        # Load new random track
-        self._load_random_track()
-        
-        # Reset environment to clean state with new track
-        # This handles all internal state reset automatically
-        return self.reset()
-    
-    def switch_to_fixed(self, track_path):
-        """Switch to specific fixed track for training curriculum"""
-        # Set fixed track settings
-        self.track_file = track_path
-        self._original_track_file = track_path
-        
-        # Load the specified track
-        self._load_track(track_path)
-        
-        # Reset environment to clean state with new track
-        # This handles all internal state reset automatically
-        return self.reset()
             
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
@@ -352,7 +333,6 @@ class CarEnv(BaseEnv):
             
             # Print track name when track is loaded or changed
             if self.track_file:
-                import os
                 track_name = os.path.splitext(os.path.basename(self.track_file))[0]
                 print(f"🏁 Track: {track_name}")
                 track_length = self.track.get_total_track_length() if self.track else 0
@@ -376,7 +356,6 @@ class CarEnv(BaseEnv):
         elif hasattr(self, '_original_track_file') and self.track_file:
             # For explicit tracks, print track name on first reset only
             if not hasattr(self, '_track_name_printed'):
-                import os
                 track_name = os.path.splitext(os.path.basename(self.track_file))[0]
                 print(f"🏁 Track: {track_name}")
                 self._track_name_printed = True
@@ -403,9 +382,13 @@ class CarEnv(BaseEnv):
             if self.cars and track_changed:
                 print(f"🔄 Track changed ({previous_track_file} → {self.track_file}), recreating physics worlds...")
                 for physics_world in self.car_physics_worlds:
+                    print("before physics_world.cleanup()")
                     physics_world.cleanup()
+                    print("after physics_world.cleanup()")
                 self.car_physics_worlds.clear()
+                print("after self.car_physics_worlds.clear()")
                 self.cars.clear()
+                print("self.cars.clear()")
             
             # Create multiple cars with new physics worlds
             for i in range(self.num_cars):
@@ -431,7 +414,7 @@ class CarEnv(BaseEnv):
                 if track_length > 0:
                     lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
                     # Print corrected lap timer info (replaces misleading initialization logs)
-                    print(f"LapTimer: Track length {track_length:.1f}m, minimum lap distance: {lap_timer.minimum_lap_distance:.1f}m ({lap_timer.minimum_lap_distance_percent*100:.0f}%)")
+                    #print(f"LapTimer: Track length {track_length:.1f}m, minimum lap distance: {lap_timer.minimum_lap_distance:.1f}m ({lap_timer.minimum_lap_distance_percent*100:.0f}%)")
         
         # Reset all lap timers (after ensuring correct track data)
         for lap_timer in self.car_lap_timers:
@@ -1450,7 +1433,6 @@ class CarEnv(BaseEnv):
         
         # Seed numpy if available
         try:
-            import numpy as np
             np.random.seed(seed_value)
         except ImportError:
             pass
@@ -1460,7 +1442,6 @@ class CarEnv(BaseEnv):
         
     def close(self) -> None:
         """Clean up environment resources safely to prevent segfaults"""
-        import time
         cleanup_start = time.time()
         CLEANUP_TIMEOUT = 3.0  # 3 second timeout for total cleanup
         
