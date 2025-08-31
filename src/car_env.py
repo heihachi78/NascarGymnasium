@@ -388,16 +388,30 @@ class CarEnv(BaseEnv):
                         if track_length > 0:
                             lap_timer.minimum_lap_distance = track_length * lap_timer.minimum_lap_distance_percent
         
-        # Create or reset cars
-        if not self.cars:
-            # Create multiple cars
+        # Create or reset cars - if track changed, recreate physics worlds
+        if self._is_random_track_mode:
+            previous_file = locals().get('previous_track_file', None)
+            track_changed = previous_file != self.track_file
+        else:
+            track_changed = False
+        
+        if not self.cars or track_changed:
+            # Clean up existing physics worlds if they exist
+            if self.cars and track_changed:
+                print(f"🔄 Track changed ({previous_track_file} → {self.track_file}), recreating physics worlds...")
+                for physics_world in self.car_physics_worlds:
+                    physics_world.cleanup()
+                self.car_physics_worlds.clear()
+                self.cars.clear()
+            
+            # Create multiple cars with new physics worlds
             for i in range(self.num_cars):
                 car = Car(world=None, start_position=self.start_position, start_angle=self.start_angle, car_id=f"car_{i}")
                 self.cars.append(car)
                 physics_world = CarPhysics(car, self.track)
                 self.car_physics_worlds.append(physics_world)
         else:
-            # Reset existing cars
+            # Reset existing cars (same track)
             for i in range(self.num_cars):
                 self.car_physics_worlds[i].reset_car(self.start_position, self.start_angle)
             
