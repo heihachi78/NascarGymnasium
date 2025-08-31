@@ -217,10 +217,10 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         action_noise=NormalActionNoise(
             mean=np.zeros(n_actions),
-            sigma=0.1 * np.ones(n_actions)
+            sigma=0.2 * np.ones(n_actions)
         ),
-        learning_starts=25_000,
-        buffer_size=360_000,
+        learning_starts=50_000,
+        buffer_size=500_000,
         batch_size=256,
         train_freq=(1, "step"),
         gradient_steps=4,
