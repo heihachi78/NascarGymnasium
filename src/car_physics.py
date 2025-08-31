@@ -5,6 +5,7 @@ This module provides complete physics simulation including car dynamics
 and track collision detection in a unified Box2D world.
 """
 
+import time
 import Box2D
 import math
 from typing import Optional, Tuple, List, Dict, Any
@@ -597,9 +598,6 @@ class CarPhysics:
             return
             
         # Add timeout protection to prevent hanging during cleanup
-        import time
-        cleanup_start = time.time()
-        CLEANUP_TIMEOUT = 2.0  # 2 second timeout
         
         try:
             # Check if world is locked (during simulation step)
@@ -608,20 +606,19 @@ class CarPhysics:
                 # Just clear references without destroying bodies
                 self._clear_references_only()
                 return
-            
+            print('->1')
             # Clean up all cars first
-            if time.time() - cleanup_start < CLEANUP_TIMEOUT:
-                if self.car and hasattr(self.car, 'body') and self.car.body:
-                    try:
-                        # Check if body is still valid before destroying
-                        if self.car.body in self.world.bodies:
-                            self.world.DestroyBody(self.car.body)
-                        self.car.body = None  # Clear reference
-                    except:
-                        pass  # Body may already be destroyed
-            
+            if self.car and hasattr(self.car, 'body') and self.car.body:
+                try:
+                    # Check if body is still valid before destroying
+                    if self.car.body in self.world.bodies:
+                        self.world.DestroyBody(self.car.body)
+                    self.car.body = None  # Clear reference
+                except:
+                    pass  # Body may already be destroyed
+            print('->2')
             # Clean up wall bodies
-            if hasattr(self, 'wall_bodies') and time.time() - cleanup_start < CLEANUP_TIMEOUT:
+            if hasattr(self, 'wall_bodies'):
                 for body in self.wall_bodies[:]:  # Use slice to create copy
                     try:
                         if body and hasattr(body, 'userData') and body in self.world.bodies:
@@ -629,14 +626,12 @@ class CarPhysics:
                     except Exception:
                         pass  # Body may already be destroyed or invalid
                 self.wall_bodies.clear()
-            
+            print('->3')
             # Clear all remaining bodies from world with timeout protection
-            if hasattr(self.world, 'bodies') and time.time() - cleanup_start < CLEANUP_TIMEOUT:
+            if hasattr(self.world, 'bodies'):
                 try:
                     bodies_to_destroy = list(self.world.bodies)  # Create a copy
                     for body in bodies_to_destroy:
-                        if time.time() - cleanup_start >= CLEANUP_TIMEOUT:
-                            break
                         try:
                             # Double-check body is still valid and accessible
                             if body and hasattr(body, 'userData'):
@@ -645,14 +640,14 @@ class CarPhysics:
                             pass  # Body may already be destroyed or invalid
                 except Exception:
                     pass  # World may be in inconsistent state
-                    
+            print('->4')
             # Clear collision data
             if hasattr(self, 'collision_listener'):
                 self.collision_listener = None
-            
+            print('->5')
             # Clear world reference last
             self.world = None
-            
+            print('->6')
         except Exception as e:
             # Catch any cleanup errors to prevent segfault
             print(f"Warning: Error during physics cleanup: {e}")
