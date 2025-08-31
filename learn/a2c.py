@@ -147,14 +147,16 @@ class CurriculumLearningCallback(BaseCallback):
         Try to switch environments in-place using env_method('switch_to_random').
         If not supported, recreate VecEnv but preserve VecNormalize statistics.
         """
-        # Access model directly as per SB3 BaseCallback documentation
-        if self.model is None:
-            logger.error("Cannot switch environments - self.model is None")
-            logger.error(f"Callback state - has model attr: {hasattr(self, 'model')}")
+        # Access model through eval_callback since this callback is not directly passed to model.learn()
+        if self.eval_callback is None or self.eval_callback.model is None:
+            logger.error("Cannot switch environments - eval_callback or eval_callback.model is None")
+            logger.error(f"Callback state - has eval_callback: {self.eval_callback is not None}")
+            if self.eval_callback:
+                logger.error(f"Eval callback has model: {hasattr(self.eval_callback, 'model')}")
             logger.error(f"Callback type: {type(self)}")
             return
         
-        model = self.model
+        model = self.eval_callback.model
 
         logger.info("Attempting to switch training environments to RANDOM tracks (in-place preferred)")
 
@@ -345,9 +347,9 @@ if __name__ == "__main__":
         n_steps=64,  # 64 steps * 8 envs => batch 512, lower variance
         gamma=0.99,
         gae_lambda=0.95,
-        ent_coef=0.0005,  # small entropy to keep exploration stable
-        vf_coef=0.5,
-        max_grad_norm=0.35,
+        ent_coef=0.0003,  # small entropy to keep exploration stable
+        vf_coef=0.45,
+        max_grad_norm=0.3,
         stats_window_size=stats_window_size,
         verbose=verbose,
         device="cpu",
