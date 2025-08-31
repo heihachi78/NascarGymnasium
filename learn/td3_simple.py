@@ -89,29 +89,10 @@ class CurriculumLearningCallback(BaseCallback):
                 self._switch_environments()
                 
     def _switch_environments(self):
-        """Switch training and evaluation environments to random tracks"""
-        if self.model is None:
-            logger.warning("Cannot switch environments - model not available")
-            return
-            
-        logger.info(f"Switching to {self.num_envs} RANDOM track environments")
-        
-        # Create new environments for random phase
-        old_env = self.model.get_env()
-        new_env = SubprocVecEnv([make_env(i, None) for i in range(self.num_envs)])
-        new_eval_env = DummyVecEnv([make_env("eval", None)])
-        
-        # Set new environment
-        self.model.set_env(new_env)
-        
-        # Update eval callback's environment if available
-        if self.eval_callback is not None:
-            self.eval_callback.eval_env.close()
-            self.eval_callback.eval_env = new_eval_env
-        
-        # Clean up old environment
-        old_env.close()
-        logger.info("Environment switch completed")
+        """Log phase transition - actual environment switch would require training restart"""
+        logger.info(f"🎯 Phase transition triggered - should switch to {self.num_envs} RANDOM track environments")
+        logger.info("📝 Note: Environment switching during training requires manual restart with random tracks")
+        logger.info("🔄 Continuing current training session with NASCAR track")
         
     def get_current_phase(self) -> str:
         return self.phase
