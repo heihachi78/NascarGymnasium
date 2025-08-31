@@ -609,12 +609,17 @@ class CarPhysics:
             print('->1')
             # Clean up all cars first
             if self.car and hasattr(self.car, 'body') and self.car.body:
+                print('->11')
                 try:
                     # Check if body is still valid before destroying
                     if self.car.body in self.world.bodies:
+                        print('->111')
                         self.world.DestroyBody(self.car.body)
+                        print('->112')
                     self.car.body = None  # Clear reference
+                    print('->113')
                 except:
+                    print('->12')
                     pass  # Body may already be destroyed
             print('->2')
             # Clean up wall bodies
