@@ -161,16 +161,35 @@ class CurriculumLearningCallback(BaseCallback):
         try:
             # Attempt in-place switch across all sub-environments
             # This expects that underlying CarEnv implements switch_to_random()
-            train_env.env_method("switch_to_random")
-            logger.info("✅ In-place training env switch succeeded (env_method)")
+            logger.info("🔄 Attempting in-place environment switch via env_method...")
+            
+            # For VecNormalize wrapped environments, we need to call on the underlying env
+            if hasattr(train_env, 'venv'):
+                # VecNormalize wraps the actual VecEnv in .venv
+                result = train_env.venv.env_method("switch_to_random")
+                logger.info(f"✅ Training env switch_to_random called on {len(result) if result else 0} sub-environments")
+            else:
+                # Direct call if not VecNormalize
+                result = train_env.env_method("switch_to_random")
+                logger.info(f"✅ Training env switch_to_random called on {len(result) if result else 0} sub-environments")
+            
             if eval_env is not None:
-                eval_env.env_method("switch_to_random")
-                logger.info("✅ In-place eval env switch succeeded (env_method)")
+                try:
+                    if hasattr(eval_env, 'venv'):
+                        eval_result = eval_env.venv.env_method("switch_to_random")
+                        logger.info(f"✅ Eval env switch_to_random called on {len(eval_result) if eval_result else 0} sub-environments")
+                    else:
+                        eval_result = eval_env.env_method("switch_to_random")
+                        logger.info(f"✅ Eval env switch_to_random called on {len(eval_result) if eval_result else 0} sub-environments")
+                except Exception as ee:
+                    logger.warning(f"⚠️  Eval env switch failed: {ee}")
+                    
             # reduce LR temporarily to stabilize
             self._dampen_learning_rate(model, factor=self.post_switch_lr_factor)
+            logger.info("🏁 In-place environment switch completed successfully!")
             return
         except Exception as e:
-            logger.info(f"✅ In-place env switch via env_method failed or not available: {e}")
+            logger.warning(f"❌ In-place env switch via env_method failed: {e}")
 
         # FALLBACK: recreate VecEnv but preserve VecNormalize stats if present
         logger.info("Fallback: Recreating VecEnv while preserving VecNormalize statistics if possible.")

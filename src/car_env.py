@@ -5,6 +5,7 @@ This module provides the complete car racing simulation environment with
 realistic physics, track integration, and comprehensive observation space.
 """
 
+import time
 import math
 import numpy as np
 import pygame
@@ -264,7 +265,6 @@ class CarEnv(BaseEnv):
         available_tracks = self._discover_available_tracks()
         
         if not available_tracks:
-            print(f"⚠️  No tracks available for random selection")
             return None
         
         # Ensure we get a different track if possible
@@ -276,8 +276,11 @@ class CarEnv(BaseEnv):
             if other_tracks:
                 available_tracks = other_tracks
         
+        # Add process-specific entropy to avoid synchronized selection in multiprocess environments
+        process_entropy = os.getpid() + int(time.time() * 1000) % 1000
+        random.seed(process_entropy)
+        
         selected_track = random.choice(available_tracks)
-        print(f"🎲 Selected random track: {selected_track} (from {len(available_tracks)} available)")
         return selected_track
     
     def _load_random_track(self) -> None:
