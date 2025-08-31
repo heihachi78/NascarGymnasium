@@ -334,9 +334,8 @@ class CarEnv(BaseEnv):
             # Print track name when track is loaded or changed
             if self.track_file:
                 track_name = os.path.splitext(os.path.basename(self.track_file))[0]
-                print(f"🏁 Track: {track_name}")
                 track_length = self.track.get_total_track_length() if self.track else 0
-                print(f"   Track length: {track_length:.1f}m")
+                print(f"🏁 Track: {track_name} (length: {track_length:.1f}m)")
             
             # Update renderer with new track if it exists and track changed
             if (self.renderer and 
