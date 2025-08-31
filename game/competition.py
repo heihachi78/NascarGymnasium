@@ -98,6 +98,7 @@ def main():
         ("game/control/models/a2c_best_model2.zip", "A2C-B-2"),
         ("game/control/models/a2c_best_model1.zip", "A2C-B-1"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
+        ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
         (None, "RB"),
     ]
 
