@@ -126,14 +126,16 @@ class CurriculumEvalCallback(EvalCallback):
         self.curriculum_callback = curriculum_callback
         
     def _on_step(self) -> bool:
+        # Store previous evaluation count
+        prev_eval_count = len(self.evaluations_results)
         result = super()._on_step()
         
-        # Update curriculum with latest mean reward
-        if len(self.evaluations_results) > 0:
+        # Only process if a new evaluation was actually performed
+        if len(self.evaluations_results) > prev_eval_count:
             latest_mean_reward = np.mean(self.evaluations_results[-1])
             self.curriculum_callback.update_reward_history(latest_mean_reward)
             
-            # Show progress only during actual evaluations
+            # Show progress only after new evaluations
             if len(self.curriculum_callback.reward_history) >= 5:
                 recent_rewards = list(self.curriculum_callback.reward_history)[-5:]
                 current_mean = np.mean(recent_rewards)
