@@ -127,6 +127,9 @@ class CarEnv(BaseEnv):
                 raise ValueError(f"Number of car names ({len(car_names)}) must match number of cars ({num_cars})")
             self.car_names = list(car_names)  # Make a copy
         
+        # Random track mode tracking
+        self._is_random_track_mode = track_file is None
+        
         # Load track: explicit file or random selection
         if track_file:
             self._load_track(track_file)
@@ -261,9 +264,20 @@ class CarEnv(BaseEnv):
         available_tracks = self._discover_available_tracks()
         
         if not available_tracks:
+            print(f"⚠️  No tracks available for random selection")
             return None
         
+        # Ensure we get a different track if possible
+        previous_track = getattr(self, 'track_file', None)
+        
+        # If we have more than one track available, try to avoid repeating
+        if len(available_tracks) > 1 and previous_track in available_tracks:
+            other_tracks = [t for t in available_tracks if t != previous_track]
+            if other_tracks:
+                available_tracks = other_tracks
+        
         selected_track = random.choice(available_tracks)
+        print(f"🎲 Selected random track: {selected_track} (from {len(available_tracks)} available)")
         return selected_track
     
     def _load_random_track(self) -> None:
@@ -271,8 +285,9 @@ class CarEnv(BaseEnv):
         selected_track = self._select_random_track()
         if selected_track:
             self._load_track(selected_track)
-            # Store the selected track file for reference
+            # Store the selected track file for reference, but mark it as random
             self.track_file = selected_track
+            self._is_random_track_mode = True  # Flag to indicate we should keep loading random tracks
             
             # Update start position if using default and track has GRID or STARTLINE
             if self.start_position == (0.0, 0.0) and self.track and self.track.segments:
@@ -285,10 +300,14 @@ class CarEnv(BaseEnv):
     
     def switch_to_random(self):
         """Switch to random track selection mode for training curriculum"""
+        print(f"🔄 Switching to random track mode...")
         # Clear fixed track settings to enable random selection
         self.track_file = None
         if hasattr(self, '_original_track_file'):
             delattr(self, '_original_track_file')
+        
+        # Enable random track mode flag
+        self._is_random_track_mode = True
         
         # Load new random track
         self._load_random_track()
@@ -323,8 +342,8 @@ class CarEnv(BaseEnv):
         """
         super().reset(seed=seed)
         
-        # Load a new random track if no explicit track was set
-        if not hasattr(self, '_original_track_file'):
+        # Load a new random track if in random track mode
+        if self._is_random_track_mode:
             previous_track_file = self.track_file
             self._load_random_track()
             
@@ -333,6 +352,8 @@ class CarEnv(BaseEnv):
                 import os
                 track_name = os.path.splitext(os.path.basename(self.track_file))[0]
                 print(f"🏁 Track: {track_name}")
+                track_length = self.track.get_total_track_length() if self.track else 0
+                print(f"   Track length: {track_length:.1f}m")
             
             # Update renderer with new track if it exists and track changed
             if (self.renderer and 
@@ -1394,6 +1415,31 @@ class CarEnv(BaseEnv):
         if self.car_physics_worlds:
             return self.car_physics_worlds[0]._is_position_on_track(position)
         return True
+        
+    def seed(self, seed_value: int = None) -> list:
+        """Set random seed for reproducible track selection.
+        
+        Args:
+            seed_value: Random seed value
+            
+        Returns:
+            List containing the seed value used
+        """
+        if seed_value is None:
+            seed_value = random.randint(0, 2**32 - 1)
+        
+        # Seed Python's random module for track selection
+        random.seed(seed_value)
+        
+        # Seed numpy if available
+        try:
+            import numpy as np
+            np.random.seed(seed_value)
+        except ImportError:
+            pass
+        
+        print(f"🌱 Environment seeded with: {seed_value}")
+        return [seed_value]
         
     def close(self) -> None:
         """Clean up environment resources safely to prevent segfaults"""
