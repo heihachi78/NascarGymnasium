@@ -282,6 +282,33 @@ class CarEnv(BaseEnv):
                         break
         else:
             self.track = None
+    
+    def switch_to_random(self):
+        """Switch to random track selection mode for training curriculum"""
+        # Clear fixed track settings to enable random selection
+        self.track_file = None
+        if hasattr(self, '_original_track_file'):
+            delattr(self, '_original_track_file')
+        
+        # Load new random track
+        self._load_random_track()
+        
+        # Reset environment to clean state with new track
+        # This handles all internal state reset automatically
+        return self.reset()
+    
+    def switch_to_fixed(self, track_path):
+        """Switch to specific fixed track for training curriculum"""
+        # Set fixed track settings
+        self.track_file = track_path
+        self._original_track_file = track_path
+        
+        # Load the specified track
+        self._load_track(track_path)
+        
+        # Reset environment to clean state with new track
+        # This handles all internal state reset automatically
+        return self.reset()
             
     def reset(self, seed: Optional[int] = None, options: Optional[Dict] = None) -> Tuple[np.ndarray, Dict[str, Any]]:
         """
