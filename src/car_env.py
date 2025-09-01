@@ -325,6 +325,7 @@ class CarEnv(BaseEnv):
             Tuple of (observation, info)
         """
         super().reset(seed=seed)
+        self.seed(seed_value=seed)
         
         # Load a new random track if in random track mode
         if self._is_random_track_mode:

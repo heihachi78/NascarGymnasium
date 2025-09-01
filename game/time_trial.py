@@ -183,6 +183,8 @@ def main():
     print(f"   D: Toggle debug display")
     print(f"   I: Toggle track info display")
     print(f"   C: Change camera mode")
+    print(f"   F: Full screen")
+    print(f"   O: Toggle observation graphs")
     print(f"   ESC: Exit")
     print("=" * 60)
     
@@ -206,7 +208,7 @@ def main():
             print(f"{'=' * 60}")
             
             # Reset environment for new attempt (selects new random track)
-            obs, info = env.reset(attempt_num)
+            obs, info = env.reset(attempt_num * 42)
             print(f"🏁 Track for attempt {attempt_num}: {env.track_file}")
             print(f"{'=' * 60}")
             
