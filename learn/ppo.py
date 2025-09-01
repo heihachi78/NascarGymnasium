@@ -20,8 +20,8 @@ verbose = 1
 total_timesteps = 50_000_000
 eval_freq = 12_500
 log_interval = 1
-learning_rate_initial_value = 1e-3
-learning_rate_final_value = 1e-4
+learning_rate_initial_value = 1e-3 #3e-4
+learning_rate_final_value = 1e-4 #1e-5
 stats_window_size = 25
 model_name = "ppo"
 
@@ -240,8 +240,9 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
-        batch_size=256,
+        batch_size=256, #512
         sde_sample_freq=4,
+        #clip_range=0.1,
         use_sde=True,
         device='cpu',
         policy_kwargs=policy_kwargs,
