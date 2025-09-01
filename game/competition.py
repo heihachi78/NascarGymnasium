@@ -102,6 +102,7 @@ def main():
         (None, "BC"),
         ("game/control/models/td3_282.zip", "TD3-282"),
         ("game/control/models/ppo_best_model.zip", "PPO"),
+        ("game/control/models/td3_220_rnd.zip", "TD3-220"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -174,7 +175,7 @@ def main():
         track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
