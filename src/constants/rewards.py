@@ -9,5 +9,5 @@ REWARD_FAST_LAP_BONUS = 0  # Bonus for completing lap under threshold time
 # Negative Rewards (Penalties)
 PENALTY_PER_STEP = 0.05  # penalty applied every physics step to encourage speed
 PENALTY_BACKWARD_PER_METER = 0.05  # penalty per meter of backward movement beyond threshold
-PENALTY_WALL_COLLISION_PER_STEP = 0.25  # penalty multiplier for accumulated impulse ratio (0-1 scale)
-PENALTY_DISABLED = 100 #penalty when a car gets disabled
+PENALTY_WALL_COLLISION_PER_STEP = 0.33  # penalty for collisions per step
+PENALTY_DISABLED = 125 #penalty when a car gets disabled
