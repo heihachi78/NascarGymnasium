@@ -20,8 +20,8 @@ verbose = 1
 total_timesteps = 50_000_000
 eval_freq = 12_500
 log_interval = 1
-learning_rate_initial_value = 1e-3 #3e-4
-learning_rate_final_value = 1e-4 #1e-5
+learning_rate_initial_value = 3e-4
+learning_rate_final_value = 1e-5
 stats_window_size = 25
 model_name = "ppo"
 
@@ -88,49 +88,133 @@ class CurriculumLearningCallback(BaseCallback):
                 self._switch_environments()
                 
     def _switch_environments(self):
-        """Switch training and evaluation environments to random tracks"""
-        # Access model from callback's training context
-        model = getattr(self, 'model', None) or self.locals.get('self', None)
-        if model is None:
-            logger.warning("Cannot switch environments - model not available")
+        """
+        Try to switch environments in-place using env_method('switch_to_random').
+        If not supported, recreate VecEnv but preserve VecNormalize statistics.
+        """
+        # Access model through eval_callback since this callback is not directly passed to model.learn()
+        if self.eval_callback is None or self.eval_callback.model is None:
+            logger.error("Cannot switch environments - eval_callback or eval_callback.model is None")
+            logger.error(f"Callback state - has eval_callback: {self.eval_callback is not None}")
+            if self.eval_callback:
+                logger.error(f"Eval callback has model: {hasattr(self.eval_callback, 'model')}")
+            logger.error(f"Callback type: {type(self)}")
             return
-            
-        logger.info(f"🎯 Switching to {self.num_envs} RANDOM track environments")
         
+        model = self.eval_callback.model
+
+        logger.info("Attempting to switch training environments to RANDOM tracks (in-place preferred)")
+
+        train_env = model.get_env()
+        eval_env = getattr(self.eval_callback, "eval_env", None)
+
+        # If the env is VecNormalize, we want to handle its internal wrapped env
         try:
-            # Create new environments for random phase
-            new_env = SubprocVecEnv([make_env(i, None) for i in range(self.num_envs)])
-            new_eval_env = DummyVecEnv([make_env("eval", None)])
+            # Attempt in-place switch across all sub-environments
+            # This expects that underlying CarEnv implements switch_to_random()
+            logger.info("🔄 Attempting in-place environment switch via env_method...")
             
-            # Get old environment reference before switching
-            old_env = model.get_env()
-            old_eval_env = None
-            if self.eval_callback is not None:
-                old_eval_env = self.eval_callback.eval_env
+            # For VecNormalize wrapped environments, we need to call on the underlying env
+            if hasattr(train_env, 'venv'):
+                # VecNormalize wraps the actual VecEnv in .venv
+                result = train_env.venv.env_method("switch_to_random")
+                logger.info(f"✅ Training env switch_to_random called on {len(result) if result else 0} sub-environments")
+            else:
+                # Direct call if not VecNormalize
+                result = train_env.env_method("switch_to_random")
+                logger.info(f"✅ Training env switch_to_random called on {len(result) if result else 0} sub-environments")
             
-            # Set new environment
-            model.set_env(new_env)
-            logger.info("✅ Training environment switched successfully")
-            
-            # Update eval callback's environment if available
-            if self.eval_callback is not None:
-                self.eval_callback.eval_env = new_eval_env
-                logger.info("✅ Evaluation environment switched successfully")
-            
-            # Clean up old environments after successful switch
-            try:
-                old_env.close()
-                if old_eval_env is not None:
-                    old_eval_env.close()
-                logger.info("✅ Old environments cleaned up successfully")
-            except Exception as e:
-                logger.warning(f"Warning during old environment cleanup: {e}")
-            
-            logger.info("🏁 Environment switch completed successfully")
-            
+            if eval_env is not None:
+                try:
+                    if hasattr(eval_env, 'venv'):
+                        eval_result = eval_env.venv.env_method("switch_to_random")
+                        logger.info(f"✅ Eval env switch_to_random called on {len(eval_result) if eval_result else 0} sub-environments")
+                    else:
+                        eval_result = eval_env.env_method("switch_to_random")
+                        logger.info(f"✅ Eval env switch_to_random called on {len(eval_result) if eval_result else 0} sub-environments")
+                except Exception as ee:
+                    logger.warning(f"⚠️  Eval env switch failed: {ee}")
+                    
+            # reduce LR temporarily to stabilize
+            self._dampen_learning_rate(model, factor=0.6)
+            logger.info("🏁 In-place environment switch completed successfully!")
+            return
         except Exception as e:
-            logger.error(f"❌ Failed to switch environments: {e}")
+            logger.warning(f"❌ In-place env switch via env_method failed: {e}")
+
+        # FALLBACK: recreate VecEnv but preserve VecNormalize stats if present
+        logger.info("Fallback: Recreating VecEnv while preserving VecNormalize statistics if possible.")
+        try:
+            # Import VecNormalize for fallback
+            from stable_baselines3.common.vec_env import VecNormalize
+            
+            # If training env is VecNormalize, extract inner env and stats
+            train_is_vecnorm = isinstance(train_env, VecNormalize)
+            if train_is_vecnorm:
+                old_vecnorm: VecNormalize = train_env
+                old_stats = {
+                    "obs_rms": getattr(old_vecnorm, "obs_rms", None),
+                    "ret_rms": getattr(old_vecnorm, "ret_rms", None),
+                    "num_timesteps": getattr(old_vecnorm, "num_timesteps", None),
+                }
+                # create new subproc vecenv with same number of envs
+                new_subproc = create_curriculum_env("random", self.num_envs)
+                new_vecnorm = VecNormalize(new_subproc, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
+                # copy stats if available
+                if old_stats["obs_rms"] is not None:
+                    new_vecnorm.obs_rms = old_stats["obs_rms"]
+                if old_stats["ret_rms"] is not None:
+                    new_vecnorm.ret_rms = old_stats["ret_rms"]
+                if old_stats["num_timesteps"] is not None:
+                    new_vecnorm.num_timesteps = old_stats["num_timesteps"]
+                model.set_env(new_vecnorm)
+                logger.info("✅ Training VecEnv recreated and VecNormalize stats restored.")
+            else:
+                # not VecNormalize: create and set new SubprocVecEnv
+                new_subproc = create_curriculum_env("random", self.num_envs)
+                model.set_env(new_subproc)
+                logger.info("✅ Training VecEnv recreated (non-VecNormalize).")
+
+            # Update eval env similarly (best-effort)
+            if eval_env is not None:
+                try:
+                    eval_is_vecnorm = isinstance(eval_env, VecNormalize)
+                    if eval_is_vecnorm:
+                        # create new eval DummyVecEnv & VecNormalize then copy stats from train if possible
+                        new_eval = DummyVecEnv([make_env("eval", None)])
+                        new_eval_vecnorm = VecNormalize(new_eval, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
+                        if train_is_vecnorm:
+                            new_eval_vecnorm.obs_rms = new_vecnorm.obs_rms
+                            new_eval_vecnorm.ret_rms = new_vecnorm.ret_rms
+                        self.eval_callback.eval_env = new_eval_vecnorm
+                        logger.info("✅ Eval VecEnv recreated and stats synced.")
+                    else:
+                        self.eval_callback.eval_env = DummyVecEnv([make_env("eval", None)])
+                        logger.info("✅ Eval env recreated (non-VecNormalize).")
+                except Exception as ee:
+                    logger.warning(f"Could not fully recreate eval env: {ee}")
+
+            # reduce LR after env switch
+            self._dampen_learning_rate(model, factor=0.6)
+            logger.info("🏁 Fallback environment switch completed successfully!")
+
+        except Exception as e:
+            logger.error(f"❌ Fallback environment switch failed: {e}")
             logger.info("🔄 Continuing with current NASCAR track environment")
+    
+    def _dampen_learning_rate(self, model, factor=0.6):
+        """Reduce learning rate temporarily to stabilize training after environment switch"""
+        try:
+            # PPO has a single optimizer for both policy and value networks
+            if hasattr(model.policy, 'optimizer'):
+                for pg in model.policy.optimizer.param_groups:
+                    if "lr" in pg:
+                        pg["lr"] = pg["lr"] * factor
+                logger.info(f"🔧 Reduced optimizer LR by factor {factor:.2f}")
+            else:
+                logger.warning("Could not find optimizer in policy to dampen LR")
+        except Exception as e:
+            logger.warning(f"Could not dampen learning rate: {e}")
         
     def get_current_phase(self) -> str:
         return self.phase
@@ -240,9 +324,9 @@ if __name__ == "__main__":
         learning_rate=linear_schedule(learning_rate_initial_value, learning_rate_final_value),
         stats_window_size=stats_window_size,
         verbose=verbose,
-        batch_size=256, #512
+        batch_size=512,
         sde_sample_freq=4,
-        #clip_range=0.1,
+        clip_range=0.1,
         use_sde=True,
         device='cpu',
         policy_kwargs=policy_kwargs,
