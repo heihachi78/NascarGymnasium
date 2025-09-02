@@ -248,9 +248,13 @@ def create_curriculum_env(phase: str, num_envs: int):
 
 # ---------- custom eval callback for curriculum ----------
 class CurriculumEvalCallback(EvalCallback):
-    def __init__(self, curriculum_callback: CurriculumLearningCallback, *args, **kwargs):
+    def __init__(self, curriculum_callback: CurriculumLearningCallback, model_name: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.curriculum_callback = curriculum_callback
+        self.model_name = model_name
+        # Track best rewards for each phase
+        self.best_nascar_reward = -np.inf
+        self.best_random_reward = -np.inf
         # Link back to curriculum callback so it can update our eval env
         self.curriculum_callback.eval_callback = self
         
@@ -262,6 +266,18 @@ class CurriculumEvalCallback(EvalCallback):
         # Only process if a new evaluation was actually performed
         if len(self.evaluations_results) > prev_eval_count:
             latest_mean_reward = np.mean(self.evaluations_results[-1])
+            current_phase = self.curriculum_callback.get_current_phase()
+            
+            # Save phase-specific best models
+            if current_phase == "nascar" and latest_mean_reward > self.best_nascar_reward:
+                self.best_nascar_reward = latest_mean_reward
+                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_nascar"
+                self.model.save(model_path)
+            elif current_phase == "random" and latest_mean_reward > self.best_random_reward:
+                self.best_random_reward = latest_mean_reward
+                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_random"
+                self.model.save(model_path)
+            
             self.curriculum_callback.update_reward_history(latest_mean_reward)
             
             # Show progress only after new evaluations
@@ -300,6 +316,7 @@ if __name__ == "__main__":
     # Create curriculum-aware eval callback
     eval_callback = CurriculumEvalCallback(
         curriculum_callback,
+        model_name,
         eval_env,
         best_model_save_path=checkpoint_dir,
         log_path=log_dir,

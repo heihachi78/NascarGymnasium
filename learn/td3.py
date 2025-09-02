@@ -279,9 +279,13 @@ class CurriculumLearningCallback(BaseCallback):
 
 # ---------- Eval callback that informs curriculum ----------
 class CurriculumEvalCallback(EvalCallback):
-    def __init__(self, curriculum_callback: CurriculumLearningCallback, *args, **kwargs):
+    def __init__(self, curriculum_callback: CurriculumLearningCallback, model_name: str, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.curriculum_callback = curriculum_callback
+        self.model_name = model_name
+        # Track best rewards for each phase
+        self.best_nascar_reward = -np.inf
+        self.best_random_reward = -np.inf
         # link back so curriculum can update this eval env
         self.curriculum_callback.eval_callback = self
 
@@ -292,6 +296,18 @@ class CurriculumEvalCallback(EvalCallback):
             # latest evaluation was recorded
             latest_eval_results = self.evaluations_results[-1]  # list of episode rewards for that eval
             latest_mean_reward = float(np.mean(latest_eval_results))
+            current_phase = self.curriculum_callback.get_current_phase()
+            
+            # Save phase-specific best models
+            if current_phase == "nascar" and latest_mean_reward > self.best_nascar_reward:
+                self.best_nascar_reward = latest_mean_reward
+                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_nascar"
+                self.model.save(model_path)
+            elif current_phase == "random" and latest_mean_reward > self.best_random_reward:
+                self.best_random_reward = latest_mean_reward
+                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_random"
+                self.model.save(model_path)
+            
             self.curriculum_callback.update_reward_history(latest_mean_reward)
 
             # logging summary of recent reward history for visibility
@@ -331,6 +347,7 @@ if __name__ == "__main__":
     # Eval callback with more episodes and robust check
     eval_callback = CurriculumEvalCallback(
         curriculum_cb,
+        model_name,
         eval_env=eval_vec,
         best_model_save_path=checkpoint_dir,
         log_path=log_dir,
@@ -345,7 +362,7 @@ if __name__ == "__main__":
     n_actions = venv.action_space.shape[-1]
     action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.2 * np.ones(n_actions)
+        sigma=0.15 * np.ones(n_actions)
     )
 
     model = TD3(
@@ -356,14 +373,14 @@ if __name__ == "__main__":
         action_noise=action_noise,
         learning_starts=50_000,  # from td3_simple.py
         buffer_size=500_000,     # from td3_simple.py
-        batch_size=256,          # from td3_simple.py
+        batch_size=512,          # from td3_simple.py
         train_freq=(1, "step"),  # from td3_simple.py
         gradient_steps=4,        # from td3_simple.py
-        gamma=0.99,
+        gamma=0.999,
         tau=0.005,               # TD3 default
         policy_delay=2,          # TD3 default
-        target_policy_noise=0.2, # TD3 default
-        target_noise_clip=0.5,   # TD3 default
+        target_policy_noise=0.15, # TD3 default
+        target_noise_clip=0.4,   # TD3 default
         stats_window_size=stats_window_size,
         verbose=verbose,
     )
