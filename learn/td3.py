@@ -362,7 +362,7 @@ if __name__ == "__main__":
     n_actions = venv.action_space.shape[-1]
     action_noise = NormalActionNoise(
         mean=np.zeros(n_actions),
-        sigma=0.15 * np.ones(n_actions)
+        sigma=0.25 * np.ones(n_actions)
     )
 
     model = TD3(
@@ -373,7 +373,7 @@ if __name__ == "__main__":
         action_noise=action_noise,
         learning_starts=50_000,  # from td3_simple.py
         buffer_size=500_000,     # from td3_simple.py
-        batch_size=512,          # from td3_simple.py
+        batch_size=128,          # from td3_simple.py
         train_freq=(1, "step"),  # from td3_simple.py
         gradient_steps=4,        # from td3_simple.py
         gamma=0.999,
