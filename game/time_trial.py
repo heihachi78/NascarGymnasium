@@ -99,7 +99,6 @@ def main():
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
-        ("game/control/models/ppo_280_nascar.zip", "PPO-280"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
         (None, "BC"),
