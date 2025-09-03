@@ -96,12 +96,13 @@ def main():
     # You can modify this list to include any models you want to test
     model_configs = [
         ("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
-        ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
-        (None, "BC"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
-        ("game/control/models/td3_best_model3.zip", "TD3-B-3"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
+        ("game/control/models/ppo_280_nascar.zip", "PPO-280"),
+        ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
+        ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
+        (None, "BC"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
