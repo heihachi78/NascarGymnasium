@@ -261,7 +261,7 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         batch_size=512,
-        sde_sample_freq=4,
+        gamma=0.999,
         clip_range=0.1,
         use_sde=True,
         device='cpu',
