@@ -19,10 +19,10 @@ verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 12_500
 log_interval = 1
-learning_rate_initial_value = 1e-4
+learning_rate_initial_value = 3e-5
 learning_rate_final_value = 1e-5
 stats_window_size = 25
-model_name = "td3_big"
+model_name = "td3_lr_7e4"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -76,7 +76,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[1024, 1024],
+        net_arch=[1024, 512],
         activation_fn=torch.nn.ReLU,
     )
 
@@ -89,12 +89,9 @@ if __name__ == "__main__":
         learning_starts=50_000,
         buffer_size=250_000,
         batch_size=512,
-        train_freq=(4, "step"),
+        train_freq=(2, "step"),
         gradient_steps=4,
         gamma=0.999,
-        tau=0.005,
-        target_policy_noise=0.15,
-        target_noise_clip=0.4,
         stats_window_size=stats_window_size,
         verbose=verbose,
         policy_kwargs=policy_kwargs,
