@@ -1126,7 +1126,7 @@ class CarEnv(BaseEnv):
             return True, False
         
         # Check if ALL active (non-disabled) cars have low rewards
-        if self.reset_on_lap and hasattr(self, '_cumulative_rewards'):
+        if  hasattr(self, '_cumulative_rewards'):
             active_cars_below_threshold = []
             active_car_count = 0
             

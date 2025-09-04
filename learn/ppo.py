@@ -58,8 +58,6 @@ class CurriculumLearningCallback(BaseCallback):
         self.eval_window = eval_window
         self.num_envs = num_envs
         self.reward_history = deque(maxlen=eval_window)
-        self.phase = "nascar"  # "nascar" or "random"
-        self.phase_switched = False
         self.eval_callback = None  # Will be set by parent callback
         
     def _on_step(self) -> bool:
@@ -70,68 +68,8 @@ class CurriculumLearningCallback(BaseCallback):
         
     def update_reward_history(self, mean_reward: float) -> None:
         """Update reward history and check for phase transition"""
-        return
         self.reward_history.append(mean_reward)
-        
-        if self.phase == "nascar" and len(self.reward_history) >= 5:  # Check after 5 evaluations
-            recent_rewards = list(self.reward_history)[-5:]  # Last 5 evaluations
-            current_mean = np.mean(recent_rewards)
-            
-            if current_mean >= self.reward_threshold and not self.phase_switched:
-                logger.info(f"🎉 Reward threshold reached! Mean reward: {current_mean:.2f} >= {self.reward_threshold}")
-                logger.info("🔄 Transitioning from NASCAR track to RANDOM tracks")
-                self.phase = "random"
-                self.phase_switched = True
-                
-                # Switch environments immediately
-                self._switch_environments()
-                
-    def _switch_environments(self):
-        """
-        Switch from NASCAR to random tracks using env_method('switch_to_random').
-        Falls back to recreating VecNormalize-wrapped environments if needed.
-        """
-        # Access model through eval_callback since this callback is not directly passed to model.learn()
-        if self.eval_callback is None or self.eval_callback.model is None:
-            logger.error("Cannot switch environments - eval_callback or eval_callback.model is None")
-            logger.error(f"Callback state - has eval_callback: {self.eval_callback is not None}")
-            if self.eval_callback:
-                logger.error(f"Eval callback has model: {hasattr(self.eval_callback, 'model')}")
-            logger.error(f"Callback type: {type(self)}")
-            return
-        
-        model = self.eval_callback.model
-
-        logger.info("Attempting to switch training environments to RANDOM tracks (in-place preferred)")
-
-        train_env = model.get_env()
-        eval_env = getattr(self.eval_callback, "eval_env", None)
-
-        # Try in-place switch via env_method (VecNormalize always wraps the VecEnv)
-        try:
-            logger.info("🔄 Attempting in-place environment switch via env_method...")
-            
-            # Call switch_to_random on the underlying VecEnv (through VecNormalize's .venv)
-            result = train_env.venv.env_method("switch_to_random")
-            logger.info(f"✅ Training env switch_to_random called on {len(result) if result else 0} sub-environments")
-            
-            # Also switch eval environment
-            if eval_env is not None:
-                try:
-                    eval_result = eval_env.venv.env_method("switch_to_random")
-                    logger.info(f"✅ Eval env switch_to_random called on {len(eval_result) if eval_result else 0} sub-environments")
-                except Exception as ee:
-                    logger.warning(f"⚠️  Eval env switch failed: {ee}")
-                    
-            logger.info("🏁 In-place environment switch completed successfully!")
-            return
-        except Exception as e:
-            logger.error(f"❌ Environment switch failed: {e}")
-            logger.info("🔄 Continuing training with current NASCAR track environment")
-        
-    def get_current_phase(self) -> str:
-        return self.phase
-
+        return
 
 # ---------- environment létrehozása ----------
 def make_env(rank, track_file=None):
@@ -149,15 +87,10 @@ def make_env(rank, track_file=None):
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
     return _init
 
-def create_curriculum_env(phase: str, num_envs: int):
+def create_curriculum_env(num_envs: int):
     """Create raw SubprocVecEnv for curriculum phase (will be wrapped with VecNormalize)"""
-    if phase == "nascar":
-        logger.info(f"Creating {num_envs} NASCAR environments")
-        return SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
-    else:  # random phase
-        logger.info(f"Creating {num_envs} RANDOM track environments")
-        return SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
-
+    logger.info(f"Creating {num_envs} environments")
+    return SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
 
 # ---------- custom eval callback for curriculum ----------
 class CurriculumEvalCallback(EvalCallback):
@@ -179,25 +112,19 @@ class CurriculumEvalCallback(EvalCallback):
         # Only process if a new evaluation was actually performed
         if len(self.evaluations_results) > prev_eval_count:
             latest_mean_reward = np.mean(self.evaluations_results[-1])
-            current_phase = self.curriculum_callback.get_current_phase()
             
             # Save phase-specific best models
-            if current_phase == "nascar" and latest_mean_reward > self.best_nascar_reward:
-                self.best_nascar_reward = latest_mean_reward
-                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_nascar"
-                self.model.save(model_path)
-            elif current_phase == "random" and latest_mean_reward > self.best_random_reward:
-                self.best_random_reward = latest_mean_reward
-                model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}_random"
-                self.model.save(model_path)
-            
+            self.best_nascar_reward = latest_mean_reward
+            model_path = f"{self.best_model_save_path}/{self.model_name}_{latest_mean_reward:.1f}.zip"
+            self.model.save(model_path)
+           
             self.curriculum_callback.update_reward_history(latest_mean_reward)
             
             # Show progress only after new evaluations
             if len(self.curriculum_callback.reward_history) >= 5:
                 recent_rewards = list(self.curriculum_callback.reward_history)[-5:]
                 current_mean = np.mean(recent_rewards)
-                logger.info(f"Eval progress: {current_mean:.1f} avg (last 5) | Recent: {[f'{r:.1f}' for r in recent_rewards]} | Phase: {self.curriculum_callback.get_current_phase()}")
+                logger.info(f"Eval progress: {current_mean:.1f} avg (last 5) | Recent: {[f'{r:.1f}' for r in recent_rewards]}")
             
         return result
 
@@ -223,7 +150,7 @@ if __name__ == "__main__":
     )
     
     # Start with NASCAR phase environments
-    train_subproc = create_curriculum_env("nascar", num_envs)
+    train_subproc = create_curriculum_env(num_envs)
     env = VecNormalize(train_subproc, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
     eval_dummy = DummyVecEnv([make_env("eval", None)])  # eval with same track
     eval_env = VecNormalize(eval_dummy, training=False, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
@@ -246,7 +173,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[1024, 512],
+        net_arch=[512, 256],
         activation_fn=torch.nn.ReLU,
         ortho_init=True
     )
@@ -260,7 +187,7 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         batch_size=512,
-        n_steps=4096,
+        n_steps=1024,
         gamma=0.999,
         use_sde=True,
         device='cpu',
