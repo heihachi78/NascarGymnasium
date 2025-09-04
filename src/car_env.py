@@ -1005,9 +1005,8 @@ class CarEnv(BaseEnv):
                     # Get collision impulse for this car
                     collision_impulse = self.car_physics_worlds[car_index].get_continuous_collision_impulse()
                     # Apply penalty for current collision
-                    if collision_impulse > 0:
-                        collision_penalty = PENALTY_WALL_COLLISION_PER_STEP
-                        reward -= collision_penalty
+                    if abs(collision_impulse) > 0:
+                        reward -= PENALTY_WALL_COLLISION_PER_STEP
                 
                 # Distance reward (track per car if needed)
                 car_state = self.car_physics_worlds[car_index].get_car_state()
