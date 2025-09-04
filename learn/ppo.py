@@ -145,7 +145,7 @@ def make_env(rank, track_file=None):
             render_mode=None,
             track_file=track_file,
             discrete_action_space=False,
-            reset_on_lap=True,
+            reset_on_lap=False,
         )
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
     return _init

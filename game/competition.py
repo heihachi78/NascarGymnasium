@@ -99,9 +99,9 @@ def main():
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
-        ("game/control/models/ppo_266_random.zip", "PPO-266-R"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
+        ("game/control/models/td3_589.zip", "TD3-589"),
         (None, "BC"),
     ]
 
@@ -175,7 +175,7 @@ def main():
         track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
