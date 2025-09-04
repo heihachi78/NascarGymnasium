@@ -99,11 +99,8 @@ def main():
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
-        ("game/control/models/ppo_266_random.zip", "PPO-266-R"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
-        ("game/control/models/td3_294_random.zip", "TD3-294-R"),
-        ("game/control/models/td3_266.zip", "TD3-266"),
         (None, "BC"),
     ]
     
@@ -176,7 +173,7 @@ def main():
     env = CarEnv(track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
-                 render_mode=None, #"human",
+                 render_mode="human",
                  discrete_action_space=False,
                  car_names=car_names)
     env.seed(42)
@@ -213,6 +210,7 @@ def main():
             
             # Reset environment for new attempt (selects new random track)
             obs, info = env.reset(attempt_num * 42)
+            env.switch_to_random()
             print(f"🏁 Track for attempt {attempt_num}: {env.track_file}")
             print(f"{'=' * 60}")
             

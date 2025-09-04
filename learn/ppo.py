@@ -28,7 +28,6 @@ model_name = "ppo"
 # ---------- curriculum learning konfiguráció ----------
 curriculum_reward_threshold = 200.0
 curriculum_eval_window = 50
-nascar_track = "tracks/nascar.track"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -42,7 +41,6 @@ print(f"   Model: {model_name}")
 print(f"   Total timesteps: {total_timesteps:,}")
 print(f"   Environments: {num_envs}")
 print(f"   Curriculum threshold: {curriculum_reward_threshold}")
-print(f"   NASCAR track: {nascar_track}")
 print(f"   Logs: {log_dir}")
 print(f"   Checkpoints: {checkpoint_dir}")
 print(f"   Tensorboard: {tensorboard_log}\n")
@@ -72,6 +70,7 @@ class CurriculumLearningCallback(BaseCallback):
         
     def update_reward_history(self, mean_reward: float) -> None:
         """Update reward history and check for phase transition"""
+        return
         self.reward_history.append(mean_reward)
         
         if self.phase == "nascar" and len(self.reward_history) >= 5:  # Check after 5 evaluations
@@ -154,7 +153,7 @@ def create_curriculum_env(phase: str, num_envs: int):
     """Create raw SubprocVecEnv for curriculum phase (will be wrapped with VecNormalize)"""
     if phase == "nascar":
         logger.info(f"Creating {num_envs} NASCAR environments")
-        return SubprocVecEnv([make_env(i, nascar_track) for i in range(num_envs)])
+        return SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
     else:  # random phase
         logger.info(f"Creating {num_envs} RANDOM track environments")
         return SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
@@ -226,7 +225,7 @@ if __name__ == "__main__":
     # Start with NASCAR phase environments
     train_subproc = create_curriculum_env("nascar", num_envs)
     env = VecNormalize(train_subproc, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
-    eval_dummy = DummyVecEnv([make_env("eval", nascar_track)])  # eval with same track
+    eval_dummy = DummyVecEnv([make_env("eval", None)])  # eval with same track
     eval_env = VecNormalize(eval_dummy, training=False, norm_obs=True, norm_reward=True, clip_obs=10.0, gamma=0.99)
     # Share normalization statistics between train and eval environments
     eval_env.obs_rms = env.obs_rms
@@ -247,7 +246,7 @@ if __name__ == "__main__":
     )
 
     policy_kwargs = dict(
-        net_arch=[512, 512],
+        net_arch=[1024, 512],
         activation_fn=torch.nn.ReLU,
         ortho_init=True
     )
@@ -261,8 +260,8 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         batch_size=512,
+        n_steps=4096,
         gamma=0.999,
-        clip_range=0.1,
         use_sde=True,
         device='cpu',
         policy_kwargs=policy_kwargs,
