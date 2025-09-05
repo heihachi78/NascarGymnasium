@@ -116,6 +116,7 @@ def main():
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
         ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
+        ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
         # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
         (None, "BC"),
     ]
@@ -197,7 +198,7 @@ def main():
     print("=" * 60)
     
     # Initialize environment with random tracks
-    env = CarEnv(track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
+    env = CarEnv(track_file='tracks/michigan.track',  # No fixed track (automatic random selection)
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
                  render_mode=None, #"human",
