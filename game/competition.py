@@ -116,6 +116,7 @@ def main():
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
+        ("game/control/models/td3_bm.zip", "TD3-BM"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
         # ("game/control/models/genetic_best_evolved_controller.pkl", "GA-Best"),

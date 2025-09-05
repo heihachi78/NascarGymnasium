@@ -2,6 +2,7 @@ import numpy as np
 import sys
 import os
 import torch
+from datetime import datetime
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import TD3
 from stable_baselines3.common.callbacks import EvalCallback
@@ -34,18 +35,31 @@ class BestModelCallback(EvalCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.best_mean_reward = -np.inf
+        self.best_model_counter = 0
         
     def _on_evaluation_end(self) -> None:
+        logger.info("BestModelCallback._on_evaluation_end() called")
         super()._on_evaluation_end()
         
+        logger.info(f"Number of evaluation results: {len(self.evaluations_results)}")
         if len(self.evaluations_results) > 0:
             mean_reward = np.mean(self.evaluations_results[-1])
+            logger.info(f"Current evaluation mean reward: {mean_reward:.4f}")
+            logger.info(f"Current best mean reward: {self.best_mean_reward:.4f}")
             
             if mean_reward > self.best_mean_reward:
+                logger.info(f"NEW BEST! {mean_reward:.4f} > {self.best_mean_reward:.4f}")
                 self.best_mean_reward = mean_reward
-                model_path = f"{checkpoint_dir}/{model_name}_best_reward_{mean_reward:.2f}.zip"
-                logger.info(f"New best mean reward: {mean_reward:.2f}, saving model to {model_path}")
+                self.best_model_counter += 1
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                model_path = f"{checkpoint_dir}/{model_name}_best_{self.best_model_counter:03d}_{timestamp}_{mean_reward:.4f}.zip"
+                logger.info(f"Saving model to {model_path}")
                 self.model.save(model_path)
+                logger.info(f"Model saved successfully!")
+            else:
+                logger.info(f"No improvement: {mean_reward:.4f} <= {self.best_mean_reward:.4f}")
+        else:
+            logger.info("No evaluation results available")
 
 def make_env(rank, track_file=None):
     def _init():
