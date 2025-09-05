@@ -34,22 +34,24 @@ logger = logging.getLogger(__name__)
 class BestModelCallback(EvalCallback):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.best_mean_reward = -np.inf
+        self.custom_best_mean_reward = -np.inf
         self.best_model_counter = 0
         
-    def _on_evaluation_end(self) -> None:
-        logger.info("BestModelCallback._on_evaluation_end() called")
-        super()._on_evaluation_end()
+    def _on_step(self) -> bool:
+        continue_training = super()._on_step()
         
-        logger.info(f"Number of evaluation results: {len(self.evaluations_results)}")
-        if len(self.evaluations_results) > 0:
-            mean_reward = np.mean(self.evaluations_results[-1])
-            logger.info(f"Current evaluation mean reward: {mean_reward:.4f}")
-            logger.info(f"Current best mean reward: {self.best_mean_reward:.4f}")
+        # Check if evaluation just happened (when n_calls is divisible by eval_freq)
+        if self.eval_freq > 0 and self.n_calls % self.eval_freq == 0:
+            logger.info("BestModelCallback: Evaluation completed, processing results")
             
-            if mean_reward > self.best_mean_reward:
-                logger.info(f"NEW BEST! {mean_reward:.4f} > {self.best_mean_reward:.4f}")
-                self.best_mean_reward = mean_reward
+            # Use the last_mean_reward from the parent class which is set after each evaluation
+            mean_reward = self.last_mean_reward
+            logger.info(f"Current evaluation mean reward: {mean_reward:.4f}")
+            logger.info(f"Current best mean reward: {self.custom_best_mean_reward:.4f}")
+            
+            if mean_reward > self.custom_best_mean_reward:
+                logger.info(f"NEW BEST! {mean_reward:.4f} > {self.custom_best_mean_reward:.4f}")
+                self.custom_best_mean_reward = mean_reward
                 self.best_model_counter += 1
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 model_path = f"{checkpoint_dir}/{model_name}_best_{self.best_model_counter:03d}_{timestamp}_{mean_reward:.4f}.zip"
@@ -57,9 +59,9 @@ class BestModelCallback(EvalCallback):
                 self.model.save(model_path)
                 logger.info(f"Model saved successfully!")
             else:
-                logger.info(f"No improvement: {mean_reward:.4f} <= {self.best_mean_reward:.4f}")
-        else:
-            logger.info("No evaluation results available")
+                logger.info(f"No improvement: {mean_reward:.4f} <= {self.custom_best_mean_reward:.4f}")
+        
+        return continue_training
 
 def make_env(rank, track_file=None):
     def _init():

@@ -50,7 +50,7 @@ class TrackBuilderGUI:
         self.loader = TrackLoader()
         self.analyzer = TrackAnalyzer()
         self.validator = TrackValidator()
-        self.centerline_generator = CenterlineGenerator()
+        self.centerline_generator = CenterlineGenerator(adaptive_sampling=False)  # Disable for faster loading
         self.boundary_generator = TrackBoundary()
         
         # Fonts
@@ -86,6 +86,11 @@ class TrackBuilderGUI:
         self.track_name = "No track loaded"
         self.current_track_index = 0
         
+        # Analysis state flags
+        self.stats_computed = False
+        self.validation_computed = False
+        self.analysis_in_progress = False
+        
         # View settings
         self.view_mode = ViewMode.OVERHEAD
         self.zoom = 1.0
@@ -118,6 +123,20 @@ class TrackBuilderGUI:
         
         return sorted(available)
     
+    def _update_current_track_index(self, file_path: str):
+        """Update the current track index to match the loaded track file."""
+        # Convert to absolute path for comparison
+        abs_file_path = os.path.abspath(file_path)
+        
+        for i, track_path in enumerate(self.available_tracks):
+            abs_track_path = os.path.abspath(track_path)
+            if abs_file_path == abs_track_path:
+                self.current_track_index = i
+                return
+        
+        # If track is not in available_tracks list, set to -1 (invalid index)
+        self.current_track_index = -1
+    
     def load_track_file(self, file_path: str) -> bool:
         """
         Load a track file and analyze it.
@@ -129,18 +148,15 @@ class TrackBuilderGUI:
             bool: True if successful, False otherwise
         """
         try:
-            # Load track
+            # Load track (fast - just parse the file)
             self.current_track = self.loader.load_track(file_path)
             self.track_name = os.path.basename(file_path)
             
-            # Analyze track
-            self.current_stats = self.analyzer.analyze_track(self.current_track)
+            # Update current_track_index to match the loaded track
+            self._update_current_track_index(file_path)
             
-            # Validate track
-            self.current_validation = self.validator.validate_track(self.current_track)
-            
-            # Generate visualization data
-            self._generate_visualization_data()
+            # Generate minimal visualization data first (just centerline)
+            self._generate_basic_visualization_data()
             
             # Auto-fit view
             self._auto_fit_view()
@@ -148,6 +164,9 @@ class TrackBuilderGUI:
             # Show status message
             self.status_message = f"Loaded: {self.track_name}"
             self.status_timer = pygame.time.get_ticks()
+            
+            # Do expensive analysis in background/on-demand
+            self._schedule_expensive_analysis()
             
             return True
             
@@ -176,11 +195,14 @@ class TrackBuilderGUI:
             return
         
         try:
-            # Generate centerline
-            self.centerline = self.centerline_generator.generate_centerline(self.current_track)
+            # Generate centerline with reduced density for faster loading
+            target_spacing = 5.0  # Increased from default ~1.0 for faster generation
+            self.centerline = self.centerline_generator.generate_centerline(
+                self.current_track, target_spacing
+            )
             
-            # Generate boundaries
-            if self.centerline:
+            # Generate boundaries only if needed for current view mode
+            if self.view_mode in [ViewMode.OVERHEAD, ViewMode.BOUNDARIES] and self.centerline:
                 self.boundaries = self.boundary_generator.generate_boundaries(
                     self.centerline, self.current_track.width
                 )
@@ -189,8 +211,96 @@ class TrackBuilderGUI:
                 self.track_polygon = self.boundary_generator.create_track_polygon(
                     self.boundaries[0], self.boundaries[1]
                 )
+            else:
+                # Skip expensive boundary calculation for modes that don't need it
+                self.boundaries = ([], [])
+                self.track_polygon = []
         except Exception as e:
             print(f"Error generating visualization data: {e}")
+    
+    def _generate_boundaries(self):
+        """Generate boundaries on demand when switching to a view mode that needs them."""
+        if self.centerline and self.current_track:
+            try:
+                self.boundaries = self.boundary_generator.generate_boundaries(
+                    self.centerline, self.current_track.width
+                )
+                
+                self.track_polygon = self.boundary_generator.create_track_polygon(
+                    self.boundaries[0], self.boundaries[1]
+                )
+            except Exception as e:
+                print(f"Error generating boundaries: {e}")
+    
+    def _refine_centerline_if_needed(self):
+        """Refine centerline with better spacing for detailed viewing."""
+        if self.current_track:
+            try:
+                # Generate finer centerline for better visual quality
+                target_spacing = 1.0  # Finer spacing for detailed view
+                self.centerline = self.centerline_generator.generate_centerline(
+                    self.current_track, target_spacing
+                )
+            except Exception as e:
+                print(f"Error refining centerline: {e}")
+    
+    def _generate_basic_visualization_data(self):
+        """Generate minimal visualization data for fast loading."""
+        if not self.current_track:
+            return
+        
+        try:
+            # Generate centerline with reasonable spacing for visibility but still fast
+            target_spacing = 3.0  # Better balance between speed and visibility
+            self.centerline = self.centerline_generator.generate_centerline(
+                self.current_track, target_spacing
+            )
+            
+            # For OVERHEAD mode, generate basic boundaries immediately for visibility
+            if self.view_mode == ViewMode.OVERHEAD and self.centerline:
+                self.boundaries = self.boundary_generator.generate_boundaries(
+                    self.centerline, self.current_track.width
+                )
+                self.track_polygon = self.boundary_generator.create_track_polygon(
+                    self.boundaries[0], self.boundaries[1]
+                )
+            else:
+                # Skip boundaries for other modes - they'll be generated on demand
+                self.boundaries = ([], [])
+                self.track_polygon = []
+            
+        except Exception as e:
+            print(f"Error generating basic visualization data: {e}")
+    
+    def _schedule_expensive_analysis(self):
+        """Mark that expensive analysis should be done on demand."""
+        self.stats_computed = False
+        self.validation_computed = False
+        self.analysis_in_progress = False
+    
+    def _ensure_stats_computed(self):
+        """Ensure track statistics are computed (lazy computation)."""
+        if not self.stats_computed and self.current_track and not self.analysis_in_progress:
+            try:
+                self.analysis_in_progress = True
+                self.current_stats = self.analyzer.analyze_track(self.current_track)
+                self.stats_computed = True
+            except Exception as e:
+                print(f"Error computing track statistics: {e}")
+            finally:
+                self.analysis_in_progress = False
+    
+    def _ensure_validation_computed(self):
+        """Ensure track validation is computed (lazy computation)."""
+        if not self.validation_computed and self.current_track and not self.analysis_in_progress:
+            try:
+                self.analysis_in_progress = True
+                self.current_validation = self.validator.validate_track(self.current_track)
+                self.validation_computed = True
+            except Exception as e:
+                print(f"Error computing track validation: {e}")
+            finally:
+                self.analysis_in_progress = False
     
     def _auto_fit_view(self):
         """Auto-fit the view to show the entire track."""
@@ -306,68 +416,82 @@ class TrackBuilderGUI:
         self.screen.blit(text, (x_pos, y_pos))
         y_pos += line_height + 10
         
-        # Track statistics
-        if self.current_stats:
+        # Track statistics (lazy computation)
+        if self.current_track:
             text = self.font_medium.render("TRACK STATISTICS:", True, self.colors['text'])
             self.screen.blit(text, (x_pos, y_pos))
             y_pos += line_height
             
-            stats_lines = [
-                f"Length: {self.current_stats.total_length:.1f}m",
-                f"Segments: {self.current_stats.segment_count}",
-                f"Curves: {self.current_stats.curve_count}",
-                f"Width: {self.current_stats.average_width:.1f}m",
-                f"Area: {self.current_stats.track_area:.0f}m²",
-                f"Lap Time: {self.current_stats.estimated_lap_time:.1f}s",
-                f"Difficulty: {self.current_stats.technical_difficulty:.1f}/10"
-            ]
-            
-            for line in stats_lines:
-                text = self.font_small.render(line, True, self.colors['text'])
+            if not self.stats_computed:
+                text = self.font_small.render("Computing statistics...", True, self.colors['text'])
                 self.screen.blit(text, (x_pos, y_pos))
                 y_pos += line_height
+                # Trigger computation for next frame
+                self._ensure_stats_computed()
+            elif self.current_stats:
+                stats_lines = [
+                    f"Length: {self.current_stats.total_length:.1f}m",
+                    f"Segments: {self.current_stats.segment_count}",
+                    f"Curves: {self.current_stats.curve_count}",
+                    f"Width: {self.current_stats.average_width:.1f}m",
+                    f"Area: {self.current_stats.track_area:.0f}m²",
+                    f"Lap Time: {self.current_stats.estimated_lap_time:.1f}s",
+                    f"Difficulty: {self.current_stats.technical_difficulty:.1f}/10"
+                ]
+                
+                for line in stats_lines:
+                    text = self.font_small.render(line, True, self.colors['text'])
+                    self.screen.blit(text, (x_pos, y_pos))
+                    y_pos += line_height
         
         y_pos += 10
         
-        # Validation results
-        if self.current_validation:
+        # Validation results (lazy computation)
+        if self.current_track:
             text = self.font_medium.render("VALIDATION:", True, self.colors['text'])
             self.screen.blit(text, (x_pos, y_pos))
             y_pos += line_height
             
-            # Status
-            if self.current_validation.is_valid:
-                text = self.font_small.render("✓ Valid", True, self.colors['text_success'])
-            else:
-                text = self.font_small.render("✗ Invalid", True, self.colors['text_error'])
-            self.screen.blit(text, (x_pos, y_pos))
-            y_pos += line_height
-            
-            # Errors
-            if self.current_validation.errors:
-                text = self.font_small.render("Errors:", True, self.colors['text_error'])
+            if not self.validation_computed:
+                text = self.font_small.render("Computing validation...", True, self.colors['text'])
                 self.screen.blit(text, (x_pos, y_pos))
                 y_pos += line_height
-                
-                for error in self.current_validation.errors[:3]:  # Show max 3 errors
-                    wrapped_lines = self._wrap_text(error, self.info_panel_width - 30)
-                    for line in wrapped_lines:
-                        text = self.font_small.render(f"• {line}", True, self.colors['text_error'])
-                        self.screen.blit(text, (x_pos + 10, y_pos))
-                        y_pos += line_height
-            
-            # Warnings
-            if self.current_validation.warnings:
-                text = self.font_small.render("Warnings:", True, self.colors['text_warning'])
+                # Trigger computation for next frame
+                self._ensure_validation_computed()
+            elif self.current_validation:
+                # Status
+                if self.current_validation.is_valid:
+                    text = self.font_small.render("✓ Valid", True, self.colors['text_success'])
+                else:
+                    text = self.font_small.render("✗ Invalid", True, self.colors['text_error'])
                 self.screen.blit(text, (x_pos, y_pos))
                 y_pos += line_height
+            
+                # Errors
+                if self.current_validation.errors:
+                    text = self.font_small.render("Errors:", True, self.colors['text_error'])
+                    self.screen.blit(text, (x_pos, y_pos))
+                    y_pos += line_height
+                    
+                    for error in self.current_validation.errors[:3]:  # Show max 3 errors
+                        wrapped_lines = self._wrap_text(error, self.info_panel_width - 30)
+                        for line in wrapped_lines:
+                            text = self.font_small.render(f"• {line}", True, self.colors['text_error'])
+                            self.screen.blit(text, (x_pos + 10, y_pos))
+                            y_pos += line_height
                 
-                for warning in self.current_validation.warnings[:2]:  # Show max 2 warnings
-                    wrapped_lines = self._wrap_text(warning, self.info_panel_width - 30)
-                    for line in wrapped_lines:
-                        text = self.font_small.render(f"• {line}", True, self.colors['text_warning'])
-                        self.screen.blit(text, (x_pos + 10, y_pos))
-                        y_pos += line_height
+                # Warnings
+                if self.current_validation.warnings:
+                    text = self.font_small.render("Warnings:", True, self.colors['text_warning'])
+                    self.screen.blit(text, (x_pos, y_pos))
+                    y_pos += line_height
+                    
+                    for warning in self.current_validation.warnings[:2]:  # Show max 2 warnings
+                        wrapped_lines = self._wrap_text(warning, self.info_panel_width - 30)
+                        for line in wrapped_lines:
+                            text = self.font_small.render(f"• {line}", True, self.colors['text_warning'])
+                            self.screen.blit(text, (x_pos + 10, y_pos))
+                            y_pos += line_height
         
         # Available tracks
         y_pos += 10
@@ -378,8 +502,9 @@ class TrackBuilderGUI:
             
             for i, track_path in enumerate(self.available_tracks):
                 track_name = os.path.basename(track_path)
-                color = self.colors['text_highlight'] if i == self.current_track_index else self.colors['text']
-                indicator = "► " if i == self.current_track_index else "  "
+                is_current = (i == self.current_track_index and self.current_track_index >= 0)
+                color = self.colors['text_highlight'] if is_current else self.colors['text']
+                indicator = "► " if is_current else "  "
                 text = self.font_small.render(f"{indicator}{track_name}", True, color)
                 self.screen.blit(text, (x_pos, y_pos))
                 y_pos += line_height
@@ -458,7 +583,19 @@ class TrackBuilderGUI:
                     # Change view mode
                     modes = list(ViewMode)
                     current_index = modes.index(self.view_mode)
+                    old_mode = self.view_mode
                     self.view_mode = modes[(current_index + 1) % len(modes)]
+                    
+                    # Regenerate boundaries if switching to a mode that needs them
+                    if (self.view_mode in [ViewMode.OVERHEAD, ViewMode.BOUNDARIES] and 
+                        old_mode not in [ViewMode.OVERHEAD, ViewMode.BOUNDARIES] and
+                        self.centerline and not self.boundaries[0]):
+                        self._generate_boundaries()
+                    
+                    # If switching to centerline mode and centerline is too coarse, refine it
+                    elif (self.view_mode == ViewMode.CENTERLINE and 
+                          old_mode != ViewMode.CENTERLINE and self.centerline):
+                        self._refine_centerline_if_needed()
                 
                 elif event.key == pygame.K_r:
                     # Reset view
@@ -492,11 +629,11 @@ class TrackBuilderGUI:
     
     def run(self):
         """Run the main application loop."""
-        # Load the first available track if any exist
-        if self.available_tracks:
+        # Only load the first available track if no track was already loaded
+        if not self.current_track and self.available_tracks:
             self.current_track_index = 0
             self.load_track_file(self.available_tracks[0])
-        else:
+        elif not self.current_track:
             self.status_message = "No track files found in tracks/ directory"
             self.status_timer = pygame.time.get_ticks()
         
