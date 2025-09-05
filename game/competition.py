@@ -119,6 +119,7 @@ def main():
         ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
+        ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
         # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
         (None, "BC"),
     ]
