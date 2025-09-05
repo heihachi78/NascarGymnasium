@@ -221,7 +221,7 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
+        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode=None, #'human',

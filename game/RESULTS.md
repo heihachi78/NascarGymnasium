@@ -13,7 +13,7 @@
 
 ************************************************************
 
-🏁 COMPETITION FINISHED - FINAL RESULTS
+🏁 COMPETITION FINISHED - FINAL RESULTS - NASCAR BANKED
 ============================================================
 🏆 FINISHING ORDER:
    🥇 TD3-BM-2 - 4 laps completed
@@ -35,7 +35,7 @@
 
 ************************************************************
 
-🏁 COMPETITION FINISHED - FINAL RESULTS
+🏁 COMPETITION FINISHED - FINAL RESULTS - DAYTONA
 ============================================================
 🏆 FINISHING ORDER:
    🥇 TD3-BM-2 - 2 laps completed
@@ -54,3 +54,23 @@
       Laps: 0, Reward: -170.1
    8. PPO-B - DISABLED
       Laps: 0, Reward: -281.6
+
+************************************************************
+
+🏁 COMPETITION FINISHED - FINAL RESULTS - MARTINSVILLE
+============================================================
+🏆 FINISHING ORDER:
+   🥇 BC - 7 laps completed
+      Best lap: 0:22.833, Reward: 432.8
+   🥈 TD3-BM-2 - DISABLED
+      Laps: 5, Reward: 306.2
+   🥉 TD3-BM-1 - DISABLED
+      Laps: 0, Reward: 28.9
+   4. PPO-284 - DISABLED
+      Laps: 0, Reward: -0.4
+   5. A2C-B-3 - DISABLED
+      Laps: 0, Reward: -15.5
+   6. PPO-B - DISABLED
+      Laps: 0, Reward: -41.0
+   7. A2C-O-1 - DISABLED
+      Laps: 0, Reward: -45.5
