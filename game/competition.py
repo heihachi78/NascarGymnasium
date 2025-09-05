@@ -116,15 +116,9 @@ def main():
         ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/ppo_284.zip", "PPO-284"),
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
-        ("game/control/models/td3_bm.zip", "TD3-BM"),
-        ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
-        ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
-        # ("game/control/models/genetic_best_evolved_controller.pkl", "GA-Best"),
-        # ("game/control/models/linear_model.pkl", "REG-Linear"),
-        # ("game/control/models/ridge_model.pkl", "REG-Ridge"),
-        # ("game/control/models/random_forest_model.pkl", "REG-RF"),
-        # ("game/control/models/neural_network_model.pkl", "REG-NN"),
+        ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
+        # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
         (None, "BC"),
     ]
 
@@ -227,10 +221,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
+        track_file='tracks/daytona.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
