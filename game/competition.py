@@ -7,6 +7,7 @@ and races them against each other to compare performance.
 
 import sys
 import os
+import pickle
 import numpy as np
 import signal
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -16,6 +17,8 @@ from game.control.ppo_control_class import PPOController
 from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
 from game.control.base_controller import BaseController
+from game.control.genetic_controller import GeneticController
+from game.control.regression_controller import RegressionController
 
 
 def calculate_finishing_order(num_cars, car_names, lap_counts, best_lap_time, car_rewards, disabled_cars, finishing_times):
@@ -79,7 +82,21 @@ def calculate_finishing_order(num_cars, car_names, lap_counts, best_lap_time, ca
     return [(result[0], result[1], result[7], result[8]) for result in race_results]
 
 
-def signal_handler(signum, frame):
+def load_genetic_controller(pkl_path, name):
+    """Load a trained genetic controller from pickle file."""
+    try:
+        with open(pkl_path, 'rb') as f:
+            controller = pickle.load(f)
+        # Update name for competition display
+        controller.name = name
+        return controller, True
+    except Exception as e:
+        print(f"⚠️ Failed to load genetic controller {pkl_path}: {e}")
+        # Return fallback controller
+        return GeneticController(name=name), False
+
+
+def signal_handler(_, __):
     """Immediately exit on interrupt to avoid segfault"""
     print("\n⚠️  Interrupt received...")
     os._exit(0)
@@ -101,6 +118,11 @@ def main():
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
+        # ("game/control/models/genetic_best_evolved_controller.pkl", "GA-Best"),
+        # ("game/control/models/linear_model.pkl", "REG-Linear"),
+        # ("game/control/models/ridge_model.pkl", "REG-Ridge"),
+        # ("game/control/models/random_forest_model.pkl", "REG-RF"),
+        # ("game/control/models/neural_network_model.pkl", "REG-NN"),
         (None, "BC"),
     ]
 
@@ -158,6 +180,38 @@ def main():
                 print(f"   ✓ Model loaded successfully")
             else:
                 print(f"   ⚠ Using fallback control")
+        elif "genetic" in model_path.lower():
+            print(f"   → Loading Genetic controller: {model_path}")
+            controller, loaded = load_genetic_controller(model_path, name)
+            controllers.append(controller)
+            if loaded:
+                print(f"   ✓ Genetic controller loaded successfully")
+                info = controller.get_info()
+                genome_length = info.get('genome_length', 'unknown')
+                print(f"   📊 Genome parameters: {genome_length}")
+            else:
+                print(f"   ⚠ Using fallback genetic control")
+        elif "regression_models" in model_path.lower() and model_path.endswith(".pkl"):
+            print(f"   → Loading Regression model: {model_path}")
+            try:
+                # Extract model type from filename using split instead of os.path
+                model_filename = model_path.split('/')[-1]  # Get just the filename
+                model_type = model_filename.replace("_model.pkl", "")
+                controller = RegressionController(name=name, model_type=model_type)
+                success = controller.load_model(model_path)
+                controllers.append(controller)
+                if success:
+                    print(f"   ✓ Regression model loaded successfully")
+                    info = controller.get_info()
+                    print(f"   📊 Model type: {info.get('model_type', 'unknown')}")
+                else:
+                    print(f"   ⚠ Using fallback regression control")
+            except Exception as e:
+                print(f"   ❌ Failed to load regression model: {e}")
+                import traceback
+                traceback.print_exc()
+                # Fallback to BaseController
+                controllers.append(BaseController(name=f"Fallback_{name}"))
         else:
             controller = BaseController(model_path, name)
             controllers.append(controller)
@@ -171,10 +225,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/nascar2.track',  # No fixed track (automatic random selection)
+        track_file=None, #'tracks/daytona.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )

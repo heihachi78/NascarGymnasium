@@ -10,6 +10,7 @@ import sys
 import os
 import numpy as np
 import signal
+import pickle
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.car_env import CarEnv
 from game.control.base_controller import BaseController
@@ -17,6 +18,7 @@ from game.control.td3_control_class import TD3Controller
 from game.control.ppo_control_class import PPOController
 from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
+from game.control.genetic_controller import GeneticController
 
 # Time trial configuration constants
 LAPS_PER_ATTEMPT = 2  # Number of laps in each attempt
@@ -72,6 +74,19 @@ def calculate_time_trial_results(num_cars, car_names, all_lap_times, best_lap_ti
     return results
 
 
+def load_genetic_controller(pkl_path, name):
+    """Load a trained genetic controller from pickle file."""
+    try:
+        with open(pkl_path, 'rb') as f:
+            controller = pickle.load(f)
+        # Update name for competition display
+        controller.name = name
+        return controller, True
+    except Exception as e:
+        print(f"⚠️ Failed to load genetic controller {pkl_path}: {e}")
+        # Return fallback controller
+        return GeneticController(name=name), False
+
 def signal_handler(signum, frame):
     """Immediately exit on interrupt to avoid segfault"""
     print("\n⚠️  Interrupt received...")
@@ -101,6 +116,7 @@ def main():
         ("game/control/models/ppo_best_model.zip", "PPO-B"),
         ("game/control/models/td3_best_model1.zip", "TD3-B-1"),
         ("game/control/models/td3_best_model2.zip", "TD3-B-2"),
+        ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
         (None, "BC"),
     ]
     
@@ -158,6 +174,17 @@ def main():
                 print(f"   ✓ Model loaded successfully")
             else:
                 print(f"   ⚠ Using fallback control")
+        elif "genetic" in model_path.lower() or model_path.endswith(".pkl"):
+            print(f"   → Loading Genetic controller: {model_path}")
+            controller, loaded = load_genetic_controller(model_path, name)
+            controllers.append(controller)
+            if loaded:
+                print(f"   ✓ Genetic controller loaded successfully")
+                info = controller.get_info()
+                genome_length = info.get('genome_length', 'unknown')
+                print(f"   📊 Genome parameters: {genome_length}")
+            else:
+                print(f"   ⚠ Using fallback genetic control")
         else:
             controller = BaseController(model_path, name)
             controllers.append(controller)
