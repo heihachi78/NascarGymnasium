@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 import os
-import torch
 from datetime import datetime
 from stable_baselines3.common.monitor import Monitor
 from stable_baselines3 import PPO
