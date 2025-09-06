@@ -110,13 +110,16 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        ("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
-        ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
-        ("game/control/models/ppo_284.zip", "PPO-284"),
-        ("game/control/models/ppo_best_model.zip", "PPO-B"),
+        #("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
+        #("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
+        #("game/control/models/ppo_284.zip", "PPO-284"),
+        #("game/control/models/ppo_best_model.zip", "PPO-B"),
         ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
+        ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
         ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
+        ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
+        ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
         # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
         (None, "BC"),
     ]
@@ -198,7 +201,7 @@ def main():
     print("=" * 60)
     
     # Initialize environment with random tracks
-    env = CarEnv(track_file='tracks/michigan.track',  # No fixed track (automatic random selection)
+    env = CarEnv(track_file='tracks/nascar_banked.track',  # No fixed track (automatic random selection)
                  num_cars=num_cars,
                  reset_on_lap=False,  # We manage resets manually
                  render_mode=None, #"human",
