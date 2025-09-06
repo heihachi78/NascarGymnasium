@@ -122,6 +122,7 @@ def main():
         ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
         ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
         ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
+        ("game/control/models/sac_final.zip", "SAC-F"),
         ("game/control/models/genetic.pkl", "GA"),
         (None, "BC"),
     ]
@@ -225,7 +226,7 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
+        track_file='tracks/daytona.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode=None, #'human',
