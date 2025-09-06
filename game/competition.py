@@ -122,7 +122,7 @@ def main():
         ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
         ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
         ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
+        ("game/control/models/genetic.pkl", "GA"),
         (None, "BC"),
     ]
 
@@ -180,7 +180,7 @@ def main():
                 print(f"   ✓ Model loaded successfully")
             else:
                 print(f"   ⚠ Using fallback control")
-        elif "genetic" in model_path.lower():
+        elif "genetic" in model_path.lower() or "genetic" in name.lower():
             print(f"   → Loading Genetic controller: {model_path}")
             controller, loaded = load_genetic_controller(model_path, name)
             controllers.append(controller)

@@ -91,7 +91,7 @@ class GeneticTrainer:
         env = CarEnv(
             render_mode=None,
             track_file=self.track_file,
-            reset_on_lap=True,
+            reset_on_lap=False,
             discrete_action_space=False
         )
         
@@ -105,7 +105,7 @@ class GeneticTrainer:
         observation, info = env.reset()
         total_reward = 0.0
         steps = 0
-        max_steps = 5000  # Prevent infinite episodes
+        max_steps = 9999  # Prevent infinite episodes
         
         # Fitness metrics
         distance_traveled = 0.0
@@ -206,20 +206,18 @@ class GeneticTrainer:
             fitness += max(0, 200 - lap_time)  # Time bonus (assumes reasonable lap times < 200s)
         else:
             # Reward progress towards lap completion
-            fitness += distance * 2  # Distance reward
-            fitness += max_speed * 10  # Speed reward
+            fitness += distance * 3  # Distance reward
+            fitness += max_speed * 2  # Speed reward
         
         # Secondary objectives
-        fitness += time_on_track * 5  # Staying on track is important
-        fitness += reward * 0.1  # Environment reward (smaller weight)
+        fitness += time_on_track  # Staying on track is important
+        fitness += reward  # Environment reward (smaller weight)
         
         # Penalties
         if distance < 10:  # Very poor performance
             fitness -= 200
         if max_speed < 1:  # Car didn't move much
             fitness -= 100
-        if time_on_track < steps * 0.5 / 60:  # Off track > 50% of time
-            fitness -= 150
             
         return fitness
     
@@ -240,7 +238,7 @@ class GeneticTrainer:
         env = CarEnv(
             render_mode=None,
             track_file=self.track_file,
-            reset_on_lap=True,
+            reset_on_lap=False,
             discrete_action_space=False,
             num_cars=num_individuals,
             car_names=[f"Individual_{start_idx + i}" for i in range(num_individuals)]
@@ -258,7 +256,7 @@ class GeneticTrainer:
         # Run evaluation episode with all individuals simultaneously
         try:
             observations, info = env.reset()
-            max_steps = 5000  # Prevent infinite episodes
+            max_steps = 9999  # Prevent infinite episodes
             steps = 0
             
             # Initialize metrics for each individual

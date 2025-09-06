@@ -19,6 +19,7 @@ from game.control.ppo_control_class import PPOController
 from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
 from game.control.genetic_controller import GeneticController
+from game.control.regression_controller import RegressionController
 
 # Time trial configuration constants
 LAPS_PER_ATTEMPT = 2  # Number of laps in each attempt
@@ -120,7 +121,7 @@ def main():
         ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
         ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
         ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        # ("genetic_results/best_evolved_controller.pkl", "GA-Best"),
+        ("game/control/models/genetic.pkl", "GA"),
         (None, "BC"),
     ]
     
@@ -178,7 +179,7 @@ def main():
                 print(f"   ✓ Model loaded successfully")
             else:
                 print(f"   ⚠ Using fallback control")
-        elif "genetic" in model_path.lower() or model_path.endswith(".pkl"):
+        elif "genetic" in model_path.lower() or "genetic" in name.lower():
             print(f"   → Loading Genetic controller: {model_path}")
             controller, loaded = load_genetic_controller(model_path, name)
             controllers.append(controller)
@@ -189,6 +190,27 @@ def main():
                 print(f"   📊 Genome parameters: {genome_length}")
             else:
                 print(f"   ⚠ Using fallback genetic control")
+        elif "regression_models" in model_path.lower() and model_path.endswith(".pkl"):
+            print(f"   → Loading Regression model: {model_path}")
+            try:
+                # Extract model type from filename using split instead of os.path
+                model_filename = model_path.split('/')[-1]  # Get just the filename
+                model_type = model_filename.replace("_model.pkl", "")
+                controller = RegressionController(name=name, model_type=model_type)
+                success = controller.load_model(model_path)
+                controllers.append(controller)
+                if success:
+                    print(f"   ✓ Regression model loaded successfully")
+                    info = controller.get_info()
+                    print(f"   📊 Model type: {info.get('model_type', 'unknown')}")
+                else:
+                    print(f"   ⚠ Using fallback regression control")
+            except Exception as e:
+                print(f"   ❌ Failed to load regression model: {e}")
+                import traceback
+                traceback.print_exc()
+                # Fallback to BaseController
+                controllers.append(BaseController(name=f"Fallback_{name}"))
         else:
             controller = BaseController(model_path, name)
             controllers.append(controller)
