@@ -1,0 +1,1031 @@
+pygame 2.5.2 (SDL 2.28.2, Python 3.11.2)
+Hello from the pygame community. https://www.pygame.org/contribute.html
+============================================================
+🏆 CHAMPIONSHIP MODE
+============================================================
+📋 CHAMPIONSHIP FORMAT:
+   • 4 tracks in championship
+   • 2 stages per track: Time Trial + Competition
+   • Time Trial points: [15, 7, 3]
+   • Competition points: ascending from 0 to 45
+   • Fastest lap bonus: +15 points
+============================================================
+📊 Championship Setup: 10 cars
+============================================================
+Car 0: A2C-O-1
+   → Loading A2C model: game/control/models/a2c_best_model_opt_1.zip
+[A2C-O-1] Successfully loaded A2C model from game/control/models/a2c_best_model_opt_1.zip
+   ✓ Model loaded successfully
+Car 1: A2C-B-3
+   → Loading A2C model: game/control/models/a2c_best_model3.zip
+[A2C-B-3] Successfully loaded A2C model from game/control/models/a2c_best_model3.zip
+   ✓ Model loaded successfully
+Car 2: PPO-284
+   → Loading PPO model: game/control/models/ppo_284.zip
+[PPO-284] Successfully loaded PPO model from game/control/models/ppo_284.zip
+   ✓ Model loaded successfully
+Car 3: PPO-B
+   → Loading PPO model: game/control/models/ppo_best_model.zip
+[PPO-B] Successfully loaded PPO model from game/control/models/ppo_best_model.zip
+   ✓ Model loaded successfully
+Car 4: TD3-BM-1
+   → Loading TD3 model: game/control/models/td3_bm1.zip
+[TD3-BM-1] Successfully loaded TD3 model from game/control/models/td3_bm1.zip
+   ✓ Model loaded successfully
+Car 5: TD3-BM-2
+   → Loading TD3 model: game/control/models/td3_bm2.zip
+[TD3-BM-2] Successfully loaded TD3 model from game/control/models/td3_bm2.zip
+   ✓ Model loaded successfully
+Car 6: TD3-BM-3
+   → Loading TD3 model: game/control/models/td3_bm3.zip
+[TD3-BM-3] Successfully loaded TD3 model from game/control/models/td3_bm3.zip
+   ✓ Model loaded successfully
+Car 7: SAC-BM-1
+   → Loading SAC model: game/control/models/sac_bm1.zip
+[SAC-BM-1] Successfully loaded SAC model from game/control/models/sac_bm1.zip
+   ✓ Model loaded successfully
+Car 8: SAC-F
+   → Loading SAC model: game/control/models/sac_final.zip
+[SAC-F] Successfully loaded SAC model from game/control/models/sac_final.zip
+   ✓ Model loaded successfully
+Car 9: GA
+   → Loading Genetic controller: game/control/models/genetic.pkl
+   ✓ Genetic controller loaded successfully
+   📊 Genome parameters: 12
+============================================================
+
+================================================================================
+🏁 ROUND 1 OF 4: tracks/daytona.track
+================================================================================
+🌱 Environment seeded with: 43
+
+============================================================
+⏱️ TIME TRIAL STAGE
+============================================================
+📋 RULES:
+   • 3 attempts of 2 laps each
+   • Fastest single lap time determines position
+   • Points: 1st=15, 2nd=7, 3rd=3
+=============================================================
+
+🏁 TIME TRIAL ATTEMPT 1 OF 3
+========================================
+🌱 Environment seeded with: 42
+🏁 Track: daytona
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250102 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 1
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250249 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 1
+🚫 SAC-F disabled due to ACCUMULATED DAMAGE (250112 N⋅s > 250000 N⋅s)
+❌ SAC-F disabled in attempt 1
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250286 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 1
+🏆 SAC-BM-1 NEW BEST! Lap 1/2: 0:57.033
+🏆 TD3-BM-3 NEW BEST! Lap 1/2: 0:57.283
+🚫 PPO-B disabled due to being STUCK (moved only 0.4m in 10.0s)
+❌ PPO-B disabled in attempt 1
+🏆 GA NEW BEST! Lap 1/2: 0:59.183
+🏆 TD3-BM-2 NEW BEST! Lap 1/2: 1:04.417
+🏆 TD3-BM-1 NEW BEST! Lap 1/2: 1:05.883
+🚫 SAC-BM-1 disabled due to ACCUMULATED DAMAGE (250043 N⋅s > 250000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 1
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:55.567
+🏁 TD3-BM-3 completed attempt 1!
+✓ GA Lap 2/2: 0:59.217
+   Gap to PB: +0.033s
+🏁 GA completed attempt 1!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 1:02.700
+🏁 TD3-BM-2 completed attempt 1!
+🏆 TD3-BM-1 NEW BEST! Lap 2/2: 1:05.583
+🏁 TD3-BM-1 completed attempt 1!
+
+🏁 TIME TRIAL ATTEMPT 2 OF 3
+========================================
+🌱 Environment seeded with: 84
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250069 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 2
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250009 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 2
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (95238 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 2
+🚫 SAC-F disabled due to ACCUMULATED DAMAGE (250488 N⋅s > 250000 N⋅s)
+❌ SAC-F disabled in attempt 2
+✓ SAC-BM-1 Lap 1/2: 0:57.033
+   Gap to PB: +0.000s
+✓ TD3-BM-3 Lap 1/2: 0:57.433
+   Gap to PB: +1.867s
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (254173 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 2
+✓ GA Lap 1/2: 1:01.217
+   Gap to PB: +2.033s
+✓ TD3-BM-2 Lap 1/2: 1:04.383
+   Gap to PB: +1.683s
+✓ TD3-BM-1 Lap 1/2: 1:05.883
+   Gap to PB: +0.300s
+🚫 SAC-BM-1 disabled due to ACCUMULATED DAMAGE (250088 N⋅s > 250000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 2
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:55.517
+🏁 TD3-BM-3 completed attempt 2!
+✓ GA Lap 2/2: 1:00.100
+   Gap to PB: +0.917s
+🏁 GA completed attempt 2!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 1:02.183
+🏁 TD3-BM-2 completed attempt 2!
+✓ TD3-BM-1 Lap 2/2: 1:05.583
+   Gap to PB: +0.000s
+🏁 TD3-BM-1 completed attempt 2!
+
+🏁 TIME TRIAL ATTEMPT 3 OF 3
+========================================
+🌱 Environment seeded with: 126
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250405 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 3
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250384 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 3
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (115351 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 3
+🚫 SAC-F disabled due to ACCUMULATED DAMAGE (250357 N⋅s > 250000 N⋅s)
+❌ SAC-F disabled in attempt 3
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250516 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 3
+✓ TD3-BM-3 Lap 1/2: 0:57.433
+   Gap to PB: +1.917s
+🚫 PPO-B disabled due to being STUCK (moved only 1.0m in 10.0s)
+❌ PPO-B disabled in attempt 3
+✓ GA Lap 1/2: 1:00.617
+   Gap to PB: +1.433s
+✓ TD3-BM-2 Lap 1/2: 1:04.417
+   Gap to PB: +2.233s
+✓ TD3-BM-1 Lap 1/2: 1:05.883
+   Gap to PB: +0.300s
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:55.500
+🏁 TD3-BM-3 completed attempt 3!
+🏆 GA NEW BEST! Lap 2/2: 0:58.767
+🏁 GA completed attempt 3!
+✓ TD3-BM-2 Lap 2/2: 1:02.667
+   Gap to PB: +0.483s
+🏁 TD3-BM-2 completed attempt 3!
+✓ TD3-BM-1 Lap 2/2: 1:05.583
+   Gap to PB: +0.000s
+🏁 TD3-BM-1 completed attempt 3!
+
+============================================================
+⏱️ TIME TRIAL RESULTS
+============================================================
+   🥇 TD3-BM-3: 0:55.500 - 6 laps completed (15 pts)
+   🥈 SAC-BM-1: 0:57.033 - DISABLED (7 pts)
+   🥉 GA: 0:58.767 - 6 laps completed (3 pts)
+   4. TD3-BM-2: 1:02.183 - 6 laps completed (0 pts)
+   5. TD3-BM-1: 1:05.583 - 6 laps completed (0 pts)
+   6. A2C-O-1: No valid lap - DISABLED (0 pts)
+   7. A2C-B-3: No valid lap - DISABLED (0 pts)
+   8. PPO-284: No valid lap - DISABLED (0 pts)
+   9. PPO-B: No valid lap - DISABLED (0 pts)
+   10. SAC-F: No valid lap - DISABLED (0 pts)
+
+============================================================
+🏆 STANDINGS AFTER TIME TRIAL
+============================================================
+   🥇 TD3-BM-3: 15 points
+   🥈 SAC-BM-1: 7 points
+   🥉 GA: 3 points
+   4. A2C-O-1: 0 points
+   5. A2C-B-3: 0 points
+   6. PPO-284: 0 points
+   7. PPO-B: 0 points
+   8. TD3-BM-1: 0 points
+   9. TD3-BM-2: 0 points
+   10. SAC-F: 0 points
+
+============================================================
+🏁 COMPETITION STAGE
+============================================================
+📋 RULES:
+   • Race until completion or timeout
+   • Points by finish position: [0, 1, 2, 3, 5, 8, 13, 21, 24, 45]
+   • Fastest lap bonus: +15 points
+============================================================
+🌱 Environment seeded with: 999
+🏁 COMPETITION STARTED!
+============================================================
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250036 N⋅s > 250000 N⋅s)
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250502 N⋅s > 250000 N⋅s)
+🚫 SAC-F disabled due to ACCUMULATED DAMAGE (250770 N⋅s > 250000 N⋅s)
+🏁 SAC-BM-1 Lap 1: 0:57.050 (NEW PB!) | Reward: 360.9
+   🌟 NEW FASTEST LAP by SAC-BM-1!
+🏁 TD3-BM-3 Lap 1: 0:57.317 (NEW PB!) | Reward: 421.0
+🚫 PPO-B disabled due to being STUCK (moved only 1.0m in 10.0s)
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (257030 N⋅s > 250000 N⋅s)
+🏁 GA Lap 1: 1:00.750 (NEW PB!) | Reward: 355.1
+🏁 TD3-BM-2 Lap 1: 1:04.417 (NEW PB!) | Reward: 399.0
+🏁 TD3-BM-1 Lap 1: 1:05.883 (NEW PB!) | Reward: 365.2
+🚫 SAC-BM-1 disabled due to ACCUMULATED DAMAGE (250147 N⋅s > 250000 N⋅s)
+🏁 PPO-284 Lap 1: 1:15.733 (NEW PB!) | Reward: 89.7
+🏁 TD3-BM-3 Lap 2: 0:55.567 (NEW PB!) | Reward: 427.9
+   🌟 NEW FASTEST LAP by TD3-BM-3!
+🏁 GA Lap 2: 0:59.383 (NEW PB!) | Reward: 375.3
+🏁 TD3-BM-2 Lap 2: 1:03.283 (NEW PB!) | Reward: 386.5
+🏁 TD3-BM-1 Lap 2: 1:05.583 (NEW PB!) | Reward: 372.0
+🏁 A2C-O-1 Lap 1: 2:15.950 (NEW PB!) | Reward: -56.1
+🏁 TD3-BM-3 Lap 3: 0:56.717 | Reward: 423.8
+
+============================================================
+🏁 COMPETITION RESULTS
+============================================================
+   🥇 TD3-BM-3 - 3 laps completed (60 pts)
+      Best lap: 0:55.567, Reward: 1326.2
+   🥈 GA - 2 laps completed (24 pts)
+      Best lap: 0:59.383, Reward: 1037.3
+   🥉 TD3-BM-2 - 2 laps completed (21 pts)
+      Best lap: 1:03.283, Reward: 1135.0
+   4. TD3-BM-1 - 2 laps completed (13 pts)
+      Best lap: 1:05.583, Reward: 1051.7
+   5. SAC-BM-1 - DISABLED (8 pts)
+      Laps: 1, Reward: 445.0
+   6. PPO-284 - DISABLED (5 pts)
+      Laps: 1, Reward: 67.3
+   7. A2C-O-1 - DISABLED (3 pts)
+      Laps: 1, Reward: -85.1
+   8. SAC-F - DISABLED (2 pts)
+      Laps: 0, Reward: 290.5
+   9. A2C-B-3 - DISABLED (1 pts)
+      Laps: 0, Reward: -119.3
+   10. PPO-B - DISABLED (0 pts)
+      Laps: 0, Reward: -375.2
+
+⚡ Fastest Lap: TD3-BM-3 - 0:55.567 (+15 pts)
+
+============================================================
+🏆 STANDINGS AFTER COMPETITION
+============================================================
+   🥇 TD3-BM-3: 75 points
+   🥈 GA: 27 points
+   🥉 TD3-BM-2: 21 points
+   4. SAC-BM-1: 15 points
+   5. TD3-BM-1: 13 points
+   6. PPO-284: 5 points
+   7. A2C-O-1: 3 points
+   8. SAC-F: 2 points
+   9. A2C-B-3: 1 points
+   10. PPO-B: 0 points
+
+================================================================================
+🏁 ROUND 2 OF 4: tracks/talladega.track
+================================================================================
+🌱 Environment seeded with: 44
+
+============================================================
+⏱️ TIME TRIAL STAGE
+============================================================
+📋 RULES:
+   • 3 attempts of 2 laps each
+   • Fastest single lap time determines position
+   • Points: 1st=15, 2nd=7, 3rd=3
+=============================================================
+
+🏁 TIME TRIAL ATTEMPT 1 OF 3
+========================================
+🌱 Environment seeded with: 42
+🏁 Track: talladega
+🚫 A2C-O-1 disabled for driving 480m backwards (threshold: 200m)
+🚫 A2C-B-3 disabled for driving 480m backwards (threshold: 200m)
+🚫 SAC-BM-1 disabled for driving 480m backwards (threshold: 200m)
+❌ A2C-O-1 disabled in attempt 1
+❌ A2C-B-3 disabled in attempt 1
+❌ SAC-BM-1 disabled in attempt 1
+🚫 GA disabled for driving 480m backwards (threshold: 200m)
+❌ GA disabled in attempt 1
+🚫 SAC-F disabled due to CATASTROPHIC IMPACT (107286 N⋅s > 50000 N⋅s)
+❌ SAC-F disabled in attempt 1
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250207 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 1
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (60349 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 1
+🏆 TD3-BM-1 NEW BEST! Lap 1/2: 0:56.350
+🏆 TD3-BM-2 NEW BEST! Lap 1/2: 0:57.283
+🏆 TD3-BM-3 NEW BEST! Lap 1/2: 0:58.633
+🏆 TD3-BM-1 NEW BEST! Lap 2/2: 0:53.467
+🏁 TD3-BM-1 completed attempt 1!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 0:53.650
+🏁 TD3-BM-2 completed attempt 1!
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:56.467
+🏁 TD3-BM-3 completed attempt 1!
+
+🏁 TIME TRIAL ATTEMPT 2 OF 3
+========================================
+🌱 Environment seeded with: 84
+🚫 A2C-O-1 disabled for driving 480m backwards (threshold: 200m)
+🚫 A2C-B-3 disabled for driving 480m backwards (threshold: 200m)
+🚫 SAC-BM-1 disabled for driving 480m backwards (threshold: 200m)
+❌ A2C-O-1 disabled in attempt 2
+❌ A2C-B-3 disabled in attempt 2
+❌ SAC-BM-1 disabled in attempt 2
+🚫 GA disabled for driving 480m backwards (threshold: 200m)
+❌ GA disabled in attempt 2
+🚫 SAC-F disabled due to CATASTROPHIC IMPACT (107286 N⋅s > 50000 N⋅s)
+❌ SAC-F disabled in attempt 2
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250186 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 2
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (57142 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 2
+✓ TD3-BM-1 Lap 1/2: 0:56.367
+   Gap to PB: +2.900s
+✓ TD3-BM-2 Lap 1/2: 0:57.300
+   Gap to PB: +3.650s
+✓ TD3-BM-3 Lap 1/2: 0:58.133
+   Gap to PB: +1.667s
+✓ TD3-BM-1 Lap 2/2: 0:55.350
+   Gap to PB: +1.883s
+🏁 TD3-BM-1 completed attempt 2!
+✓ TD3-BM-2 Lap 2/2: 0:54.783
+   Gap to PB: +1.133s
+🏁 TD3-BM-2 completed attempt 2!
+✓ TD3-BM-3 Lap 2/2: 0:56.517
+   Gap to PB: +0.050s
+🏁 TD3-BM-3 completed attempt 2!
+
+🏁 TIME TRIAL ATTEMPT 3 OF 3
+========================================
+🌱 Environment seeded with: 126
+🚫 A2C-O-1 disabled for driving 480m backwards (threshold: 200m)
+🚫 A2C-B-3 disabled for driving 480m backwards (threshold: 200m)
+🚫 SAC-BM-1 disabled for driving 480m backwards (threshold: 200m)
+❌ A2C-O-1 disabled in attempt 3
+❌ A2C-B-3 disabled in attempt 3
+❌ SAC-BM-1 disabled in attempt 3
+🚫 GA disabled for driving 480m backwards (threshold: 200m)
+❌ GA disabled in attempt 3
+🚫 SAC-F disabled due to CATASTROPHIC IMPACT (107286 N⋅s > 50000 N⋅s)
+❌ SAC-F disabled in attempt 3
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250026 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 3
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (57142 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 3
+✓ TD3-BM-1 Lap 1/2: 0:56.167
+   Gap to PB: +2.700s
+✓ TD3-BM-2 Lap 1/2: 0:57.317
+   Gap to PB: +3.667s
+✓ TD3-BM-3 Lap 1/2: 0:58.183
+   Gap to PB: +1.717s
+🚫 TD3-BM-1 disabled due to ACCUMULATED DAMAGE (250016 N⋅s > 250000 N⋅s)
+❌ TD3-BM-1 disabled in attempt 3
+✓ TD3-BM-2 Lap 2/2: 0:54.233
+   Gap to PB: +0.583s
+🏁 TD3-BM-2 completed attempt 3!
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:56.367
+🏁 TD3-BM-3 completed attempt 3!
+
+============================================================
+⏱️ TIME TRIAL RESULTS
+============================================================
+   🥇 TD3-BM-1: 0:53.467 - DISABLED (15 pts)
+   🥈 TD3-BM-2: 0:53.650 - 6 laps completed (7 pts)
+   🥉 TD3-BM-3: 0:56.367 - 6 laps completed (3 pts)
+   4. A2C-O-1: No valid lap - DISABLED (0 pts)
+   5. A2C-B-3: No valid lap - DISABLED (0 pts)
+   6. PPO-284: No valid lap - DISABLED (0 pts)
+   7. PPO-B: No valid lap - DISABLED (0 pts)
+   8. SAC-BM-1: No valid lap - DISABLED (0 pts)
+   9. SAC-F: No valid lap - DISABLED (0 pts)
+   10. GA: No valid lap - DISABLED (0 pts)
+
+============================================================
+🏆 STANDINGS AFTER TIME TRIAL
+============================================================
+   🥇 TD3-BM-3: 78 points
+   🥈 TD3-BM-1: 28 points
+   🥉 TD3-BM-2: 28 points
+   4. GA: 27 points
+   5. SAC-BM-1: 15 points
+   6. PPO-284: 5 points
+   7. A2C-O-1: 3 points
+   8. SAC-F: 2 points
+   9. A2C-B-3: 1 points
+   10. PPO-B: 0 points
+
+============================================================
+🏁 COMPETITION STAGE
+============================================================
+📋 RULES:
+   • Race until completion or timeout
+   • Points by finish position: [0, 1, 2, 3, 5, 8, 13, 21, 24, 45]
+   • Fastest lap bonus: +15 points
+============================================================
+🌱 Environment seeded with: 999
+🏁 COMPETITION STARTED!
+============================================================
+🚫 A2C-O-1 disabled for driving 480m backwards (threshold: 200m)
+🚫 A2C-B-3 disabled for driving 480m backwards (threshold: 200m)
+🚫 SAC-BM-1 disabled for driving 480m backwards (threshold: 200m)
+🚫 GA disabled for driving 480m backwards (threshold: 200m)
+🚫 SAC-F disabled due to CATASTROPHIC IMPACT (107286 N⋅s > 50000 N⋅s)
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250174 N⋅s > 250000 N⋅s)
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (57142 N⋅s > 50000 N⋅s)
+🏁 TD3-BM-2 Lap 1: 0:57.783 (NEW PB!) | Reward: 452.3
+   🌟 NEW FASTEST LAP by TD3-BM-2!
+🏁 TD3-BM-3 Lap 1: 0:58.400 (NEW PB!) | Reward: 454.9
+🏁 TD3-BM-1 Lap 1: 0:59.083 (NEW PB!) | Reward: 339.5
+🚫 TD3-BM-1 disabled due to ACCUMULATED DAMAGE (250272 N⋅s > 250000 N⋅s)
+🏁 PPO-284 Lap 1: 1:28.517 (NEW PB!) | Reward: 111.8
+🏁 TD3-BM-2 Lap 2: 0:55.117 (NEW PB!) | Reward: 463.1
+   🌟 NEW FASTEST LAP by TD3-BM-2!
+🏁 TD3-BM-3 Lap 2: 0:56.467 (NEW PB!) | Reward: 368.8
+🏁 TD3-BM-2 Lap 3: 0:58.900 | Reward: 438.5
+🏁 TD3-BM-3 Lap 3: 0:59.533 | Reward: 458.9
+
+============================================================
+🏁 COMPETITION RESULTS
+============================================================
+   🥇 TD3-BM-2 - 3 laps completed (60 pts)
+      Best lap: 0:55.117, Reward: 1390.5
+   🥈 TD3-BM-3 - 3 laps completed (24 pts)
+      Best lap: 0:56.467, Reward: 1291.8
+   🥉 TD3-BM-1 - DISABLED (21 pts)
+      Laps: 1, Reward: 473.4
+   4. PPO-284 - DISABLED (13 pts)
+      Laps: 1, Reward: 111.2
+   5. PPO-B - DISABLED (8 pts)
+      Laps: 0, Reward: 366.0
+   6. SAC-F - DISABLED (5 pts)
+      Laps: 0, Reward: 142.3
+   7. A2C-O-1 - DISABLED (3 pts)
+      Laps: 0, Reward: -22.9
+   8. A2C-B-3 - DISABLED (2 pts)
+      Laps: 0, Reward: -22.9
+   9. SAC-BM-1 - DISABLED (1 pts)
+      Laps: 0, Reward: -22.9
+   10. GA - DISABLED (0 pts)
+      Laps: 0, Reward: -23.0
+
+⚡ Fastest Lap: TD3-BM-2 - 0:55.117 (+15 pts)
+
+============================================================
+🏆 STANDINGS AFTER COMPETITION
+============================================================
+   🥇 TD3-BM-3: 102 points
+   🥈 TD3-BM-2: 88 points
+   🥉 TD3-BM-1: 49 points
+   4. GA: 27 points
+   5. PPO-284: 18 points
+   6. SAC-BM-1: 16 points
+   7. PPO-B: 8 points
+   8. SAC-F: 7 points
+   9. A2C-O-1: 6 points
+   10. A2C-B-3: 3 points
+
+================================================================================
+🏁 ROUND 3 OF 4: tracks/martinsville.track
+================================================================================
+🌱 Environment seeded with: 45
+
+============================================================
+⏱️ TIME TRIAL STAGE
+============================================================
+📋 RULES:
+   • 3 attempts of 2 laps each
+   • Fastest single lap time determines position
+   • Points: 1st=15, 2nd=7, 3rd=3
+=============================================================
+
+🏁 TIME TRIAL ATTEMPT 1 OF 3
+========================================
+🌱 Environment seeded with: 42
+🏁 Track: martinsville
+🚫 A2C-B-3 disabled due to CATASTROPHIC IMPACT (74629 N⋅s > 50000 N⋅s)
+❌ A2C-B-3 disabled in attempt 1
+🚫 PPO-284 disabled due to CATASTROPHIC IMPACT (78147 N⋅s > 50000 N⋅s)
+❌ PPO-284 disabled in attempt 1
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (251747 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 1
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (66566 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 1
+🚫 TD3-BM-1 disabled due to CATASTROPHIC IMPACT (63696 N⋅s > 50000 N⋅s)
+❌ TD3-BM-1 disabled in attempt 1
+🏆 SAC-F NEW BEST! Lap 1/2: 0:20.700
+🏆 TD3-BM-3 NEW BEST! Lap 1/2: 0:20.717
+🏆 TD3-BM-2 NEW BEST! Lap 1/2: 0:21.050
+🏆 SAC-BM-1 NEW BEST! Lap 1/2: 0:21.500
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (72703 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 1
+🏆 GA NEW BEST! Lap 1/2: 0:24.167
+🚫 TD3-BM-3 disabled due to CATASTROPHIC IMPACT (74284 N⋅s > 50000 N⋅s)
+❌ TD3-BM-3 disabled in attempt 1
+🏆 SAC-F NEW BEST! Lap 2/2: 0:19.767
+🏁 SAC-F completed attempt 1!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 0:20.867
+🏁 TD3-BM-2 completed attempt 1!
+🏆 GA NEW BEST! Lap 2/2: 0:23.567
+🏁 GA completed attempt 1!
+
+🏁 TIME TRIAL ATTEMPT 2 OF 3
+========================================
+🌱 Environment seeded with: 84
+🚫 PPO-284 disabled due to CATASTROPHIC IMPACT (76744 N⋅s > 50000 N⋅s)
+❌ PPO-284 disabled in attempt 2
+🚫 TD3-BM-1 disabled due to CATASTROPHIC IMPACT (67484 N⋅s > 50000 N⋅s)
+❌ TD3-BM-1 disabled in attempt 2
+✓ SAC-F Lap 1/2: 0:20.700
+   Gap to PB: +0.933s
+✓ TD3-BM-3 Lap 1/2: 0:20.717
+   Gap to PB: +0.000s
+✓ TD3-BM-2 Lap 1/2: 0:21.067
+   Gap to PB: +0.200s
+✓ SAC-BM-1 Lap 1/2: 0:21.500
+   Gap to PB: +0.000s
+🏆 A2C-B-3 NEW BEST! Lap 1/2: 0:21.500
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250467 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 2
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250605 N⋅s > 250000 N⋅s)
+🚫 TD3-BM-3 disabled due to CATASTROPHIC IMPACT (70533 N⋅s > 50000 N⋅s)
+❌ A2C-O-1 disabled in attempt 2
+❌ TD3-BM-3 disabled in attempt 2
+✓ GA Lap 1/2: 0:24.100
+   Gap to PB: +0.533s
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (71759 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 2
+🏆 PPO-B NEW BEST! Lap 1/2: 0:27.383
+✓ SAC-F Lap 2/2: 0:19.767
+   Gap to PB: +0.000s
+🏁 SAC-F completed attempt 2!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 0:20.767
+🏁 TD3-BM-2 completed attempt 2!
+🚫 PPO-B disabled due to being STUCK (moved only 0.5m in 10.0s)
+❌ PPO-B disabled in attempt 2
+🏆 GA NEW BEST! Lap 2/2: 0:23.500
+🏁 GA completed attempt 2!
+
+🏁 TIME TRIAL ATTEMPT 3 OF 3
+========================================
+🌱 Environment seeded with: 126
+🚫 A2C-B-3 disabled due to CATASTROPHIC IMPACT (74629 N⋅s > 50000 N⋅s)
+❌ A2C-B-3 disabled in attempt 3
+🚫 PPO-284 disabled due to CATASTROPHIC IMPACT (75147 N⋅s > 50000 N⋅s)
+❌ PPO-284 disabled in attempt 3
+🚫 TD3-BM-1 disabled due to CATASTROPHIC IMPACT (67484 N⋅s > 50000 N⋅s)
+❌ TD3-BM-1 disabled in attempt 3
+✓ SAC-F Lap 1/2: 0:20.700
+   Gap to PB: +0.933s
+🏆 TD3-BM-3 NEW BEST! Lap 1/2: 0:20.683
+✓ TD3-BM-2 Lap 1/2: 0:21.067
+   Gap to PB: +0.300s
+✓ SAC-BM-1 Lap 1/2: 0:21.500
+   Gap to PB: +0.000s
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250841 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 3
+✓ GA Lap 1/2: 0:24.100
+   Gap to PB: +0.600s
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (68030 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 3
+🏆 PPO-B NEW BEST! Lap 1/2: 0:26.717
+✓ SAC-F Lap 2/2: 0:19.767
+   Gap to PB: +0.000s
+🏁 SAC-F completed attempt 3!
+🏆 TD3-BM-3 NEW BEST! Lap 2/2: 0:20.567
+🏁 TD3-BM-3 completed attempt 3!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 0:20.383
+🏁 TD3-BM-2 completed attempt 3!
+✓ GA Lap 2/2: 0:23.500
+   Gap to PB: +0.000s
+🏁 GA completed attempt 3!
+🚫 GA disabled due to CATASTROPHIC IMPACT (51210 N⋅s > 50000 N⋅s)
+🚫 TD3-BM-2 disabled due to being STUCK (moved only 0.9m in 10.0s)
+🚫 TD3-BM-3 disabled due to being STUCK (moved only 0.8m in 10.0s)
+🚫 SAC-F disabled due to being STUCK (moved only 0.9m in 10.0s)
+✓ PPO-B Lap 2/2: 0:42.867
+   Gap to PB: +16.150s
+🏁 PPO-B completed attempt 3!
+
+============================================================
+⏱️ TIME TRIAL RESULTS
+============================================================
+   🥇 SAC-F: 0:19.767 - DISABLED (15 pts)
+   🥈 TD3-BM-2: 0:20.383 - DISABLED (7 pts)
+   🥉 TD3-BM-3: 0:20.567 - DISABLED (3 pts)
+   4. A2C-B-3: 0:21.500 - DISABLED (0 pts)
+   5. SAC-BM-1: 0:21.500 - DISABLED (0 pts)
+   6. GA: 0:23.500 - DISABLED (0 pts)
+   7. PPO-B: 0:26.717 - 3 laps completed (0 pts)
+   8. A2C-O-1: No valid lap - DISABLED (0 pts)
+   9. PPO-284: No valid lap - DISABLED (0 pts)
+   10. TD3-BM-1: No valid lap - DISABLED (0 pts)
+
+============================================================
+🏆 STANDINGS AFTER TIME TRIAL
+============================================================
+   🥇 TD3-BM-3: 105 points
+   🥈 TD3-BM-2: 95 points
+   🥉 TD3-BM-1: 49 points
+   4. GA: 27 points
+   5. SAC-F: 22 points
+   6. PPO-284: 18 points
+   7. SAC-BM-1: 16 points
+   8. PPO-B: 8 points
+   9. A2C-O-1: 6 points
+   10. A2C-B-3: 3 points
+
+============================================================
+🏁 COMPETITION STAGE
+============================================================
+📋 RULES:
+   • Race until completion or timeout
+   • Points by finish position: [0, 1, 2, 3, 5, 8, 13, 21, 24, 45]
+   • Fastest lap bonus: +15 points
+============================================================
+🌱 Environment seeded with: 999
+🏁 COMPETITION STARTED!
+============================================================
+🚫 A2C-B-3 disabled due to CATASTROPHIC IMPACT (73325 N⋅s > 50000 N⋅s)
+🚫 PPO-284 disabled due to CATASTROPHIC IMPACT (75731 N⋅s > 50000 N⋅s)
+🚫 A2C-O-1 disabled due to CATASTROPHIC IMPACT (66987 N⋅s > 50000 N⋅s)
+🚫 TD3-BM-1 disabled due to CATASTROPHIC IMPACT (67484 N⋅s > 50000 N⋅s)
+🏁 SAC-F Lap 1: 0:20.700 (NEW PB!) | Reward: 61.5
+   🌟 NEW FASTEST LAP by SAC-F!
+🏁 TD3-BM-3 Lap 1: 0:20.750 (NEW PB!) | Reward: 53.2
+🏁 TD3-BM-2 Lap 1: 0:21.067 (NEW PB!) | Reward: 60.8
+🏁 SAC-BM-1 Lap 1: 0:21.500 (NEW PB!) | Reward: 43.8
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (72496 N⋅s > 50000 N⋅s)
+🏁 GA Lap 1: 0:24.100 (NEW PB!) | Reward: 53.7
+🚫 PPO-B disabled due to being STUCK (moved only 0.4m in 10.0s)
+🏁 SAC-F Lap 2: 0:19.767 (NEW PB!) | Reward: 65.8
+   🌟 NEW FASTEST LAP by SAC-F!
+🏁 TD3-BM-3 Lap 2: 0:20.517 (NEW PB!) | Reward: 9.4
+🏁 TD3-BM-2 Lap 2: 0:20.383 (NEW PB!) | Reward: 63.5
+🏁 GA Lap 2: 0:23.500 (NEW PB!) | Reward: 55.5
+🚫 TD3-BM-3 disabled due to ACCUMULATED DAMAGE (252518 N⋅s > 250000 N⋅s)
+🏁 SAC-F Lap 3: 0:19.733 (NEW PB!) | Reward: 66.7
+   🌟 NEW FASTEST LAP by SAC-F!
+🏁 TD3-BM-2 Lap 3: 0:20.817 | Reward: 61.6
+🏁 GA Lap 3: 0:23.467 (NEW PB!) | Reward: 55.7
+🏁 SAC-F Lap 4: 0:20.017 | Reward: 64.7
+🏁 TD3-BM-2 Lap 4: 0:20.550 | Reward: 61.6
+🏁 GA Lap 4: 0:23.667 | Reward: 55.3
+🏁 SAC-F Lap 5: 0:20.383 | Reward: 63.9
+🚫 SAC-F disabled due to CATASTROPHIC IMPACT (92870 N⋅s > 50000 N⋅s)
+🏁 TD3-BM-2 Lap 5: 0:21.067 | Reward: 59.9
+⚠️  SAC-F Lap completion rejected: time too short (4.817s < 10.0s)
+🏁 GA Lap 5: 0:24.317 | Reward: 53.4
+🏁 TD3-BM-2 Lap 6: 0:21.767 | Reward: 59.4
+🏁 GA Lap 6: 0:24.217 | Reward: 53.8
+🏁 TD3-BM-2 Lap 7: 0:20.867 | Reward: 62.0
+🏁 TD3-BM-2 Lap 8: 0:21.683 | Reward: 57.9
+🏁 GA Lap 7: 0:24.517 | Reward: 53.0
+
+============================================================
+🏁 COMPETITION RESULTS
+============================================================
+   🥇 TD3-BM-2 - 8 laps completed (45 pts)
+      Best lap: 0:20.383, Reward: 499.3
+   🥈 GA - 7 laps completed (24 pts)
+      Best lap: 0:23.467, Reward: 388.4
+   🥉 SAC-F - DISABLED (36 pts)
+      Laps: 5, Reward: 327.3
+   4. TD3-BM-3 - DISABLED (13 pts)
+      Laps: 2, Reward: 57.9
+   5. SAC-BM-1 - DISABLED (8 pts)
+      Laps: 1, Reward: 51.1
+   6. TD3-BM-1 - DISABLED (5 pts)
+      Laps: 0, Reward: 39.0
+   7. A2C-B-3 - DISABLED (3 pts)
+      Laps: 0, Reward: -35.5
+   8. PPO-284 - DISABLED (2 pts)
+      Laps: 0, Reward: -38.3
+   9. A2C-O-1 - DISABLED (1 pts)
+      Laps: 0, Reward: -53.7
+   10. PPO-B - DISABLED (0 pts)
+      Laps: 0, Reward: -140.5
+
+⚡ Fastest Lap: SAC-F - 0:19.733 (+15 pts)
+
+============================================================
+🏆 STANDINGS AFTER COMPETITION
+============================================================
+   🥇 TD3-BM-2: 140 points
+   🥈 TD3-BM-3: 118 points
+   🥉 SAC-F: 58 points
+   4. TD3-BM-1: 54 points
+   5. GA: 51 points
+   6. SAC-BM-1: 24 points
+   7. PPO-284: 20 points
+   8. PPO-B: 8 points
+   9. A2C-O-1: 7 points
+   10. A2C-B-3: 6 points
+
+================================================================================
+🏁 ROUND 4 OF 4: tracks/michigan.track
+================================================================================
+🌱 Environment seeded with: 46
+
+============================================================
+⏱️ TIME TRIAL STAGE
+============================================================
+📋 RULES:
+   • 3 attempts of 2 laps each
+   • Fastest single lap time determines position
+   • Points: 1st=15, 2nd=7, 3rd=3
+=============================================================
+
+🏁 TIME TRIAL ATTEMPT 1 OF 3
+========================================
+🌱 Environment seeded with: 42
+🏁 Track: michigan
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250084 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 1
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250207 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 1
+🏆 A2C-B-3 NEW BEST! Lap 1/2: 0:45.800
+🏆 TD3-BM-3 NEW BEST! Lap 1/2: 0:46.100
+🏆 SAC-BM-1 NEW BEST! Lap 1/2: 0:46.567
+🏆 SAC-F NEW BEST! Lap 1/2: 0:46.700
+🏆 TD3-BM-2 NEW BEST! Lap 1/2: 0:48.317
+🏆 TD3-BM-1 NEW BEST! Lap 1/2: 0:48.917
+🚫 PPO-B disabled for driving 200m backwards (threshold: 200m)
+❌ PPO-B disabled in attempt 1
+🏆 GA NEW BEST! Lap 1/2: 0:48.967
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (108583 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 1
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250087 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 1
+🏆 SAC-F NEW BEST! Lap 2/2: 0:44.950
+🏁 SAC-F completed attempt 1!
+✓ TD3-BM-3 Lap 2/2: 0:46.450
+   Gap to PB: +0.350s
+🏁 TD3-BM-3 completed attempt 1!
+🏆 TD3-BM-1 NEW BEST! Lap 2/2: 0:44.283
+🏁 TD3-BM-1 completed attempt 1!
+🏆 TD3-BM-2 NEW BEST! Lap 2/2: 0:45.817
+🏁 TD3-BM-2 completed attempt 1!
+🏆 GA NEW BEST! Lap 2/2: 0:45.750
+🏁 GA completed attempt 1!
+
+🏁 TIME TRIAL ATTEMPT 2 OF 3
+========================================
+🌱 Environment seeded with: 84
+🚫 A2C-O-1 disabled due to CATASTROPHIC IMPACT (124280 N⋅s > 50000 N⋅s)
+❌ A2C-O-1 disabled in attempt 2
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250150 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 2
+🏆 A2C-B-3 NEW BEST! Lap 1/2: 0:45.617
+✓ TD3-BM-3 Lap 1/2: 0:46.117
+   Gap to PB: +0.017s
+✓ SAC-BM-1 Lap 1/2: 0:46.567
+   Gap to PB: +0.000s
+✓ SAC-F Lap 1/2: 0:46.700
+   Gap to PB: +1.750s
+✓ TD3-BM-2 Lap 1/2: 0:48.317
+   Gap to PB: +2.500s
+✓ GA Lap 1/2: 0:47.750
+   Gap to PB: +2.000s
+✓ TD3-BM-1 Lap 1/2: 0:48.900
+   Gap to PB: +4.617s
+🏆 PPO-B NEW BEST! Lap 1/2: 0:55.450
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250056 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 2
+🚫 SAC-BM-1 disabled due to ACCUMULATED DAMAGE (250755 N⋅s > 250000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 2
+✓ SAC-F Lap 2/2: 0:44.967
+   Gap to PB: +0.017s
+🏁 SAC-F completed attempt 2!
+✓ TD3-BM-3 Lap 2/2: 0:46.333
+   Gap to PB: +0.233s
+🏁 TD3-BM-3 completed attempt 2!
+✓ TD3-BM-1 Lap 2/2: 0:44.367
+   Gap to PB: +0.083s
+🏁 TD3-BM-1 completed attempt 2!
+✓ TD3-BM-2 Lap 2/2: 0:45.817
+   Gap to PB: +0.000s
+🏁 TD3-BM-2 completed attempt 2!
+✓ GA Lap 2/2: 0:46.333
+   Gap to PB: +0.583s
+🏁 GA completed attempt 2!
+🚫 PPO-B disabled due to CATASTROPHIC IMPACT (109552 N⋅s > 50000 N⋅s)
+❌ PPO-B disabled in attempt 2
+
+🏁 TIME TRIAL ATTEMPT 3 OF 3
+========================================
+🌱 Environment seeded with: 126
+🚫 A2C-O-1 disabled due to ACCUMULATED DAMAGE (250033 N⋅s > 250000 N⋅s)
+❌ A2C-O-1 disabled in attempt 3
+🚫 PPO-284 disabled due to ACCUMULATED DAMAGE (250564 N⋅s > 250000 N⋅s)
+❌ PPO-284 disabled in attempt 3
+✓ TD3-BM-3 Lap 1/2: 0:46.100
+   Gap to PB: +0.000s
+✓ SAC-BM-1 Lap 1/2: 0:46.567
+   Gap to PB: +0.000s
+✓ SAC-F Lap 1/2: 0:46.700
+   Gap to PB: +1.750s
+✓ A2C-B-3 Lap 1/2: 0:46.500
+   Gap to PB: +0.883s
+✓ TD3-BM-2 Lap 1/2: 0:48.317
+   Gap to PB: +2.500s
+✓ GA Lap 1/2: 0:47.683
+   Gap to PB: +1.933s
+✓ TD3-BM-1 Lap 1/2: 0:48.900
+   Gap to PB: +4.617s
+🏆 PPO-B NEW BEST! Lap 1/2: 0:49.333
+🚫 SAC-BM-1 disabled due to CATASTROPHIC IMPACT (107991 N⋅s > 50000 N⋅s)
+❌ SAC-BM-1 disabled in attempt 3
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250009 N⋅s > 250000 N⋅s)
+❌ A2C-B-3 disabled in attempt 3
+✓ SAC-F Lap 2/2: 0:44.967
+   Gap to PB: +0.017s
+🏁 SAC-F completed attempt 3!
+🚫 PPO-B disabled due to ACCUMULATED DAMAGE (250090 N⋅s > 250000 N⋅s)
+❌ PPO-B disabled in attempt 3
+✓ TD3-BM-3 Lap 2/2: 0:46.317
+   Gap to PB: +0.217s
+🏁 TD3-BM-3 completed attempt 3!
+✓ TD3-BM-1 Lap 2/2: 0:44.367
+   Gap to PB: +0.083s
+🏁 TD3-BM-1 completed attempt 3!
+✓ TD3-BM-2 Lap 2/2: 0:45.817
+   Gap to PB: +0.000s
+🏁 TD3-BM-2 completed attempt 3!
+✓ GA Lap 2/2: 0:47.950
+   Gap to PB: +2.200s
+🏁 GA completed attempt 3!
+
+============================================================
+⏱️ TIME TRIAL RESULTS
+============================================================
+   🥇 TD3-BM-1: 0:44.283 - 6 laps completed (15 pts)
+   🥈 SAC-F: 0:44.950 - 6 laps completed (7 pts)
+   🥉 A2C-B-3: 0:45.617 - DISABLED (3 pts)
+   4. GA: 0:45.750 - 6 laps completed (0 pts)
+   5. TD3-BM-2: 0:45.817 - 6 laps completed (0 pts)
+   6. TD3-BM-3: 0:46.100 - 6 laps completed (0 pts)
+   7. SAC-BM-1: 0:46.567 - DISABLED (0 pts)
+   8. PPO-B: 0:49.333 - DISABLED (0 pts)
+   9. A2C-O-1: No valid lap - DISABLED (0 pts)
+   10. PPO-284: No valid lap - DISABLED (0 pts)
+
+============================================================
+🏆 STANDINGS AFTER TIME TRIAL
+============================================================
+   🥇 TD3-BM-2: 140 points
+   🥈 TD3-BM-3: 118 points
+   🥉 TD3-BM-1: 69 points
+   4. SAC-F: 65 points
+   5. GA: 51 points
+   6. SAC-BM-1: 24 points
+   7. PPO-284: 20 points
+   8. A2C-B-3: 9 points
+   9. PPO-B: 8 points
+   10. A2C-O-1: 7 points
+
+============================================================
+🏁 COMPETITION STAGE
+============================================================
+📋 RULES:
+   • Race until completion or timeout
+   • Points by finish position: [0, 1, 2, 3, 5, 8, 13, 21, 24, 45]
+   • Fastest lap bonus: +15 points
+============================================================
+🌱 Environment seeded with: 999
+🏁 COMPETITION STARTED!
+============================================================
+🚫 A2C-O-1 disabled due to CATASTROPHIC IMPACT (123110 N⋅s > 50000 N⋅s)
+🚫 PPO-284 disabled due to CATASTROPHIC IMPACT (118946 N⋅s > 50000 N⋅s)
+🏁 TD3-BM-3 Lap 1: 0:46.100 (NEW PB!) | Reward: 342.9
+   🌟 NEW FASTEST LAP by TD3-BM-3!
+🏁 SAC-BM-1 Lap 1: 0:46.567 (NEW PB!) | Reward: 338.2
+🏁 SAC-F Lap 1: 0:46.700 (NEW PB!) | Reward: 340.9
+🏁 A2C-B-3 Lap 1: 0:47.783 (NEW PB!) | Reward: 242.8
+🏁 TD3-BM-2 Lap 1: 0:48.317 (NEW PB!) | Reward: 329.0
+🏁 GA Lap 1: 0:47.683 (NEW PB!) | Reward: 325.0
+🏁 TD3-BM-1 Lap 1: 0:48.900 (NEW PB!) | Reward: 316.3
+🏁 PPO-B Lap 1: 0:49.267 (NEW PB!) | Reward: 322.3
+🚫 A2C-B-3 disabled due to ACCUMULATED DAMAGE (250120 N⋅s > 250000 N⋅s)
+🚫 SAC-BM-1 disabled due to ACCUMULATED DAMAGE (250056 N⋅s > 250000 N⋅s)
+🚫 PPO-B disabled due to ACCUMULATED DAMAGE (250012 N⋅s > 250000 N⋅s)
+🏁 SAC-F Lap 2: 0:44.967 (NEW PB!) | Reward: 343.9
+   🌟 NEW FASTEST LAP by SAC-F!
+🏁 TD3-BM-3 Lap 2: 0:46.317 | Reward: 340.7
+🏁 TD3-BM-1 Lap 2: 0:44.367 (NEW PB!) | Reward: 339.6
+   🌟 NEW FASTEST LAP by TD3-BM-1!
+🏁 TD3-BM-2 Lap 2: 0:45.817 (NEW PB!) | Reward: 341.4
+🏁 GA Lap 2: 0:48.200 | Reward: 301.3
+🏁 SAC-F Lap 3: 0:44.283 (NEW PB!) | Reward: 337.0
+   🌟 NEW FASTEST LAP by SAC-F!
+🏁 TD3-BM-2 Lap 3: 0:46.350 | Reward: 342.5
+🏁 TD3-BM-1 Lap 3: 0:47.483 | Reward: 336.6
+🏁 TD3-BM-3 Lap 3: 0:49.017 | Reward: 335.0
+🏁 GA Lap 3: 0:47.533 (NEW PB!) | Reward: 334.2
+🏁 PPO-B Lap 2: 1:54.867 | Reward: -31.9
+
+============================================================
+🏁 COMPETITION RESULTS
+============================================================
+   🥇 SAC-F - 3 laps completed (60 pts)
+      Best lap: 0:44.283, Reward: 1314.3
+   🥈 TD3-BM-1 - 3 laps completed (24 pts)
+      Best lap: 0:44.367, Reward: 1259.1
+   🥉 TD3-BM-2 - 3 laps completed (21 pts)
+      Best lap: 0:45.817, Reward: 1241.7
+   4. TD3-BM-3 - 3 laps completed (13 pts)
+      Best lap: 0:46.100, Reward: 1255.9
+   5. GA - 3 laps completed (8 pts)
+      Best lap: 0:47.533, Reward: 1139.4
+   6. PPO-B - DISABLED (5 pts)
+      Laps: 2, Reward: 289.6
+   7. SAC-BM-1 - DISABLED (3 pts)
+      Laps: 1, Reward: 439.5
+   8. A2C-B-3 - DISABLED (2 pts)
+      Laps: 1, Reward: 285.5
+   9. PPO-284 - DISABLED (1 pts)
+      Laps: 0, Reward: 159.2
+   10. A2C-O-1 - DISABLED (0 pts)
+      Laps: 0, Reward: 15.9
+
+⚡ Fastest Lap: SAC-F - 0:44.283 (+15 pts)
+
+============================================================
+🏆 STANDINGS AFTER COMPETITION
+============================================================
+   🥇 TD3-BM-2: 161 points
+   🥈 TD3-BM-3: 131 points
+   🥉 SAC-F: 125 points
+   4. TD3-BM-1: 93 points
+   5. GA: 59 points
+   6. SAC-BM-1: 27 points
+   7. PPO-284: 21 points
+   8. PPO-B: 13 points
+   9. A2C-B-3: 11 points
+   10. A2C-O-1: 7 points
+
+================================================================================
+🏆 CHAMPIONSHIP COMPLETE!
+================================================================================
+
+============================================================
+🏆 FINAL CHAMPIONSHIP STANDINGS
+============================================================
+   🥇 TD3-BM-2: 161 points
+   🥈 TD3-BM-3: 131 points
+   🥉 SAC-F: 125 points
+   4. TD3-BM-1: 93 points
+   5. GA: 59 points
+   6. SAC-BM-1: 27 points
+   7. PPO-284: 21 points
+   8. PPO-B: 13 points
+   9. A2C-B-3: 11 points
+   10. A2C-O-1: 7 points
+
+============================================================
+📊 CHAMPIONSHIP STATISTICS
+============================================================
+
+1. TD3-BM-2 - 161 points
+   🏁 Time Trial: 0 wins, 2 2nd places, 0 3rd places
+   🏁 Competition: 2 wins, 0 2nd places, 2 3rd places
+   ⚡ Fastest Laps: 1
+
+2. TD3-BM-3 - 131 points
+   🏁 Time Trial: 1 wins, 0 2nd places, 2 3rd places
+   🏁 Competition: 1 wins, 1 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 1
+
+3. SAC-F - 125 points
+   🏁 Time Trial: 1 wins, 1 2nd places, 0 3rd places
+   🏁 Competition: 1 wins, 0 2nd places, 1 3rd places
+   ⚡ Fastest Laps: 2
+
+4. TD3-BM-1 - 93 points
+   🏁 Time Trial: 2 wins, 0 2nd places, 0 3rd places
+   🏁 Competition: 0 wins, 1 2nd places, 1 3rd places
+   ⚡ Fastest Laps: 0
+
+5. GA - 59 points
+   🏁 Time Trial: 0 wins, 0 2nd places, 1 3rd places
+   🏁 Competition: 0 wins, 2 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+6. SAC-BM-1 - 27 points
+   🏁 Time Trial: 0 wins, 1 2nd places, 0 3rd places
+   🏁 Competition: 0 wins, 0 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+7. PPO-284 - 21 points
+   🏁 Time Trial: 0 wins, 0 2nd places, 0 3rd places
+   🏁 Competition: 0 wins, 0 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+8. PPO-B - 13 points
+   🏁 Time Trial: 0 wins, 0 2nd places, 0 3rd places
+   🏁 Competition: 0 wins, 0 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+9. A2C-B-3 - 11 points
+   🏁 Time Trial: 0 wins, 0 2nd places, 1 3rd places
+   🏁 Competition: 0 wins, 0 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+10. A2C-O-1 - 7 points
+   🏁 Time Trial: 0 wins, 0 2nd places, 0 3rd places
+   🏁 Competition: 0 wins, 0 2nd places, 0 3rd places
+   ⚡ Fastest Laps: 0
+
+================================================================================
+🏆 CHAMPIONSHIP FINISHED!
+================================================================================
+============================================================
+🔒 Done.

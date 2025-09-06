@@ -226,14 +226,14 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/daytona.track',  # No fixed track (automatic random selection)
+        track_file='tracks/talladega.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )
-    env.seed(42)
+    env.seed(19780428)
     
     print(f"🎮 CONTROLS:")
     print(f"   Keys 0-{min(num_cars-1, 9)}: Switch camera between cars")
