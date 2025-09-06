@@ -23,7 +23,7 @@ def main():
     
     # Training configuration - optimized for multi-car evaluation
     trainer = GeneticTrainer(
-        population_size=50,      # Larger population since we can evaluate faster
+        population_size=10,      # Larger population since we can evaluate faster
         generations=50,          # More generations for better evolution  
         mutation_rate=0.15,
         mutation_strength=0.2,
@@ -46,7 +46,7 @@ def main():
         best_genome, best_fitness = trainer.train()
         
         print(f"\n🎯 Training completed successfully!")
-        print(f"Best fitness achieved: {best_fitness:.1f}")
+        print(f"Best fitness achieved: {best_fitness:.3f}")
         print(f"Best genome parameters:")
         
         # Display best genome in readable format
@@ -73,7 +73,7 @@ def main():
     except KeyboardInterrupt:
         print(f"\n⚠️ Training interrupted by user")
         if hasattr(trainer, 'best_individual') and trainer.best_individual:
-            print(f"Best fitness so far: {trainer.best_fitness:.1f}")
+            print(f"Best fitness so far: {trainer.best_fitness:.3f}")
     except Exception as e:
         print(f"\n❌ Training failed with error: {e}")
         import traceback
@@ -104,7 +104,7 @@ def test_controller_performance(controller, num_episodes=3):
             observation, _ = env.reset()
             total_reward = 0.0
             steps = 0
-            max_steps = 3000
+            max_steps = 9999
             
             while steps < max_steps:
                 action = controller.control(observation)
