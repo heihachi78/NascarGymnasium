@@ -197,28 +197,28 @@ class GeneticTrainer:
         - Secondary: Distance, speed, track adherence
         - Penalties: Poor performance, crashes
         """
-        fitness = 0.0
-        
-        # Primary objective: Lap completion
-        if lap_completed and lap_time is not None:
-            # Reward lap completion heavily, with bonus for faster times
-            fitness += 1000  # Base lap completion bonus
-            fitness += max(0, 200 - lap_time)  # Time bonus (assumes reasonable lap times < 200s)
-        else:
-            # Reward progress towards lap completion
-            fitness += distance * 3  # Distance reward
-            fitness += max_speed * 2  # Speed reward
-        
-        # Secondary objectives
-        fitness += time_on_track  # Staying on track is important
-        fitness += reward  # Environment reward (smaller weight)
-        
-        # Penalties
-        if distance < 10:  # Very poor performance
-            fitness -= 200
-        if max_speed < 1:  # Car didn't move much
-            fitness -= 100
-            
+        fitness = reward
+        #
+        ## Primary objective: Lap completion
+        #if lap_completed and lap_time is not None:
+        #    # Reward lap completion heavily, with bonus for faster times
+        #    fitness += 1000  # Base lap completion bonus
+        #    fitness += max(0, 200 - lap_time)  # Time bonus (assumes reasonable lap times < 200s)
+        #else:
+        #    # Reward progress towards lap completion
+        #    fitness += distance * 3  # Distance reward
+        #    fitness += max_speed * 2  # Speed reward
+        #
+        ## Secondary objectives
+        #fitness += time_on_track  # Staying on track is important
+        #fitness += reward  # Environment reward (smaller weight)
+        #
+        ## Penalties
+        #if distance < 10:  # Very poor performance
+        #    fitness -= 200
+        #if max_speed < 1:  # Car didn't move much
+        #    fitness -= 100
+        #    
         return fitness
     
     def _evaluate_batch(self, genomes: List[List[float]], start_idx: int = 0) -> List[Dict]:
