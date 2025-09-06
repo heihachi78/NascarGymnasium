@@ -95,6 +95,7 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device='cuda',
+        learning_rate=7.5e-4,
     )
 
     model.learn(
