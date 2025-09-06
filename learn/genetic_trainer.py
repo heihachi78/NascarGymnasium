@@ -167,6 +167,8 @@ class GeneticTrainer:
                 'fitness': -1000
             }
         
+        print(f"🏁 Evaluating generation {self.generation} with ({total_reward} reward)...")
+        
         # Calculate composite fitness
         fitness = self._calculate_fitness(
             total_reward, distance_traveled, max_speed, 
@@ -551,7 +553,7 @@ class GeneticTrainer:
             self.evolve_generation(results)
             
             # Save progress periodically
-            if generation % 10 == 0 or generation == self.generations - 1:
+            if generation % 2 == 0 or generation == self.generations - 1:
                 self.save_progress()
                 self.plot_fitness_evolution()
         
