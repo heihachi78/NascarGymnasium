@@ -70,18 +70,18 @@ class BaseController:
             self.control_state['speed_limit'] = forward
         if self.control_state['last_forward'] < forward:
             self.control_state['speed_limit'] = 1
-        
+
         # Throttle control - accumulate changes
         if current_speed < self.control_state['speed_limit'] * 0.95:
             self.control_state['throttle_brake'] += 0.1
         if current_speed > self.control_state['speed_limit'] * 1.05:
             self.control_state['throttle_brake'] -= 0.1
-        
+
         # Steering control based on sensor readings (improved with 16 sensors)
         # Compare left vs right sensor groups for better steering decisions
         right_sensors = sensors[15]
         left_sensors = sensors[1]
-        
+
         if right_sensors > left_sensors:
             self.control_state['steering'] = 1 - (left_sensors/right_sensors)
         elif left_sensors > right_sensors:
@@ -91,7 +91,7 @@ class BaseController:
 
         if abs(self.control_state['steering']) > 0.25:
             self.control_state['throttle_brake'] *= 0.5
-        
+
         # Apply limits and adjustments
         self.control_state['throttle_brake'] = max(min(self.control_state['throttle_brake'], 1), -1)
         self.control_state['steering'] = max(min(self.control_state['steering'], 1), -1)

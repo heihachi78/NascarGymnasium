@@ -91,26 +91,20 @@ class GeneticController(BaseController):
                 self.control_state['throttle_brake'] += self.throttle_increment
             if current_speed > self.control_state['speed_limit'] * self.speed_upper_multiplier:
                 self.control_state['throttle_brake'] -= self.brake_increment
+
+        right_sensors = sensors[15] * self.right_sensor_weight
+        left_sensors = sensors[1] * self.left_sensor_weight
         
-        # Enhanced steering control with evolved weights
-        # Multi-sensor steering decision
-        left_side_avg = np.mean(sensors[1:4]) * self.left_sensor_weight
-        right_side_avg = np.mean(sensors[13:16]) * self.right_sensor_weight
-        
-        if right_side_avg > left_side_avg:
-            steering_amount = (1 - (left_side_avg/right_side_avg)) * self.steering_sensitivity
-            self.control_state['steering'] = min(steering_amount, 1.0)
-        elif left_side_avg > right_side_avg:
-            steering_amount = (1 - (right_side_avg/left_side_avg)) * self.steering_sensitivity
-            self.control_state['steering'] = max(-steering_amount, -1.0)
+        if right_sensors > left_sensors:
+            self.control_state['steering'] = (1 - (left_sensors/right_sensors)) * self.steering_sensitivity
+        elif left_sensors > right_sensors:
+            self.control_state['steering'] = ((1 - (right_sensors/left_sensors)) * -1) * self.steering_sensitivity
         else:
-            # Gradual return to center with evolved decay rate
             self.control_state['steering'] *= self.steering_decay
-        
-        # Reduce throttle when steering heavily (evolved threshold and reduction)
+
         if abs(self.control_state['steering']) > self.max_steering_threshold:
             self.control_state['throttle_brake'] *= self.throttle_reduction
-        
+
         # Apply limits
         self.control_state['throttle_brake'] = max(min(self.control_state['throttle_brake'], 1), -1)
         self.control_state['steering'] = max(min(self.control_state['steering'], 1), -1)
