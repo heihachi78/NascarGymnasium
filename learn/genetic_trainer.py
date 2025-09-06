@@ -247,6 +247,21 @@ class GeneticTrainer:
         
         # Run evaluation episode with all individuals simultaneously
         try:
+            # Initialize metrics for each individual
+            individual_metrics = []
+            for i in range(num_individuals):
+                individual_metrics.append({
+                    'total_reward': 0.0,
+                    'distance_traveled': 0.0,
+                    'max_speed': 0.0,
+                    'time_on_track': 0.0,
+                    'lap_completed': False,
+                    'lap_time': None,
+                    'steps': 0
+                })
+            for i in range(num_individuals):
+                metrics = individual_metrics[i]
+
             for trck in ['tracks/daytona.track', 'tracks/martinsville.track', 'tracks/michigan.track']:
                 # Create multi-car environment
                 env = CarEnv(
@@ -261,19 +276,6 @@ class GeneticTrainer:
                 observations, info = env.reset()
                 max_steps = 9999  # Prevent infinite episodes
                 steps = 0
-                
-                # Initialize metrics for each individual
-                individual_metrics = []
-                for i in range(num_individuals):
-                    individual_metrics.append({
-                        'total_reward': 0.0,
-                        'distance_traveled': 0.0,
-                        'max_speed': 0.0,
-                        'time_on_track': 0.0,
-                        'lap_completed': False,
-                        'lap_time': None,
-                        'steps': 0
-                    })
                 
                 while steps < max_steps:
                     # Get actions from all controllers
@@ -316,13 +318,17 @@ class GeneticTrainer:
                             if 'lap_timing' in car_info:
                                 lap_info = car_info['lap_timing']
                                 if lap_info.get('lap_count', 0) > 0 and not metrics['lap_completed']:
-                                    metrics['lap_completed'] = True
-                                    metrics['lap_time'] = lap_info.get('last_lap_time')
+                                    metrics['lap_completed'] = True or metrics['lap_completed']
+                                    if metrics['lap_time'] is None:
+                                        metrics['lap_time'] = metrics['lap_time']
+                                    else:
+                                        metrics['lap_time'] = (metrics['lap_time'] + lap_info.get('last_lap_time')) / 2.0
                         
-                        metrics['steps'] += steps
+                        metrics['steps'] += 1
                     
                     # Check termination
                     if terminated or truncated:
+                        individual_metrics[i] = metrics
                         break
                 
                 env.close()
