@@ -3,7 +3,7 @@ import sys
 import os
 from datetime import datetime
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3 import PPO
+from stable_baselines3 import A2C
 from stable_baselines3.common.callbacks import EvalCallback
 from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
 import logging
@@ -16,9 +16,9 @@ base_path = "learn/"
 verbose = 1
 total_timesteps = 25_000_000
 eval_freq = 12_500
-log_interval = 1
+log_interval = 1000
 stats_window_size = 25
-model_name = "ppo"
+model_name = "a2c"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -88,14 +88,13 @@ if __name__ == "__main__":
         verbose=verbose,
     )
 
-    model = PPO(
+    model = A2C(
         "MlpPolicy",
         train_subproc,
         tensorboard_log=tensorboard_log,
         stats_window_size=stats_window_size,
         verbose=verbose,
-        device='cuda',
-        batch_size=256,
+        device='cpu',
     )
 
     model.learn(
