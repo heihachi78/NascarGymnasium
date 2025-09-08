@@ -95,7 +95,8 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device='cuda',
-        batch_size=256,
+        ent_coef=0.002,
+        n_steps=4096,
     )
 
     model.learn(

@@ -112,19 +112,16 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        #("game/control/models/a2c_best_model_opt_1.zip", "A2C-O-1"),
-        #("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
-        #("game/control/models/ppo_284.zip", "PPO-284"),
-        #("game/control/models/ppo_best_model.zip", "PPO-B"),
+        ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
         ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
-        ("game/control/models/sac_bm1.zip", "SAC-BM-1"),
-        ("game/control/models/sac_bm2.zip", "SAC-BM-2"),
         ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
         ("game/control/models/sac_final.zip", "SAC-F"),
         ("game/control/models/genetic.pkl", "GA"),
         (None, "BC"),
+        ("game/control/models/ppo_789.zip", "PPO-789"),
+        ("game/control/models/ppo_849.zip", "PPO-849"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -226,7 +223,7 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/talladega.track',  # No fixed track (automatic random selection)
+        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode='human',
