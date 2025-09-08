@@ -1,601 +1,854 @@
-# Car Racing Environment - Reinforcement Learning Simulation
+# Car Racing Simulation Environment
 
-A sophisticated car racing simulation environment built with realistic physics, reinforcement learning capabilities, and comprehensive game modes. This environment provides a complete gymnasium-compatible interface for training and testing autonomous racing agents.
+A comprehensive car racing simulation environment built with realistic physics, reinforcement learning capabilities, and multiple game modes. This system provides a complete racing ecosystem with Gymnasium-compatible environment interface, advanced car physics, track management, and AI training capabilities.
 
 ## Table of Contents
 
 - [Environment Overview](#environment-overview)
-- [Installation](#installation)
-- [Quick Start](#quick-start)
-- [Environment Details](#environment-details)
-  - [Observation Space](#observation-space)
-  - [Action Spaces](#action-spaces)
-  - [Reward System](#reward-system)
-  - [Car Disabling System](#car-disabling-system)
-  - [Track System](#track-system)
+- [Environment Observation Space](#environment-observation-space)
+- [Environment Action Space](#environment-action-space)
+- [Environment Info Dictionary](#environment-info-dictionary)
+- [Reward Structure](#reward-structure)
 - [Game Modes](#game-modes)
-- [Reinforcement Learning](#reinforcement-learning)
-- [Tools and Utilities](#tools-and-utilities)
-- [Architecture](#architecture)
-- [Contributing](#contributing)
+- [Controllers](#controllers)
+- [Learning Methods](#learning-methods)
+- [Tools](#tools)
+- [Track Files](#track-files)
+- [Creating New Components](#creating-new-components)
+- [Installation and Usage](#installation-and-usage)
 
 ## Environment Overview
 
-This racing simulation features:
+The car racing environment (`CarEnv`) is built on top of Gymnasium and provides a realistic racing simulation with:
 
-- **Realistic Physics**: Box2D-based physics with tire temperature, collision detection, and aerodynamics
-- **Multi-car Support**: Up to 10 cars racing simultaneously
-- **Gymnasium Interface**: Standard RL environment with continuous and discrete action spaces
-- **Multiple Game Modes**: Time trials, competitions, and training scenarios
-- **Rich Observation Space**: 39-dimensional normalized observations including sensors, car state, and physics
-- **Comprehensive Reward System**: Distance-based rewards with collision penalties and lap bonuses
-- **Dynamic Track System**: Random track selection or specific track loading
-- **Advanced Tools**: Track builder, analyzer, validator, and visualization tools
+- **Realistic Physics**: Box2D-based physics simulation with tire temperature, wear, and collision detection
+- **Distance Sensors**: 16-directional distance sensors for AI navigation
+- **Multi-car Support**: Support for up to 10 cars simultaneously
+- **Track System**: Comprehensive track loading and management system
+- **Lap Timing**: Precise lap timing and progress tracking
+- **Flexible Action Spaces**: Both discrete and continuous control modes
 
-## Installation
+### Key Features
 
-### Prerequisites
+- **Environment Hierarchy**: `BaseEnv` → `CarEnv` structure with Gymnasium compatibility
+- **Physics Integration**: Realistic car dynamics with tire physics, aerodynamics, and collision detection
+- **Sensor System**: 16-directional distance sensors at 22.5° intervals
+- **Track Integration**: Dynamic track loading from `.track` files
+- **Rendering**: Pygame-based real-time visualization
 
-```bash
-python >= 3.8
-```
+## Environment Observation Space
 
-### Dependencies
+The observation space is a **38-dimensional vector** containing comprehensive car state information, all normalized to `[-1, 1]` or `[0, 1]` ranges for optimal neural network training.
 
-```bash
-pip install -r requirements.txt
-```
+### Observation Vector Structure (38 elements total)
 
-### Quick Setup
-
-```bash
-# Clone or download the project
-cd claude_car4
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Test the installation
-python demo/random_demo.py
-```
-
-## Quick Start
-
-### Basic Usage
-
-```python
-from src.car_env import CarEnv
-
-# Create environment with default settings
-env = CarEnv(render_mode="human")
-
-# Reset environment
-obs, info = env.reset()
-
-# Take random actions
-for step in range(1000):
-    action = env.action_space.sample()
-    obs, reward, terminated, truncated, info = env.step(action)
-    env.render()
-    
-    if terminated or truncated:
-        obs, info = env.reset()
-
-env.close()
-```
-
-### Training a Reinforcement Learning Model
-
-```bash
-# Train TD3 agent
-python learn/td3_simple.py
-
-# Train PPO agent  
-python learn/ppo_simple.py
-
-# Train SAC agent
-python learn/sac_simple.py
-```
-
-### Running Game Modes
-
-```bash
-# Time trial mode (3 attempts × 2 laps)
-python game/time_trial.py
-
-# Competition mode (multi-car racing)
-python game/competition.py
-
-# Random demonstration
-python demo/random_demo.py
-```
-
-## Environment Details
-
-### Observation Space
-
-The environment provides a **38-dimensional continuous observation space** with normalized values:
-
-#### Observation Vector (39 elements):
-
-| Index | Component | Range | Description |
-|-------|-----------|--------|-------------|
-| 0-1 | `pos_x, pos_y` | [-1, 1] | Car position normalized to track bounds |
-| 2-3 | `vel_x, vel_y` | [-1, 1] | Car velocity components |
-| 4 | `speed_magnitude` | [0, 1] | Speed magnitude normalized to max velocity |
-| 5-6 | `orientation, angular_vel` | [-1, 1] | Car rotation and angular velocity |
-| 7-10 | `tyre_load_fl/fr/rl/rr` | [0, 1] | Tire load for each wheel (normalized) |
-| 11-14 | `tyre_temp_fl/fr/rl/rr` | [0, 1] | Tire temperature for each wheel |
-| 15-18 | `tyre_wear_fl/fr/rl/rr` | [0, 1] | Tire wear for each wheel |
-| 19-20 | `collision_impulse, collision_angle` | [0, 1], [-1, 1] | Collision data |
+| Index | Element | Range | Description |
+|-------|---------|-------|-------------|
+| 0-1 | `pos_x`, `pos_y` | [-1, 1] | Car position coordinates (normalized to world bounds) |
+| 2-3 | `vel_x`, `vel_y` | [-1, 1] | Car velocity components (normalized to max velocity) |
+| 4 | `speed_magnitude` | [0, 1] | Speed magnitude (normalized to max realistic speed) |
+| 5-6 | `orientation`, `angular_vel` | [-1, 1] | Car orientation and angular velocity |
+| 7-10 | `tyre_load_fl/fr/rl/rr` | [0, 1] | Tire load forces (front-left, front-right, rear-left, rear-right) |
+| 11-14 | `tyre_temp_fl/fr/rl/rr` | [0, 1] | Tire temperatures (affects grip and performance) |
+| 15-18 | `tyre_wear_fl/fr/rl/rr` | [0, 1] | Tire wear percentages (affects performance over time) |
+| 19-20 | `collision_impulse`, `collision_angle` | [0, 1], [-1, 1] | Collision impact force and relative angle |
 | 21 | `cumulative_impact_percentage` | [0, 1] | Accumulated collision damage |
-| 22-37 | `sensor_dist_0` to `sensor_dist_15` | [0, 1] | 16 distance sensors around the car |
+| 22-37 | `sensor_dist_0` to `sensor_dist_15` | [0, 1] | Distance sensor readings (16 directions) |
 
-#### Normalization Details
+### Normalization Details
 
-- **Position**: Normalized using `NORM_MAX_POSITION = 10000.0` meters
-- **Velocity**: Normalized using `NORM_MAX_VELOCITY = 111.1` m/s
-- **Tire Load**: Normalized using `NORM_MAX_TYRE_LOAD` based on car weight distribution
-- **Tire Temperature**: Normalized using `NORM_MAX_TYRE_TEMP = 200.0°C`
-- **Tire Wear**: Normalized using `NORM_MAX_TYRE_WEAR = 100.0`
-- **Sensors**: Normalized using `SENSOR_MAX_DISTANCE = 250.0` meters
-- **Angular Velocity**: Normalized using `NORM_MAX_ANGULAR_VEL = 10.0` rad/s
+- **Position**: Normalized by `NORM_MAX_POSITION = 10000.0` meters
+- **Velocity**: Normalized by `NORM_MAX_VELOCITY = 111.1` m/s (≈400 km/h)
+- **Angular Velocity**: Normalized by `NORM_MAX_ANGULAR_VEL = 10.0` rad/s
+- **Tire Temperature**: Normalized by `NORM_MAX_TYRE_TEMP = 200.0`°C
+- **Tire Load**: Normalized by `MAX_TYRE_LOAD = CAR_MASS * GRAVITY * 2.0`
+- **Sensor Distances**: Normalized by `SENSOR_MAX_DISTANCE = 250.0` meters
 
-### Action Spaces
+### Distance Sensors Configuration
 
-The environment supports both **continuous** and **discrete** action spaces:
+The 16 distance sensors are positioned around the car at 22.5° intervals:
+- **Sensor 0**: 0° (forward)
+- **Sensor 1**: 22.5° (forward-right)
+- **Sensor 4**: 90° (right)
+- **Sensor 8**: 180° (backward)
+- **Sensor 12**: 270° (left)
+- **etc.**
 
-#### Continuous Action Space (Default)
+Each sensor returns normalized distance (0.0 = obstacle at car position, 1.0 = no obstacle within max range).
 
-**Single Car**: `Box(low=[-1, -1], high=[1, 1], shape=(2,))`
-**Multi-Car**: `Box(low=[[-1, -1], ...], high=[[1, 1], ...], shape=(num_cars, 2))`
+## Environment Action Space
 
-- `action[0]`: **Throttle/Brake** [-1.0 to 1.0]
-  - `> 0`: Throttle (acceleration)
-  - `< 0`: Brake (absolute value used as brake force)
-- `action[1]`: **Steering** [-1.0 to 1.0]
-  - `< 0`: Turn left
-  - `> 0`: Turn right
+The environment supports both **discrete** and **continuous** action spaces, configurable during initialization.
 
-#### Discrete Action Space
+### Continuous Action Space (Default)
 
-**Single Car**: `Discrete(5)`
-**Multi-Car**: `MultiDiscrete([5, 5, ...])`
+**Shape**: `(2,)` - Two-dimensional continuous control
+**Range**: `[-1.0, 1.0]` for both dimensions
 
-- `0`: No action
-- `1`: Accelerate (throttle = 1.0)
-- `2`: Brake (brake = 1.0)
-- `3`: Turn left (steering = -1.0)
-- `4`: Turn right (steering = 1.0)
+| Index | Action | Range | Description |
+|-------|---------|-------|-------------|
+| 0 | `throttle_brake` | [-1.0, 1.0] | Combined throttle/brake axis: <br/>• `1.0` = Full throttle<br/>• `0.0` = Neutral<br/>• `-1.0` = Full brake |
+| 1 | `steering` | [-1.0, 1.0] | Steering angle: <br/>• `-1.0` = Full left turn<br/>• `0.0` = Straight<br/>• `1.0` = Full right turn |
 
-### Reward System
+### Discrete Action Space
 
-The reward system encourages fast, clean racing with multiple components:
+**Shape**: `Discrete(5)` - Five discrete actions
 
-#### Positive Rewards
-- **Distance Reward**: `+0.15` per meter traveled forward
-- **Lap Completion**: Configurable bonus for completing laps
-- **Fast Lap Bonus**: Extra reward for laps under threshold time
+| Action ID | Action | Description |
+|-----------|--------|-------------|
+| 0 | Do Nothing | No throttle, no brake, no steering |
+| 1 | Accelerate | Full throttle, no steering |
+| 2 | Brake | Full brake, no steering |
+| 3 | Turn Left | No throttle/brake, full left steering |
+| 4 | Turn Right | No throttle/brake, full right steering |
 
-#### Negative Rewards (Penalties)
-- **Per-Step Penalty**: `-0.05` per simulation step (encourages speed)
-- **Wall Collision**: `-0.25` per step while colliding with walls
-- **Backward Movement**: `-0.05` per meter of backward driving
-- **Car Disabled**: `-100.0` when car becomes disabled
+### Multi-Car Action Spaces
 
-#### Reward Configuration
+For multi-car environments (`num_cars > 1`):
+- **Continuous**: `Box(shape=(num_cars, 2))` - Array of 2D actions
+- **Discrete**: `MultiDiscrete([5] * num_cars)` - Array of discrete actions
 
-```python
-# Located in src/constants/rewards.py
-REWARD_DISTANCE_MULTIPLIER = 0.15
-PENALTY_PER_STEP = 0.05
-PENALTY_WALL_COLLISION_PER_STEP = 0.25
-PENALTY_BACKWARD_PER_METER = 0.05
-PENALTY_DISABLED = 100.0
-```
+### Internal Action Conversion
 
-### Car Disabling System
+Actions are internally converted to a 3-element format `[throttle, brake, steering]`:
+- Continuous `throttle_brake` ≥ 0 → `throttle = throttle_brake, brake = 0`
+- Continuous `throttle_brake` < 0 → `throttle = 0, brake = -throttle_brake`
 
-Cars can be disabled due to various conditions to simulate realistic racing consequences:
+## Environment Info Dictionary
 
-#### Disabling Conditions
+The `info` dictionary returned by `step()` and `reset()` contains comprehensive environment state information:
 
-1. **Catastrophic Impact**: Single collision > 50000 N⋅s instant disable
-2. **Cumulative Damage**: Total collision damage > 250000 N⋅s
-3. **Stuck Detection**: Car moving < 0.5 m/s for > 10 seconds with < 1m movement
-4. **Excessive Backward Driving**: > 200 meters of backward movement
-
-#### Disabled Car Behavior
-- Receives zero control input (throttle=0, brake=0, steering=0)
-- No longer accumulates rewards (except final disable penalty)
-- Excluded from race position calculations
-- Visually distinguished in rendering
-
-### Track System
-
-#### Track File Format
-
-Tracks are defined using simple command files with `.track` extension:
-
-```
-# Example: nascar.track
-WIDTH 25           # Track width in meters
-GRID              # Starting grid segment  
-STARTLINE         # Start/finish line
-STRAIGHT 200      # 200m straight section
-LEFT 180 300      # 180° left turn with 300m radius
-STRAIGHT 400      # 400m straight section
-LEFT 180 300      # Another 180° left turn
-STRAIGHT 95       # Final straight to complete oval
-```
-
-#### Available Track Commands
-
-| Command | Parameters | Description |
-|---------|------------|-------------|
-| `WIDTH` | `<meters>` | Set track width |
-| `GRID` | - | Starting grid position |
-| `STARTLINE` | - | Start/finish line marker |
-| `STRAIGHT` | `<length>` | Straight section in meters |
-| `LEFT` | `<degrees> <radius>` | Left turn with angle and radius |
-| `RIGHT` | `<degrees> <radius>` | Right turn with angle and radius |
-| `FINISHLINE` | - | Finish line marker |
-
-#### Track Parameters
-
-- **Width**: Typically 15-30 meters for realistic racing
-- **Length**: Can range from 500m (short) to 5000m+ (endurance)
-- **Complexity**: Measured by turn count and radius variations
-- **Banking**: Supported through track generation parameters
-
-#### Available Tracks
-
-The environment includes several pre-built tracks:
-
-- `nascar.track` - Simple NASCAR-style oval
-- `daytona.track` - Daytona International Speedway inspired
-- `martinsville.track` - Short track configuration  
-- `trioval.track` - Triangular superspeedway
-- `nascar_banked.track` - Banked oval configuration
-
-## Game Modes
-
-### Time Trial Mode
-
-**File**: `game/time_trial.py`
-
-- **Format**: 3 attempts × 2 laps each (6 total laps)
-- **Objective**: Fastest single lap time wins
-- **Features**:
-  - Random track selection for each attempt
-  - Environment resets between attempts
-  - Personal best tracking
-  - Overall leaderboard
-
-```bash
-python game/time_trial.py
-```
-
-### Competition Mode  
-
-**File**: `game/competition.py`
-
-- **Format**: Multi-car simultaneous racing
-- **Objective**: Complete most laps, fastest times as tiebreaker
-- **Features**:
-  - Up to 10 cars racing
-  - Real-time leaderboards
-  - Collision tracking
-  - Performance statistics
-
-```bash
-python game/competition.py
-```
-
-### Controls (Rendering Mode)
-
-| Key | Action |
-|-----|--------|
-| `0-9` | Switch camera between cars |
-| `R` | Toggle reward display |
-| `O` | Toggle observation visualization |
-| `ESC` | Exit simulation |
-
-## Reinforcement Learning
-
-### Supported Algorithms
-
-The environment is compatible with popular RL libraries and includes training scripts for:
-
-- **TD3** (Twin Delayed Deep Deterministic Policy Gradient)
-- **PPO** (Proximal Policy Optimization)  
-- **SAC** (Soft Actor-Critic)
-- **A2C** (Advantage Actor-Critic)
-- **DDPG** (Deep Deterministic Policy Gradient)
-
-### Training Configuration
-
-#### Example: TD3 Training
-
-```python
-# learn/td3_simple.py configuration
-num_envs = 8                    # Parallel environments
-total_timesteps = 25_000_000    # Training steps
-learning_rate = 1e-4            # Initial learning rate
-eval_freq = 25_000              # Evaluation frequency
-```
-
-#### Training Commands
-
-```bash
-# Train different algorithms
-python learn/td3_simple.py      # TD3 training
-python learn/ppo_simple.py      # PPO training  
-python learn/sac_simple.py      # SAC training
-python learn/a2c_simple.py      # A2C training
-python learn/ddpg_simple.py     # DDPG training
-```
-
-#### Pre-trained Models
-
-The environment includes pre-trained models in `game/control/models/`:
-- `td3_best_model1.zip` - Best performing TD3 model
-- `a2c_best_model1.zip` - Best performing A2C model
-- Additional model checkpoints for comparison
-
-### Environment Info Dictionary
-
-The `step()` method returns comprehensive information:
+### Structure Overview
 
 ```python
 info = {
-    "simulation_time": 45.6,           # Current simulation time
-    "num_cars": 1,                     # Number of cars
-    "followed_car_index": 0,           # Camera-followed car
-    "termination_reason": None,        # Why episode ended
-    "cars": [                          # Per-car information
-        {
-            "car_index": 0,
-            "disabled": False,
-            "car_position": (100.5, 25.3),
-            "car_speed_kmh": 180.4,
-            "car_speed_ms": 50.1,
-            "on_track": True,
-            "lap_timing": {
-                "lap_count": 2,
-                "current_lap_time": 45.67,
-                "last_lap_time": 87.23,
-                "best_lap_time": 85.1,
-                "is_timing": True
-            },
-            "cumulative_reward": 156.7,
-            "cumulative_impact_force": 245.8
-        }
-    ]
+    "elapsed_time": float,          # Episode time in seconds
+    "last_action": [float, float, float],  # [throttle, brake, steering]
+    "throttle": float,              # Current throttle value [0, 1]
+    "brake": float,                 # Current brake value [0, 1] 
+    "steering": float,              # Current steering value [-1, 1]
+    "termination_reason": str,      # Why episode ended (if terminated)
+    "cars": [...],                  # Per-car detailed information
+    "physics": {...}                # Physics simulation statistics
 }
 ```
 
-## Tools and Utilities
+### Per-Car Information (`info["cars"][i]`)
 
-### Track Tool CLI
+Each car's info contains:
 
-**File**: `tools/track_tool.py`
+```python
+car_info = {
+    "car_index": int,               # Car identifier
+    "car_name": str,                # Car name
+    "disabled": bool,               # Whether car is disabled
+    "position": [float, float],     # World coordinates [x, y]
+    "velocity": [float, float],     # Velocity components [vx, vy]
+    "speed": float,                 # Speed magnitude (m/s)
+    "orientation": float,           # Car heading (radians)
+    "angular_velocity": float,      # Rotation rate (rad/s)
+    "lap_count": int,              # Completed laps
+    "lap_times": [float, ...],     # All lap times
+    "best_lap_time": float,        # Best lap time (or None)
+    "current_lap_time": float,     # Current lap progress time
+    "track_progress": float,       # Progress around track [0, 1]
+    "distance_traveled": float,    # Total distance traveled
+    "tire_data": {...},            # Tire temperatures, loads, wear
+    "collision_data": {...},       # Collision history and damage
+    "reward": float,               # Current step reward
+    "cumulative_reward": float     # Total episode reward
+}
+```
 
-Comprehensive track analysis and validation:
+### Physics Statistics (`info["physics"]`)
+
+Contains simulation performance metrics:
+
+```python
+physics_info = {
+    "fps": float,                   # Current simulation FPS
+    "physics_steps_per_frame": int, # Physics substeps
+    "total_physics_steps": int,     # Cumulative physics steps
+    "simulation_time": float,       # Total simulation time
+    "real_time_factor": float      # Simulation speed relative to real-time
+}
+```
+
+## Reward Structure
+
+The reward system encourages fast, safe driving with multiple components:
+
+### Positive Rewards
+
+| Component | Value | Description |
+|-----------|--------|-------------|
+| `REWARD_DISTANCE_MULTIPLIER` | 0.15 | Bonus per meter of forward progress |
+| `REWARD_LAP_COMPLETION` | 0.0 | Bonus for completing a lap (currently disabled) |
+| `REWARD_FAST_LAP_BONUS` | 0.0 | Bonus for fast lap times (currently disabled) |
+
+### Negative Rewards (Penalties)
+
+| Component | Value | Description |
+|-----------|--------|-------------|
+| `PENALTY_PER_STEP` | -0.05 | Small penalty each step (encourages speed) |
+| `PENALTY_BACKWARD_PER_METER` | -0.05 | Penalty for backward movement |
+| `PENALTY_WALL_COLLISION_PER_STEP` | -0.5 | Penalty during wall collisions |
+| `PENALTY_DISABLED` | -1.0 | Large penalty when car is disabled |
+
+### Reward Calculation Logic
+
+1. **Distance Reward**: `REWARD_DISTANCE_MULTIPLIER × meters_forward_progress`
+2. **Time Penalty**: `-PENALTY_PER_STEP` (encourages faster completion)
+3. **Collision Penalty**: `-PENALTY_WALL_COLLISION_PER_STEP` while colliding
+4. **Backward Movement**: `-PENALTY_BACKWARD_PER_METER × backward_distance`
+5. **Disability**: `-PENALTY_DISABLED` when car becomes disabled
+
+### Termination Conditions
+
+- **Reward Termination**: Episode ends if cumulative reward < `TERMINATION_MIN_REWARD = -250.0`
+- **Time Termination**: Episode ends after `TERMINATION_MAX_TIME = 60.0` seconds
+- **Time Truncation**: Hard limit at `TRUNCATION_MAX_TIME = 180.0` seconds
+
+## Game Modes
+
+The system provides multiple game modes for different racing scenarios:
+
+### 1. Time Trial Mode (`game/time_trial.py`)
+
+**Objective**: Achieve the fastest single lap time across multiple attempts.
+
+**Rules**:
+- Each car gets 3 attempts
+- Each attempt consists of 2 laps
+- Environment resets between attempts for fair conditions
+- Winner determined by fastest single lap time
+- Disabled cars ranked last
+
+**Usage**:
+```bash
+python game/time_trial.py
+```
+
+### 2. Competition Mode (`game/competition.py`)
+
+**Objective**: Multi-car racing competition with position-based scoring.
+
+**Rules**:
+- Multiple cars race simultaneously
+- Ranking based on laps completed and finishing times
+- Real-time collision and interaction between cars
+- Final positions determine winner
+
+**Usage**:
+```bash
+python game/competition.py
+```
+
+### 3. Championship Mode (`game/championship.py`)
+
+**Objective**: Multi-track championship with comprehensive points system.
+
+**Rules**:
+- **Two-stage racing per track**:
+  - **Time Trial Stage**: 3 attempts × 2 laps, points: [15, 7, 3] for top 3
+  - **Competition Stage**: Race positions, points: [0, 1, 2, 3, 5, 8, 13, 21, 24, 45]
+- **Fastest lap bonus**: 15 additional points in competition stage
+- **Multi-track campaign**: Race across all available tracks
+- **Comprehensive statistics**: Track performance, overall standings
+
+**Usage**:
+```bash
+python game/championship.py
+```
+
+## Controllers
+
+The system features a modular controller architecture with multiple AI implementations:
+
+### Base Controller Architecture
+
+All controllers inherit from `BaseController` (`game/control/base_controller.py`):
+
+```python
+class BaseController:
+    def __init__(self, name=None):
+        self.name = name
+        self.control_state = {...}  # Per-instance state
+    
+    def control(self, observation):
+        """Main control method - returns [throttle_brake, steering]"""
+        pass
+    
+    def _fallback_control(self, observation):
+        """Rule-based fallback control logic"""
+        pass
+```
+
+### Available Controllers
+
+#### 1. **Rule-Based Controller** (`BaseController`)
+- **Type**: Hand-crafted rule-based logic  
+- **Strategy**: Sensor-based speed and steering control
+- **Features**: 
+  - Speed adaptation based on forward distance sensor
+  - Steering based on left/right sensor comparison
+  - Throttle reduction during steering for stability
+
+#### 2. **PPO Controller** (`PPOController`)
+- **Type**: Proximal Policy Optimization reinforcement learning
+- **Features**:
+  - Pre-trained model loading from checkpoints
+  - Fallback to rule-based control if model unavailable
+  - Per-instance model management for multi-car scenarios
+
+#### 3. **TD3 Controller** (`TD3Controller`) 
+- **Type**: Twin Delayed Deep Deterministic Policy Gradient
+- **Features**:
+  - Deterministic policy for precise control
+  - Model checkpoint loading
+  - Robust fallback mechanism
+
+#### 4. **SAC Controller** (`SACController`)
+- **Type**: Soft Actor-Critic reinforcement learning
+- **Features**:
+  - Maximum entropy policy optimization
+  - Continuous action space specialization
+  - Temperature parameter learning
+
+#### 5. **A2C Controller** (`A2CController`)
+- **Type**: Advantage Actor-Critic
+- **Features**: 
+  - Actor-critic architecture
+  - Value function approximation
+  - Policy gradient optimization
+
+#### 6. **Genetic Controller** (`GeneticController`)
+- **Type**: Genetically evolved rule-based parameters
+- **Features**:
+  - Evolved parameter optimization
+  - Rule-based structure with optimized constants
+  - Population-based parameter search
+
+#### 7. **Regression Controller** (`RegressionController`)
+- **Type**: Supervised learning from expert demonstrations
+- **Features**:
+  - Neural network trained on expert data
+  - Behavior cloning approach
+  - Fast inference for real-time control
+
+### Controller Selection
+
+Controllers can be dynamically selected and instantiated:
+
+```python
+controllers = [
+    PPOController("game/control/models/ppo_model.zip", "PPO-V1"),
+    TD3Controller("game/control/models/td3_model.zip", "TD3-V1"),
+    GeneticController("Genetic-Optimized"),
+    BaseController("Rule-Based-Fallback")
+]
+```
+
+## Learning Methods
+
+The system supports multiple reinforcement learning algorithms with comprehensive training infrastructure:
+
+### Supported Algorithms
+
+#### 1. **Proximal Policy Optimization (PPO)** (`learn/ppo.py`)
+- **Type**: On-policy actor-critic method
+- **Strengths**: Stable training, good sample efficiency
+- **Configuration**:
+  - 8 parallel environments
+  - 25M timesteps training
+  - Continuous action space optimization
+
+#### 2. **Soft Actor-Critic (SAC)** (`learn/sac.py`)
+- **Type**: Off-policy maximum entropy method
+- **Strengths**: Sample efficient, robust exploration
+- **Configuration**:
+  - Experience replay buffer
+  - Automatic temperature tuning
+  - Twin critic networks
+
+#### 3. **Twin Delayed DDPG (TD3)** (`learn/td3.py`)
+- **Type**: Off-policy deterministic policy gradient
+- **Strengths**: Low variance, deterministic policies
+- **Configuration**:
+  - Twin critic networks
+  - Target policy smoothing
+  - Delayed policy updates
+
+#### 4. **Advantage Actor-Critic (A2C)** (`learn/a2c.py`)
+- **Type**: On-policy actor-critic method
+- **Strengths**: Simple, fast training
+- **Configuration**:
+  - Advantage estimation
+  - Policy and value function optimization
+
+#### 5. **Genetic Algorithm** (`learn/genetic_trainer.py`)
+- **Type**: Evolutionary optimization
+- **Strengths**: Parameter space exploration
+- **Configuration**:
+  - Population-based parameter evolution
+  - Rule-based controller optimization
+
+#### 6. **Regression Learning** (`learn/regression_trainer.py`)
+- **Type**: Supervised learning from demonstrations
+- **Strengths**: Fast training from expert data
+- **Configuration**:
+  - Expert trajectory collection
+  - Behavior cloning neural networks
+
+### Training Infrastructure
+
+#### Vectorized Environments
+```python
+# Multi-environment training for sample efficiency
+num_envs = 8
+env = SubprocVecEnv([make_env(i) for i in range(num_envs)])
+```
+
+#### Monitoring and Logging
+- **Tensorboard Integration**: Real-time training metrics
+- **Model Checkpointing**: Automatic best model saving  
+- **Evaluation Callbacks**: Periodic performance assessment
+- **Logging Systems**: Comprehensive training logs
+
+#### Training Configuration
+```python
+# Common training parameters
+total_timesteps = 25_000_000
+eval_freq = 12_500
+log_interval = 1
+```
+
+### Model Management
+
+Trained models are saved in structured directories:
+```
+game/control/models/
+├── ppo_model.zip
+├── td3_model.zip  
+├── sac_model.zip
+└── a2c_model.zip
+```
+
+## Tools
+
+The system includes comprehensive tools for track management and analysis:
+
+### Track Tool CLI (`tools/track_tool.py`)
+
+**Command-line interface for track operations**:
 
 ```bash
 # List available tracks
 python tools/track_tool.py list
 
-# Analyze specific track
-python tools/track_tool.py analyze tracks/nascar.track
+# Analyze a specific track
+python tools/track_tool.py analyze nascar.track
 
-# Validate track files
-python tools/track_tool.py validate tracks/*.track
+# Validate track file format
+python tools/track_tool.py validate daytona.track
 
-# Launch GUI track builder
+# Launch interactive GUI
 python tools/track_tool.py gui
 
-# Generate JSON analysis report
-python tools/track_tool.py analyze tracks/nascar.track --json report.json
+# Load specific track in GUI
+python tools/track_tool.py gui talladega.track
 ```
 
-#### Track Analysis Features
+### Track Builder GUI (`tools/track_builder.py`)
 
-- **Length Calculation**: Total track distance
-- **Segment Analysis**: Count of straights vs curves
-- **Difficulty Rating**: Technical complexity assessment
-- **Lap Time Estimation**: Predicted lap times
-- **Bounds Calculation**: Track dimensional analysis
-- **Validation**: Syntax and logical consistency checking
+**Interactive track visualization and analysis**:
 
-### Track Builder GUI
-
-**File**: `tools/track_builder.py`
-
-Visual track design interface:
-
-- Real-time track visualization
-- Interactive segment placement
+**Features**:
+- Real-time track rendering
+- Multiple view modes (overhead, centerline, boundaries, segments)
+- Track statistics display
 - Validation feedback
-- Export to `.track` format
-- Import existing tracks for editing
+- Analysis metrics
 
+**View Modes**:
+- **Overhead**: Complete track overview
+- **Centerline**: Racing line visualization
+- **Boundaries**: Track boundary display
+- **Segments**: Individual segment breakdown
+
+### Track Analyzer (`tools/track_analyzer.py`)
+
+**Comprehensive track analysis**:
+
+**Capabilities**:
+- Track length calculation
+- Segment analysis
+- Curvature metrics
+- Banking angle analysis
+- Difficulty assessment
+
+**Output Statistics**:
+```python
+TrackStatistics = {
+    "total_length": float,          # Total track length (meters)
+    "segment_count": int,           # Number of track segments
+    "straight_length": float,       # Total straight sections
+    "curve_length": float,          # Total curved sections
+    "max_banking": float,           # Maximum banking angle
+    "avg_curvature": float,         # Average curvature
+    "difficulty_score": float       # Calculated difficulty rating
+}
+```
+
+### Track Validator (`tools/track_validator.py`)
+
+**Track file format validation**:
+
+**Validation Checks**:
+- File format correctness
+- Segment continuity
+- Track closure verification
+- Banking angle limits
+- Minimum segment lengths
+
+**Validation Result**:
+```python
+ValidationResult = {
+    "is_valid": bool,               # Overall validity
+    "errors": [str, ...],           # Error messages
+    "warnings": [str, ...],         # Warning messages  
+    "suggestions": [str, ...]       # Improvement suggestions
+}
+```
+
+## Track Files
+
+Track files use a simple text-based format for defining racing circuits.
+
+### Track File Format
+
+Track files (`.track` extension) contain sequential commands defining track geometry:
+
+```
+WIDTH <width_in_meters>
+GRID                           # Starting grid area
+STARTLINE                      # Start/finish line
+STRAIGHT <length>              # Straight section
+LEFT <angle> <radius> [banking] # Left curve
+RIGHT <angle> <radius> [banking] # Right curve
+FINISHLINE                     # Finish line (optional)
+```
+
+### Example Track File (`nascar.track`)
+
+```
+WIDTH 25
+GRID
+STARTLINE
+STRAIGHT 200
+LEFT 180 300
+STRAIGHT 400  
+LEFT 180 300
+STRAIGHT 95
+```
+
+### Track Commands Reference
+
+| Command | Parameters | Description |
+|---------|------------|-------------|
+| `WIDTH` | `<meters>` | Sets default track width |
+| `GRID` | None | Creates starting grid area |
+| `STARTLINE` | None | Places start/finish line |
+| `FINISHLINE` | None | Places separate finish line |
+| `STRAIGHT` | `<length>` | Straight section in meters |
+| `LEFT` | `<angle> <radius> [banking]` | Left turn: degrees, radius(m), banking(°) |
+| `RIGHT` | `<angle> <radius> [banking]` | Right turn: degrees, radius(m), banking(°) |
+
+### Advanced Track Features
+
+#### Banking Angles
+```
+LEFT 180 300 31    # 31° banked left turn
+RIGHT 90 150 15    # 15° banked right turn
+```
+
+#### Variable Width (Future Enhancement)
+```
+WIDTH 20           # Change width mid-track
+STRAIGHT 100       # Applies new width
+```
+
+### Available Tracks
+
+| Track | Type | Description |
+|-------|------|-------------|
+| `nascar.track` | Oval | Basic NASCAR-style oval |
+| `daytona.track` | Superspeedway | High-speed banked oval |
+| `talladega.track` | Superspeedway | Large banked oval |
+| `martinsville.track` | Short Track | Tight, flat turns |
+| `michigan.track` | Intermediate | Medium-speed oval |
+| `trioval.track` | Trioval | Three-turn configuration |
+| `nascar2.track` | Modified Oval | Alternative oval design |
+| `nascar_banked.track` | Banked Oval | Heavily banked turns |
+
+## Creating New Components
+
+### Creating a New Track
+
+#### Method 1: Manual Track File Creation
+
+1. **Create track file** (`tracks/mytrack.track`):
+```
+WIDTH 20
+GRID
+STARTLINE
+STRAIGHT 300
+RIGHT 90 200 10
+STRAIGHT 500
+LEFT 180 250 15
+STRAIGHT 400
+RIGHT 90 200 10
+STRAIGHT 195
+```
+
+2. **Test track validity**:
 ```bash
-python tools/track_tool.py gui [track_file.track]
+python tools/track_tool.py validate mytrack.track
 ```
 
-### Analysis Tools
-
-**Files**: `tools/track_analyzer.py`, `tools/track_validator.py`
-
-- **TrackAnalyzer**: Computational track metrics
-- **TrackValidator**: Track file validation and error detection
-- **Performance Profiling**: Physics and rendering performance analysis
-
-## Architecture
-
-### Core Components
-
-#### Environment Hierarchy
-```
-BaseEnv (gymnasium.Env)
-  ├── Action/Observation space definitions
-  └── CarEnv (BaseEnv)
-      ├── Physics simulation (Box2D)
-      ├── Multi-car management
-      ├── Rendering system
-      └── Reward calculation
-```
-
-#### Key Modules
-
-- **`src/car_env.py`** - Main environment implementation
-- **`src/base_env.py`** - Base environment with space definitions
-- **`src/car.py`** & **`src/car_physics.py`** - Vehicle simulation
-- **`src/track_generator.py`** - Track loading and management
-- **`src/renderer.py`** - Pygame-based visualization
-- **`src/constants/`** - Configuration constants organized by category
-
-#### Physics System
-
-- **Box2D Integration**: Realistic collision and dynamics
-- **Tire Model**: Temperature, wear, and grip simulation  
-- **Aerodynamics**: Drag force calculation
-- **Collision Detection**: Wall and car-to-car collision handling
-- **Sensor System**: 16-directional distance sensors
-
-#### Multi-car Architecture
-
-- **Parallel Physics**: Separate physics worlds per car
-- **Collision Isolation**: Independent collision tracking
-- **Camera System**: Switchable car following
-- **Performance Scaling**: Optimized for up to 10 simultaneous cars
-
-### Constants System
-
-Configuration is centralized in `src/constants/` by category:
-
-- **Physics**: `CAR_MASS`, `GRAVITY_MS2`, tire parameters
-- **Rendering**: Display settings, colors, UI layout
-- **Rewards**: All reward/penalty values
-- **Environment**: Termination conditions, normalization ranges
-- **Track**: Default dimensions, validation rules
-
-## Development Commands
-
-### Testing
+3. **Analyze track**:
 ```bash
-pytest                          # Run all tests
-pytest tests/                   # Run specific test directory
+python tools/track_tool.py analyze mytrack.track
 ```
+
+#### Method 2: Interactive GUI Creation
+
+1. **Launch track builder**:
+```bash
+python tools/track_tool.py gui
+```
+
+2. **Load and modify existing track**:
+```bash
+python tools/track_tool.py gui nascar.track
+```
+
+### Creating a New Game Mode
+
+1. **Create game mode file** (`game/my_game_mode.py`):
+
+```python
+import sys
+import os
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from src.car_env import CarEnv
+from game.control.base_controller import BaseController
+
+def run_my_game_mode():
+    # Initialize environment
+    env = CarEnv(
+        render_mode="human",
+        num_cars=2,
+        discrete_action_space=False
+    )
+    
+    # Create controllers
+    controllers = [
+        BaseController("Player 1"),
+        BaseController("Player 2") 
+    ]
+    
+    # Game loop
+    observation, info = env.reset()
+    done = False
+    
+    while not done:
+        # Get actions from controllers
+        actions = []
+        for i, controller in enumerate(controllers):
+            action = controller.control(observation[i] if env.num_cars > 1 else observation)
+            actions.append(action)
+        
+        # Step environment
+        observation, reward, terminated, truncated, info = env.step(actions)
+        done = terminated or truncated
+        
+        # Custom game logic here
+        process_game_state(info)
+    
+    env.close()
+
+def process_game_state(info):
+    """Custom game state processing logic"""
+    # Implement scoring, conditions, etc.
+    pass
+
+if __name__ == "__main__":
+    run_my_game_mode()
+```
+
+2. **Add to CLAUDE.md**:
+```bash
+python game/my_game_mode.py    # My custom game mode
+```
+
+### Creating a New Controller
+
+1. **Create controller class** (`game/control/my_controller.py`):
+
+```python
+import numpy as np
+from .base_controller import BaseController
+
+class MyController(BaseController):
+    """Custom controller implementation"""
+    
+    def __init__(self, name=None, custom_param=1.0):
+        super().__init__(name or "MyController")
+        self.custom_param = custom_param
+    
+    def control(self, observation):
+        """
+        Custom control logic
+        
+        Args:
+            observation: numpy array of shape (38,) containing car state
+            
+        Returns:
+            numpy array of shape (2,) containing [throttle_brake, steering]
+        """
+        # Extract sensor data
+        sensors = observation[22:38]  # 16 distance sensors
+        speed = observation[4]        # Current speed
+        
+        # Custom control logic
+        throttle_brake = self.calculate_throttle(sensors, speed)
+        steering = self.calculate_steering(sensors)
+        
+        return np.array([throttle_brake, steering], dtype=np.float32)
+    
+    def calculate_throttle(self, sensors, speed):
+        """Custom throttle calculation"""
+        forward_distance = sensors[0]
+        target_speed = forward_distance * self.custom_param
+        
+        if speed < target_speed:
+            return 0.5  # Accelerate
+        else:
+            return -0.2  # Light braking
+    
+    def calculate_steering(self, sensors):
+        """Custom steering calculation"""  
+        left_distance = sensors[12]   # Left sensor
+        right_distance = sensors[4]   # Right sensor
+        
+        if left_distance > right_distance:
+            return -0.3  # Turn left
+        elif right_distance > left_distance:
+            return 0.3   # Turn right
+        else:
+            return 0.0   # Go straight
+```
+
+2. **Use in game modes**:
+
+```python
+from game.control.my_controller import MyController
+
+# Create controller instance
+controller = MyController("Custom-AI", custom_param=1.5)
+
+# Use in environment
+action = controller.control(observation)
+```
+
+## Installation and Usage
+
+### Requirements
+
+Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+**Key Dependencies**:
+- `gymnasium>=0.29.1` - RL environment interface
+- `stable_baselines3>=2.7.0` - RL algorithms
+- `pygame>=2.5.2` - Graphics and rendering
+- `numpy>=2.2.6` - Numerical computations  
+- `box2d-py>=2.3.8` - Physics simulation
+- `torch>=2.8.0` - Neural networks
+- `matplotlib>=3.10.5` - Plotting and visualization
 
 ### Environment Setup
+
 ```bash
-pip install -r requirements.txt    # Install dependencies
-python -m venv .venv               # Create virtual environment
-source .venv/bin/activate          # Activate (Linux/Mac)
+# Create virtual environment
+python -m venv .venv
+
+# Activate environment  
+source .venv/bin/activate  # Linux/Mac
+# .venv\Scripts\activate   # Windows
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
-### Running Applications
+### Quick Start
+
+#### Run Time Trial Mode
 ```bash
-python game/time_trial.py         # Time trial mode
-python game/competition.py        # Competition mode
-python demo/random_demo.py        # Random demonstration
-python learn/ppo_simple.py        # Train PPO model
-python tools/track_tool.py gui    # Launch track builder
+python game/time_trial.py
 ```
 
-## Performance Characteristics
-
-### Environment Performance
-- **Physics Rate**: 60 Hz fixed timestep
-- **Rendering Rate**: Variable (30-120 FPS typical)
-- **Multi-car Scaling**: Linear performance degradation
-- **Memory Usage**: ~100MB base + ~50MB per additional car
-
-### Training Performance
-- **Single Environment**: ~1000 steps/second
-- **Vectorized (8 envs)**: ~6000 steps/second  
-- **Typical Training Time**: 2-6 hours for 25M timesteps (TD3)
-
-### Observation Processing
-- **Sensor Calculation**: Ray casting with Box2D physics
-- **Normalization**: Pre-computed constants for efficiency
-- **Memory Layout**: Contiguous numpy arrays for ML frameworks
-
-## Troubleshooting
-
-### Common Issues
-
-**Environment Not Rendering**
-```python
-# Ensure pygame is installed
-pip install pygame
-
-# Check render_mode parameter
-env = CarEnv(render_mode="human")
-```
-
-**Physics Simulation Slow**
-```python
-# Disable rendering for training
-env = CarEnv(render_mode=None)
-
-# Reduce number of cars
-env = CarEnv(num_cars=1)
-```
-
-**Track Loading Errors**
+#### Run Competition Mode  
 ```bash
-# Validate track file
-python tools/track_tool.py validate tracks/your_track.track
-
-# Check file path and format
+python game/competition.py
 ```
 
-### Performance Optimization
+#### Run Championship Mode
+```bash
+python game/championship.py
+```
 
-- Use `render_mode=None` for training
-- Vectorize environments with `stable-baselines3`
-- Limit `num_cars` for complex scenarios
-- Monitor memory usage with multiple cars
-- Use pre-compiled Box2D for better physics performance
+#### Train RL Model
+```bash
+python learn/ppo.py        # Train PPO model
+python learn/sac.py        # Train SAC model
+python learn/td3.py        # Train TD3 model
+```
 
-## Contributing
+#### Analyze Tracks
+```bash
+python tools/track_tool.py list                    # List tracks
+python tools/track_tool.py analyze nascar.track    # Analyze track
+python tools/track_tool.py gui                     # Launch GUI
+```
 
-### Code Style
-- Follow PEP 8 standards
-- Use type hints where possible
-- Document complex physics calculations
-- Test multi-car scenarios
+### Testing
 
-### Adding New Features
-1. **New Track Commands**: Extend `TrackLoader` in `src/track_generator.py`
-2. **Reward Components**: Add to `src/constants/rewards.py`
-3. **Observation Elements**: Update `_get_multi_obs()` in `CarEnv`
-4. **Game Modes**: Create new scripts in `game/` directory
+```bash
+pytest                     # Run all tests
+pytest tests/              # Run specific test directory
+```
 
-### Testing Guidelines
-- Test both single and multi-car scenarios
-- Verify observation/action space consistency  
-- Test with different track configurations
-- Performance test with maximum cars (10)
+### Development
 
----
+The codebase follows a modular architecture with clear separation of concerns:
+
+- `src/` - Core environment and physics
+- `game/` - Game modes and controllers  
+- `learn/` - Training scripts and algorithms
+- `tools/` - Track management utilities
+- `tracks/` - Track definition files
+
+For detailed development guidance, see `CLAUDE.md`.
 
 ## License
 
-This project is available for educational and research purposes. See the repository for specific licensing terms.
+This project is open source. Please check the repository for license details.
 
-## Acknowledgments
+## Contributing
 
-- **Box2D Physics Engine** - Realistic collision detection and dynamics
-- **Gymnasium** - Standard RL environment interface
-- **Stable Baselines3** - Reference RL algorithm implementations  
-- **Pygame** - Graphics rendering and user interface
-- **NumPy** - Efficient numerical computations
-
----
-
-*For additional documentation, examples, and tutorials, see the individual module docstrings and the `game/` directory for practical usage examples.*
+Contributions are welcome! Please follow the established code structure and add appropriate tests for new features.
