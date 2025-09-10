@@ -102,6 +102,7 @@ if __name__ == "__main__":
         device='cuda',
         learning_rate=7e-5,
         batch_size=512,
+        n_steps=4,
         action_noise=action_noise,
         policy_kwargs=dict(net_arch=[512, 512], activation_fn=torch.nn.ReLU),
     )

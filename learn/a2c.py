@@ -126,7 +126,7 @@ if __name__ == "__main__":
         tensorboard_log=tensorboard_log,
         verbose=verbose,
         stats_window_size=stats_window_size,
-        n_steps=128,
+        policy_kwargs=dict(net_arch=[512, 512], activation_fn=torch.nn.ReLU),
         device='cpu'
     )
 
