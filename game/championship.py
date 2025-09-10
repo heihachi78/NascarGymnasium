@@ -32,13 +32,14 @@ FASTEST_LAP_BONUS = 15  # Bonus points for fastest lap in competition
 
 # Predefined championship tracks
 CHAMPIONSHIP_TRACKS = [
+    'tracks/nascar.track',
     'tracks/daytona.track',
     'tracks/talladega.track', 
     'tracks/martinsville.track',
     'tracks/michigan.track',
     'tracks/trioval.track',
-    'tracks/nascar_banked.track',
     'tracks/nascar2.track',
+    'tracks/nascar_banked.track',
 ]
 
 class ChampionshipManager:
@@ -623,16 +624,17 @@ def main():
     
     # Configure which models to compete
     model_configs = [
-        ("game/control/models/a2c_best_model3.zip", "A2C-B-3"),
-        ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
+        ("game/control/models/td3_n_1031.zip", "TD3-1031"),
+        ("game/control/models/td3_n_1047.zip", "TD3-1047"),
+        #("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
-        ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
+        #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
         ("game/control/models/sac_final.zip", "SAC-F"),
-        ("game/control/models/genetic.pkl", "GA"),
-        (None, "BC"),
-        ("game/control/models/ppo_789.zip", "PPO-789"),
-        ("game/control/models/ppo_849.zip", "PPO-849"),
+        #("game/control/models/genetic.pkl", "GA"),
+        #(None, "BC"),
+        #("game/control/models/ppo_789.zip", "PPO-789"),
+        #("game/control/models/ppo_849.zip", "PPO-849"),
     ]
     
     # Take only the first 10 models (environment supports max 10 cars)

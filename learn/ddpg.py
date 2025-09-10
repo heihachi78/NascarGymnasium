@@ -90,7 +90,7 @@ if __name__ == "__main__":
     )
 
     n_actions = train_subproc.action_space.shape[-1]
-    action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.15 * np.ones(n_actions))
 
     model = DDPG(
         "MlpPolicy",
@@ -98,7 +98,8 @@ if __name__ == "__main__":
         tensorboard_log=tensorboard_log,
         verbose=verbose,
         device='cuda',
-        action_noise=action_noise
+        action_noise=action_noise,
+        learning_rate=1e-5,
     )
 
     model.learn(

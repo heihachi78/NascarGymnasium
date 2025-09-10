@@ -10,6 +10,7 @@ import os
 import json
 import time
 import pickle
+import random
 from typing import List, Dict, Optional
 import matplotlib.pyplot as plt
 
@@ -76,121 +77,9 @@ class GeneticTrainer:
             self.population.append(genome)
         print(f"🧬 Initialized population of {self.population_size} individuals")
         
-    def evaluate_individual(self, genome: List[float], individual_id: int = 0) -> Dict:
-        """
-        Evaluate fitness of a single individual.
-        
-        Args:
-            genome: Individual's genome to evaluate
-            individual_id: ID for tracking/debugging
-            
-        Returns:
-            Dictionary containing fitness metrics
-        """
-        # Create environment with specific or random track
-        env = CarEnv(
-            render_mode=None,
-            track_file=self.track_file,
-            reset_on_lap=False,
-            discrete_action_space=False
-        )
-        
-        # Create controller with this genome
-        controller = GeneticController(
-            name=f"Individual_{individual_id}",
-            genome=genome
-        )
-        
-        # Run evaluation episode
-        observation, info = env.reset()
-        total_reward = 0.0
-        steps = 0
-        max_steps = 9999  # Prevent infinite episodes
-        
-        # Fitness metrics
-        distance_traveled = 0.0
-        max_speed = 0.0
-        time_on_track = 0.0
-        lap_completed = False
-        lap_time = None
-        
-        try:
-            while steps < max_steps:
-                # Get action from controller
-                action = controller.control(observation)
-                
-                # Take step in environment
-                observation, reward, terminated, truncated, info = env.step(action)
-                
-                # Accumulate metrics
-                total_reward += reward
-                steps += 1
-                
-                # Extract performance metrics from info
-                if isinstance(info, dict):
-                    if 'cars' in info and len(info['cars']) > 0:
-                        car_info = info['cars'][0]  # Single car
-                        
-                        # Track distance and speed
-                        if 'car_speed_ms' in car_info:
-                            speed = car_info['car_speed_ms']
-                            max_speed = max(max_speed, speed)
-                            distance_traveled += speed * (1/60)  # Assuming 60Hz
-                        
-                        # Track time on track
-                        if car_info.get('on_track', False):
-                            time_on_track += 1/60
-                        
-                        # Check for lap completion
-                        if 'lap_timing' in car_info:
-                            lap_info = car_info['lap_timing']
-                            if lap_info.get('lap_count', 0) > 0 and not lap_completed:
-                                lap_completed = True
-                                lap_time = lap_info.get('last_lap_time')
-                
-                # Check termination
-                if terminated or truncated:
-                    break
-                    
-        except Exception as e:
-            print(f"⚠️ Error evaluating individual {individual_id}: {e}")
-            # Return poor fitness for failed individuals
-            env.close()
-            return {
-                'total_reward': -1000,
-                'distance_traveled': 0,
-                'max_speed': 0,
-                'time_on_track': 0,
-                'lap_completed': False,
-                'lap_time': None,
-                'steps': steps,
-                'fitness': -1000
-            }
-        
-        print(f"🏁 Evaluating generation {self.generation} with ({total_reward} reward)...")
-        
-        # Calculate composite fitness
-        fitness = self._calculate_fitness(
-            total_reward, distance_traveled, max_speed, 
-            time_on_track, lap_completed, lap_time, steps
-        )
-        
-        env.close()
-        
-        return {
-            'total_reward': total_reward,
-            'distance_traveled': distance_traveled,
-            'max_speed': max_speed,
-            'time_on_track': time_on_track,
-            'lap_completed': lap_completed,
-            'lap_time': lap_time,
-            'steps': steps,
-            'fitness': fitness
-        }
-    
     def _calculate_fitness(self, reward: float, distance: float, max_speed: float,
                           time_on_track: float, lap_completed: bool, lap_time: Optional[float],
-                          steps: int) -> float:
+                          steps: int, track: str) -> float:
         """
         Calculate composite fitness score from performance metrics.
         
@@ -199,7 +88,23 @@ class GeneticTrainer:
         - Secondary: Distance, speed, track adherence
         - Penalties: Poor performance, crashes
         """
-        fitness = reward / steps
+        # Track-specific reward multipliers
+        track_multipliers = {
+            'daytona': 0.79,
+            'talladega': 0.74,
+            'martinsville': 2.07,
+            'michigan': 0.77,
+            'trioval': 0.98,
+            'nascar_banked': 0.74,
+            'nascar2': 1.0,
+            'nascar': 0.8
+        }
+        
+        # Extract track name from file path
+        track_name = track.split('/')[-1].replace('.track', '') if track else 'unknown'
+        multiplier = track_multipliers.get(track_name, 1.0)
+        
+        fitness = reward * multiplier
         #
         ## Primary objective: Lap completion
         #if lap_completed and lap_time is not None:
@@ -225,14 +130,14 @@ class GeneticTrainer:
     
     def _evaluate_batch(self, genomes: List[List[float]], start_idx: int = 0) -> List[Dict]:
         """
-        Evaluate a batch of genomes simultaneously using multi-car environment.
+        Evaluate a batch of genomes on two different tracks and sum the results.
         
         Args:
             genomes: List of genomes to evaluate
             start_idx: Starting index for individual IDs
             
         Returns:
-            List of evaluation results for each genome
+            List of evaluation results for each genome (combined from two tracks)
         """
         num_individuals = len(genomes)
         
@@ -245,7 +150,56 @@ class GeneticTrainer:
             )
             controllers.append(controller)
         
-        # Run evaluation episode with all individuals simultaneously
+        # Available tracks
+        available_tracks = [
+            'tracks/daytona.track', 'tracks/martinsville.track', 'tracks/michigan.track',
+            'tracks/trioval.track', 'tracks/nascar2.track', 'tracks/nascar_banked.track',
+            'tracks/nascar.track', 'tracks/talladega.track'
+        ]
+        
+        # Select two different random tracks
+        selected_tracks = random.sample(available_tracks, 2)
+        
+        # Evaluate on both tracks and combine results
+        combined_results = []
+        
+        for track in selected_tracks:
+            track_results = self._evaluate_single_track(controllers, track, start_idx, num_individuals)
+            
+            if not combined_results:
+                # First track - initialize combined results
+                combined_results = track_results
+            else:
+                # Second track - sum the results
+                for i in range(len(combined_results)):
+                    combined_results[i]['total_reward'] += track_results[i]['total_reward']
+                    combined_results[i]['distance_traveled'] += track_results[i]['distance_traveled']
+                    combined_results[i]['max_speed'] = max(combined_results[i]['max_speed'], track_results[i]['max_speed'])
+                    combined_results[i]['time_on_track'] += track_results[i]['time_on_track']
+                    combined_results[i]['lap_completed'] = combined_results[i]['lap_completed'] or track_results[i]['lap_completed']
+                    if combined_results[i]['lap_time'] is None:
+                        combined_results[i]['lap_time'] = track_results[i]['lap_time']
+                    elif track_results[i]['lap_time'] is not None:
+                        combined_results[i]['lap_time'] = (combined_results[i]['lap_time'] + track_results[i]['lap_time']) / 2.0
+                    combined_results[i]['steps'] += track_results[i]['steps']
+                    combined_results[i]['fitness'] += track_results[i]['fitness']
+                    combined_results[i]['track'] = f"{combined_results[i]['track']},{track_results[i]['track']}"
+        
+        return combined_results
+    
+    def _evaluate_single_track(self, controllers: List, track: str, start_idx: int, num_individuals: int) -> List[Dict]:
+        """
+        Evaluate controllers on a single track.
+        
+        Args:
+            controllers: List of controllers to evaluate
+            track: Track file path
+            start_idx: Starting index for individual IDs
+            num_individuals: Number of individuals
+            
+        Returns:
+            List of evaluation results for the track
+        """
         try:
             # Initialize metrics for each individual
             individual_metrics = []
@@ -257,81 +211,78 @@ class GeneticTrainer:
                     'time_on_track': 0.0,
                     'lap_completed': False,
                     'lap_time': None,
-                    'steps': 0
+                    'steps': 0,
+                    'track': track,
                 })
-            for i in range(num_individuals):
-                metrics = individual_metrics[i]
+            
+            # Create multi-car environment with selected track
+            env = CarEnv(
+                render_mode=None,
+                track_file=track,
+                reset_on_lap=False,
+                discrete_action_space=False,
+                num_cars=num_individuals,
+                car_names=[f"Individual_{start_idx + i}" for i in range(num_individuals)]
+            )
 
-            for trck in ['tracks/daytona.track', 'tracks/martinsville.track', 'tracks/michigan.track']:
-                # Create multi-car environment
-                env = CarEnv(
-                    render_mode=None,
-                    track_file=trck,
-                    reset_on_lap=False,
-                    discrete_action_space=False,
-                    num_cars=num_individuals,
-                    car_names=[f"Individual_{start_idx + i}" for i in range(num_individuals)]
-                )
-
-                observations, info = env.reset()
-                max_steps = 9999  # Prevent infinite episodes
-                steps = 0
+            observations, info = env.reset()
+            max_steps = 9999  # Prevent infinite episodes
+            steps = 0
                 
-                while steps < max_steps:
-                    # Get actions from all controllers
-                    actions = []
-                    for i, controller in enumerate(controllers):
-                        if i < len(observations):
-                            action = controller.control(observations[i])
-                            actions.append(action)
-                        else:
-                            # Fallback if observation missing
-                            actions.append([0.0, 0.0])
-                    
-                    # Take step in environment
-                    observations, rewards, terminated, truncated, info = env.step(actions)
-                    steps += 1
-                    
-                    # Update metrics for each individual
-                    for i in range(num_individuals):
-                        metrics = individual_metrics[i]
-                        
-                        # Accumulate reward
-                        if i < len(rewards):
-                            metrics['total_reward'] += rewards[i]
-                        
-                        # Extract car-specific metrics from info
-                        if isinstance(info, dict) and 'cars' in info and i < len(info['cars']):
-                            car_info = info['cars'][i]
-                            
-                            # Track speed and distance
-                            if 'car_speed_ms' in car_info:
-                                speed = car_info['car_speed_ms']
-                                metrics['max_speed'] = max(metrics['max_speed'], speed)
-                                metrics['distance_traveled'] += speed * (1/60)  # Assuming 60Hz
-                            
-                            # Track time on track
-                            if car_info.get('on_track', False):
-                                metrics['time_on_track'] += 1/60
-                            
-                            # Check for lap completion
-                            if 'lap_timing' in car_info:
-                                lap_info = car_info['lap_timing']
-                                if lap_info.get('lap_count', 0) > 0 and not metrics['lap_completed']:
-                                    metrics['lap_completed'] = True or metrics['lap_completed']
-                                    if metrics['lap_time'] is None:
-                                        metrics['lap_time'] = metrics['lap_time']
-                                    else:
-                                        metrics['lap_time'] = (metrics['lap_time'] + lap_info.get('last_lap_time')) / 2.0
-                        
-                        metrics['steps'] += 1
-                    
-                    # Check termination
-                    if terminated or truncated:
-                        individual_metrics[i] = metrics
-                        break
+            while steps < max_steps:
+                # Get actions from all controllers
+                actions = []
+                for i, controller in enumerate(controllers):
+                    if i < len(observations):
+                        action = controller.control(observations[i])
+                        actions.append(action)
+                    else:
+                        # Fallback if observation missing
+                        actions.append([0.0, 0.0])
                 
-                env.close()
+                # Take step in environment
+                observations, rewards, terminated, truncated, info = env.step(actions)
+                steps += 1
+                
+                # Update metrics for each individual
+                for i in range(num_individuals):
+                    metrics = individual_metrics[i]
+                    
+                    # Accumulate reward
+                    if i < len(rewards):
+                        metrics['total_reward'] += rewards[i]
+                    
+                    # Extract car-specific metrics from info
+                    if isinstance(info, dict) and 'cars' in info and i < len(info['cars']):
+                        car_info = info['cars'][i]
+                        
+                        # Track speed and distance
+                        if 'car_speed_ms' in car_info:
+                            speed = car_info['car_speed_ms']
+                            metrics['max_speed'] = max(metrics['max_speed'], speed)
+                            metrics['distance_traveled'] += speed * (1/60)  # Assuming 60Hz
+                        
+                        # Track time on track
+                        if car_info.get('on_track', False):
+                            metrics['time_on_track'] += 1/60
+                        
+                        # Check for lap completion
+                        if 'lap_timing' in car_info:
+                            lap_info = car_info['lap_timing']
+                            if lap_info.get('lap_count', 0) > 0 and not metrics['lap_completed']:
+                                metrics['lap_completed'] = True or metrics['lap_completed']
+                                if metrics['lap_time'] is None:
+                                    metrics['lap_time'] = metrics['lap_time']
+                                else:
+                                    metrics['lap_time'] = (metrics['lap_time'] + lap_info.get('last_lap_time')) / 2.0
+                    
+                    metrics['steps'] += 1
+                
+                # Check termination
+                if terminated or truncated:
+                    break
+            
+            env.close()
             
             # Calculate fitness for each individual
             results = []
@@ -343,7 +294,8 @@ class GeneticTrainer:
                     metrics['time_on_track'],
                     metrics['lap_completed'],
                     metrics['lap_time'],
-                    metrics['steps']
+                    metrics['steps'],
+                    metrics['track']
                 )
                 
                 result = {
@@ -355,8 +307,11 @@ class GeneticTrainer:
             return results
             
         except Exception as e:
-            print(f"⚠️ Error in batch evaluation: {e}")
-            env.close()
+            print(f"⚠️ Error in single track evaluation: {e}")
+            try:
+                env.close()
+            except:
+                pass
             
             # Return poor fitness for all individuals on error
             return [{
@@ -366,9 +321,10 @@ class GeneticTrainer:
                 'time_on_track': 0,
                 'lap_completed': False,
                 'lap_time': None,
-                'steps': max_steps,
+                'steps': 9999,
+                'track': track,
                 'fitness': -1000
-            } for _ in genomes]
+            } for _ in range(num_individuals)]
     
     def evaluate_population(self) -> List[Dict]:
         """Evaluate entire population using multi-car environments for efficiency."""

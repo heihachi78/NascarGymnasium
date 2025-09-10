@@ -1,0 +1,8 @@
+daytona 1258.8 0.79
+talladega 1344.4 0.74
+martinsville 483.1 2.07
+michigan 1299.2 0.77
+trioval 1019.9 0.98
+nascar_banked 1349.8 0.74
+nascar2 1008.1 1
+nascar 1243.0 0.8
