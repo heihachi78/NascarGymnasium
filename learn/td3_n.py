@@ -91,7 +91,7 @@ if __name__ == "__main__":
     )
 
     n_actions = train_subproc.action_space.shape[-1]
-    action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.35 * np.ones(n_actions))
+    action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.75 * np.ones(n_actions))
 
     model = TD3(
         "MlpPolicy",
@@ -100,11 +100,7 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device='cuda',
-        learning_rate=7e-5,
-        batch_size=512,
-        n_steps=4,
         action_noise=action_noise,
-        policy_kwargs=dict(net_arch=[512, 512], activation_fn=torch.nn.ReLU),
     )
 
     model.learn(
