@@ -17,7 +17,7 @@ num_envs = 8
 base_path = "learn/"
 verbose = 1
 total_timesteps = 50_000_000
-eval_freq = 12_500
+eval_freq = 7_500
 log_interval = 1
 stats_window_size = 25
 model_name = "td3_n"
@@ -91,7 +91,7 @@ if __name__ == "__main__":
     )
 
     n_actions = train_subproc.action_space.shape[-1]
-    action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.5 * np.ones(n_actions))
+    action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.35 * np.ones(n_actions))
 
     model = TD3(
         "MlpPolicy",
@@ -100,7 +100,10 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device='cuda',
+        learning_rate=7e-5,
+        batch_size=512,
         action_noise=action_noise,
+        policy_kwargs=dict(net_arch=[512, 512], activation_fn=torch.nn.ReLU),
     )
 
     model.learn(
