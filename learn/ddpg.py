@@ -3,11 +3,11 @@ import sys
 import os
 from datetime import datetime
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3 import A2C
+from stable_baselines3 import DDPG
 from stable_baselines3.common.callbacks import EvalCallback
-from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv, VecNormalize
+from stable_baselines3.common.vec_env import SubprocVecEnv, DummyVecEnv
+from stable_baselines3.common.noise import NormalActionNoise, OrnsteinUhlenbeckActionNoise
 import logging
-import torch
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from src.car_env import CarEnv
@@ -15,11 +15,11 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 100_000_000
-eval_freq = 50_000
-log_interval = 100
+total_timesteps = 50_000_000
+eval_freq = 12_500
+log_interval = 1
 stats_window_size = 25
-model_name = "a2c"
+model_name = "ddpg"
 
 log_dir = f"./{base_path}logs/{model_name}"
 checkpoint_dir = f"./{base_path}checkpoints/{model_name}"
@@ -32,19 +32,12 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 class BestModelCallback(EvalCallback):
-    def __init__(self, train_env=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.custom_best_mean_reward = -np.inf
         self.best_model_counter = 0
-        self.train_env = train_env
         
     def _on_step(self) -> bool:
-        # Sync normalization statistics before evaluation if we have VecNormalize
-        if (self.eval_freq > 0 and self.n_calls % self.eval_freq == 0 and 
-            self.train_env is not None and hasattr(self.train_env, 'obs_rms')):
-            self.eval_env.obs_rms = self.train_env.obs_rms
-            self.eval_env.ret_rms = self.train_env.ret_rms
-        
         continue_training = super()._on_step()
         
         # Check if evaluation just happened (when n_calls is divisible by eval_freq)
@@ -62,13 +55,8 @@ class BestModelCallback(EvalCallback):
                 self.best_model_counter += 1
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 model_path = f"{checkpoint_dir}/{model_name}_best_{self.best_model_counter:03d}_{timestamp}_{mean_reward:.4f}.zip"
-                vecnorm_path = f"{checkpoint_dir}/{model_name}_best_{self.best_model_counter:03d}_{timestamp}_{mean_reward:.4f}_vecnormalize.pkl"
                 logger.info(f"Saving model to {model_path}")
                 self.model.save(model_path)
-                # Also save VecNormalize statistics with best models
-                if self.train_env is not None and hasattr(self.train_env, 'save'):
-                    self.train_env.save(vecnorm_path)
-                    logger.info(f"VecNormalize statistics saved to {vecnorm_path}")
                 logger.info(f"Model saved successfully!")
             else:
                 logger.info(f"No improvement: {mean_reward:.4f} <= {self.custom_best_mean_reward:.4f}")
@@ -80,7 +68,7 @@ def make_env(rank, track_file=None):
         env = CarEnv(
             render_mode=None,
             track_file=track_file,
-            discrete_action_space=True,
+            discrete_action_space=False,
             reset_on_lap=False,
         )
         return Monitor(env, filename=os.path.join(log_dir, f"{model_name}_{rank}"))
@@ -89,45 +77,28 @@ def make_env(rank, track_file=None):
 if __name__ == "__main__":
     train_subproc = SubprocVecEnv([make_env(i, None) for i in range(num_envs)])
     eval_dummy = DummyVecEnv([make_env("eval", None)])
-    
-    # Apply VecNormalize for observation and reward normalization
-    train_subproc = VecNormalize(
-        train_subproc, 
-        norm_obs=True,
-        norm_reward=True,
-        clip_obs=1.0,
-        gamma=0.99
-    )
-    
-    # For evaluation, we need VecNormalize but with training=False
-    eval_dummy = VecNormalize(
-        eval_dummy,
-        norm_obs=True,
-        norm_reward=False,  # Don't normalize rewards during evaluation
-        clip_obs=1.0,
-        training=False  # Don't update normalization statistics during evaluation
-    )
 
     eval_callback = BestModelCallback(
-        train_env=train_subproc,
         eval_env=eval_dummy,
         best_model_save_path=checkpoint_dir,
         log_path=log_dir,
         eval_freq=eval_freq,
         deterministic=True,
         render=False,
-        n_eval_episodes=20,
+        n_eval_episodes=10,
         verbose=verbose,
     )
 
-    model = A2C(
+    n_actions = train_subproc.action_space.shape[-1]
+    action_noise = OrnsteinUhlenbeckActionNoise(mean=np.zeros(n_actions), sigma=0.2 * np.ones(n_actions))
+
+    model = DDPG(
         "MlpPolicy",
         train_subproc,
         tensorboard_log=tensorboard_log,
         verbose=verbose,
-        stats_window_size=stats_window_size,
-        n_steps=128,
-        device='cpu'
+        device='cuda',
+        action_noise=action_noise
     )
 
     model.learn(
@@ -137,9 +108,7 @@ if __name__ == "__main__":
         callback=[eval_callback],
     )
 
-    # Save both model and normalization statistics
     model.save(f"{checkpoint_dir}/{model_name}_final")
-    train_subproc.save(f"{checkpoint_dir}/{model_name}_vecnormalize_final.pkl")
     
     train_subproc.close()
     eval_dummy.close()
