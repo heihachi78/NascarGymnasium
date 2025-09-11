@@ -18,7 +18,6 @@ from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
 from game.control.base_controller import BaseController
 from game.control.genetic_controller import GeneticController
-from game.control.regression_controller import RegressionController
 
 
 def calculate_finishing_order(num_cars, car_names, lap_counts, best_lap_time, car_rewards, disabled_cars, finishing_times):
@@ -115,11 +114,12 @@ def main():
         ("game/control/models/td3_n_1031.zip", "TD3-1031"),
         ("game/control/models/td3_n_1047.zip", "TD3-1047"),
         ("game/control/models/td3_n_1145.zip", "TD3-1145"),
-        ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
+        ("game/control/models/td3_n_1152.zip", "TD3-1152"),
+        #("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
         #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        #("game/control/models/sac_final.zip", "SAC-F"),
+        ("game/control/models/sac_final.zip", "SAC-F"),
         #("game/control/models/genetic.pkl", "GA"),
         #(None, "BC"),
         #("game/control/models/ppo_789.zip", "PPO-789"),
@@ -225,10 +225,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/michigan.track',  # No fixed track (automatic random selection)
+        track_file='tracks/nascar2.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode=None, #'human',
+        render_mode='human',
         discrete_action_space=False,
         car_names=car_names
     )

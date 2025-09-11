@@ -23,8 +23,8 @@ def main():
     
     # Training configuration - optimized for multi-car evaluation
     trainer = GeneticTrainer(
-        population_size=10,      # Larger population since we can evaluate faster
-        generations=50,          # More generations for better evolution  
+        population_size=100,      # Larger population since we can evaluate faster
+        generations=500,          # More generations for better evolution  
         mutation_rate=0.15,
         mutation_strength=0.2,
         crossover_rate=0.7,

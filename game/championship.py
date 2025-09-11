@@ -21,7 +21,6 @@ from game.control.ppo_control_class import PPOController
 from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
 from game.control.genetic_controller import GeneticController
-from game.control.regression_controller import RegressionController
 
 # Championship configuration constants
 LAPS_PER_ATTEMPT = 2  # Time trial laps per attempt
@@ -633,7 +632,7 @@ def main():
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
         #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
         ("game/control/models/sac_final.zip", "SAC-F"),
-        ("game/control/models/genetic.pkl", "GA"),
+        #("game/control/models/genetic.pkl", "GA"),
         #(None, "BC"),
         #("game/control/models/ppo_789.zip", "PPO-789"),
         #("game/control/models/ppo_849.zip", "PPO-849"),
