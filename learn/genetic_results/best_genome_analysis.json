@@ -1,0 +1,98 @@
+{
+  "speed_lower_multiplier": {
+    "value": 0.8159609211386195,
+    "bounds": [
+      0.7,
+      0.99
+    ],
+    "normalized": 0.39986524530558465
+  },
+  "speed_upper_multiplier": {
+    "value": 1.0474775157794474,
+    "bounds": [
+      1.01,
+      1.3
+    ],
+    "normalized": 0.12923281303257708
+  },
+  "throttle_increment": {
+    "value": 0.0601605974281091,
+    "bounds": [
+      0.01,
+      0.3
+    ],
+    "normalized": 0.17296757733830725
+  },
+  "brake_increment": {
+    "value": 0.29448040098677886,
+    "bounds": [
+      0.01,
+      0.3
+    ],
+    "normalized": 0.9809668999544099
+  },
+  "steering_sensitivity": {
+    "value": 2.9072884032362216,
+    "bounds": [
+      0.1,
+      3.0
+    ],
+    "normalized": 0.9680304838745591
+  },
+  "throttle_reduction": {
+    "value": 0.5118819915261568,
+    "bounds": [
+      0.1,
+      0.9
+    ],
+    "normalized": 0.5148524894076959
+  },
+  "steering_decay": {
+    "value": 0.7783415350176338,
+    "bounds": [
+      0.7,
+      0.99
+    ],
+    "normalized": 0.27014322419873743
+  },
+  "max_steering_threshold": {
+    "value": 0.5,
+    "bounds": [
+      0.1,
+      0.5
+    ],
+    "normalized": 1.0
+  },
+  "left_sensor_weight": {
+    "value": 1.714866968381381,
+    "bounds": [
+      0.5,
+      2.0
+    ],
+    "normalized": 0.8099113122542541
+  },
+  "right_sensor_weight": {
+    "value": 1.5178567521340653,
+    "bounds": [
+      0.5,
+      2.0
+    ],
+    "normalized": 0.6785711680893769
+  },
+  "collision_threshold": {
+    "value": 0.9899156910881702,
+    "bounds": [
+      0.5,
+      1.0
+    ],
+    "normalized": 0.9798313821763405
+  },
+  "emergency_brake_threshold": {
+    "value": 0.20584527616414963,
+    "bounds": [
+      0.05,
+      0.5
+    ],
+    "normalized": 0.3463228359203325
+  }
+}

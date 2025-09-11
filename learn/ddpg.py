@@ -99,7 +99,7 @@ if __name__ == "__main__":
         verbose=verbose,
         device='cuda',
         action_noise=action_noise,
-        learning_rate=1e-5,
+        learning_rate=1e-6,
     )
 
     model.learn(

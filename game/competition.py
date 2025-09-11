@@ -114,15 +114,16 @@ def main():
     model_configs = [
         ("game/control/models/td3_n_1031.zip", "TD3-1031"),
         ("game/control/models/td3_n_1047.zip", "TD3-1047"),
+        ("game/control/models/td3_n_1145.zip", "TD3-1145"),
         ("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
-        ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        ("game/control/models/sac_final.zip", "SAC-F"),
+        #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
+        #("game/control/models/sac_final.zip", "SAC-F"),
         #("game/control/models/genetic.pkl", "GA"),
-        (None, "BC"),
-        ("game/control/models/ppo_789.zip", "PPO-789"),
-        ("game/control/models/ppo_849.zip", "PPO-849"),
+        #(None, "BC"),
+        #("game/control/models/ppo_789.zip", "PPO-789"),
+        #("game/control/models/ppo_849.zip", "PPO-849"),
     ]
 
     # Take only the first 10 models (environment supports max 10 cars)
@@ -224,10 +225,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
+        track_file='tracks/michigan.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )

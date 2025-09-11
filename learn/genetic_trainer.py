@@ -7,12 +7,18 @@ for rule-based car controllers using fitness evaluation on racing tracks.
 
 import numpy as np
 import os
+import sys
 import json
 import time
 import pickle
 import random
 from typing import List, Dict, Optional
 import matplotlib.pyplot as plt
+
+# Add project root to Python path
+project_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
 
 from game.control.genetic_controller import GeneticController
 from src.car_env import CarEnv
