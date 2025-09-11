@@ -627,7 +627,7 @@ def main():
         ("game/control/models/td3_n_1031.zip", "TD3-1031"),
         ("game/control/models/td3_n_1047.zip", "TD3-1047"),
         ("game/control/models/td3_n_1145.zip", "TD3-1145"),
-        ("game/control/models/td3_n_1145.zip", "TD3-1152"),
+        ("game/control/models/td3_n_1152.zip", "TD3-1152"),
         #("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
