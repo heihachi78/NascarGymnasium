@@ -85,9 +85,19 @@ def load_genetic_controller(pkl_path, name):
     """Load a trained genetic controller from pickle file."""
     try:
         with open(pkl_path, 'rb') as f:
-            controller = pickle.load(f)
-        # Update name for competition display
-        controller.name = name
+            data = pickle.load(f)
+        
+        # Handle different pickle file formats
+        if isinstance(data, GeneticController):
+            # Complete controller object
+            controller = data
+            controller.name = name
+        elif isinstance(data, list):
+            # Just the genome parameters - create controller with these parameters
+            controller = GeneticController(name=name, genome=data)
+        else:
+            raise ValueError(f"Unsupported pickle format: {type(data)}")
+            
         return controller, True
     except Exception as e:
         print(f"⚠️ Failed to load genetic controller {pkl_path}: {e}")
@@ -111,17 +121,17 @@ def main():
     # Configure which models to compete
     # You can modify this list to include any models you want to test
     model_configs = [
-        ("game/control/models/td3_n_1031.zip", "TD3-1031"),
-        ("game/control/models/td3_n_1047.zip", "TD3-1047"),
-        ("game/control/models/td3_n_1145.zip", "TD3-1145"),
-        ("game/control/models/td3_n_1152.zip", "TD3-1152"),
+        #("game/control/models/td3_n_1031.zip", "TD3-1031"),
+        #("game/control/models/td3_n_1047.zip", "TD3-1047"),
+        #("game/control/models/td3_n_1145.zip", "TD3-1145"),
+        #("game/control/models/td3_n_1152.zip", "TD3-1152"),
         #("game/control/models/td3_bm1.zip", "TD3-BM-1"),
-        ("game/control/models/td3_bm2.zip", "TD3-BM-2"),
-        ("game/control/models/td3_bm3.zip", "TD3-BM-3"),
+        #("game/control/models/td3_bm2.zip", "TD3-BM-2"),
+        #("game/control/models/td3_bm3.zip", "TD3-BM-3"),
         #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        ("game/control/models/sac_final.zip", "SAC-F"),
-        #("game/control/models/genetic.pkl", "GA"),
-        #(None, "BC"),
+        #("game/control/models/sac_final.zip", "SAC-F"),
+        ("game/control/models/genetic2.pkl", "GA-2"),
+        (None, "BC"),
         #("game/control/models/ppo_789.zip", "PPO-789"),
         #("game/control/models/ppo_849.zip", "PPO-849"),
     ]
@@ -191,27 +201,6 @@ def main():
                 print(f"   📊 Genome parameters: {genome_length}")
             else:
                 print(f"   ⚠ Using fallback genetic control")
-        elif "regression_models" in model_path.lower() and model_path.endswith(".pkl"):
-            print(f"   → Loading Regression model: {model_path}")
-            try:
-                # Extract model type from filename using split instead of os.path
-                model_filename = model_path.split('/')[-1]  # Get just the filename
-                model_type = model_filename.replace("_model.pkl", "")
-                controller = RegressionController(name=name, model_type=model_type)
-                success = controller.load_model(model_path)
-                controllers.append(controller)
-                if success:
-                    print(f"   ✓ Regression model loaded successfully")
-                    info = controller.get_info()
-                    print(f"   📊 Model type: {info.get('model_type', 'unknown')}")
-                else:
-                    print(f"   ⚠ Using fallback regression control")
-            except Exception as e:
-                print(f"   ❌ Failed to load regression model: {e}")
-                import traceback
-                traceback.print_exc()
-                # Fallback to BaseController
-                controllers.append(BaseController(name=f"Fallback_{name}"))
         else:
             controller = BaseController(model_path, name)
             controllers.append(controller)
@@ -225,7 +214,7 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/nascar2.track',  # No fixed track (automatic random selection)
+        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
         render_mode='human',

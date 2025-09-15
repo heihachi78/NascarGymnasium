@@ -73,28 +73,31 @@ class GeneticController(BaseController):
         """
         # Extract sensor data (16 sensors from index 22-37)
         sensors = observation[22:38]
-        forward = sensors[0]           # Forward sensor (0°)
-        current_speed = observation[4] # Speed from observation
-        
-        # Emergency braking for imminent collision
-        if forward < self.emergency_brake_threshold:
-            self.control_state['throttle_brake'] = -1.0  # Full brake
-        else:
-            # Speed control with evolved parameters
-            if self.control_state['last_forward'] >= forward:
-                self.control_state['speed_limit'] = forward * self.collision_threshold
-            if self.control_state['last_forward'] < forward:
-                self.control_state['speed_limit'] = 1.0
-            
-            # Throttle control with evolved increments
-            if current_speed < self.control_state['speed_limit'] * self.speed_lower_multiplier:
-                self.control_state['throttle_brake'] += self.throttle_increment
-            if current_speed > self.control_state['speed_limit'] * self.speed_upper_multiplier:
-                self.control_state['throttle_brake'] -= self.brake_increment
+        right_sensors = sensors[15]
+        left_sensors = sensors[1]
+        forward = sensors[0]
+        current_speed = observation[4]
 
-        right_sensors = sensors[15] * self.right_sensor_weight
-        left_sensors = sensors[1] * self.left_sensor_weight
+        self.control_state['throttle_brake'] = forward * self.throttle_break
+        self.control_state['steering'] = ((right_sensors * self.right_sensor_weight) / (left_sensors * self.left_sensor_weight)) * self.steering_sensitivity
         
+
+
+
+        # Speed control with evolved parameters
+        if self.control_state['last_forward'] >= forward:
+            self.control_state['speed_limit'] = forward * self.collision_threshold
+        if self.control_state['last_forward'] < forward:
+            self.control_state['speed_limit'] = 1.0
+
+        # Throttle control with evolved increments
+        if current_speed < self.control_state['speed_limit'] * self.speed_lower_multiplier:
+            self.control_state['throttle_brake'] += self.throttle_increment
+        if current_speed > self.control_state['speed_limit'] * self.speed_upper_multiplier:
+            self.control_state['throttle_brake'] -= self.brake_increment
+
+        
+
         if right_sensors > left_sensors:
             self.control_state['steering'] = (1 - (left_sensors/right_sensors)) * self.steering_sensitivity
         elif left_sensors > right_sensors:
@@ -109,7 +112,7 @@ class GeneticController(BaseController):
         self.control_state['throttle_brake'] = max(min(self.control_state['throttle_brake'], 1), -1)
         self.control_state['steering'] = max(min(self.control_state['steering'], 1), -1)
         self.control_state['last_forward'] = forward
-        
+
         return np.array([
             self.control_state['throttle_brake'],
             self.control_state['steering']
