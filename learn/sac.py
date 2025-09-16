@@ -15,7 +15,7 @@ from src.car_env import CarEnv
 num_envs = 8
 base_path = "learn/"
 verbose = 1
-total_timesteps = 25_000_000
+total_timesteps = 50_000_000
 eval_freq = 12_500
 log_interval = 1
 stats_window_size = 25
@@ -96,6 +96,8 @@ if __name__ == "__main__":
         stats_window_size=stats_window_size,
         verbose=verbose,
         device='cuda',
+        batch_size=512,
+        gradient_steps=2,
     )
 
     model.learn(

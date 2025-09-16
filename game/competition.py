@@ -128,10 +128,11 @@ def main():
         #("game/control/models/td3_bm1.zip", "TD3-BM-1"),
         #("game/control/models/td3_bm2.zip", "TD3-BM-2"),
         #("game/control/models/td3_bm3.zip", "TD3-BM-3"),
-        #("game/control/models/sac_bm3.zip", "SAC-BM-3"),
-        #("game/control/models/sac_final.zip", "SAC-F"),
-        ("game/control/models/genetic2.pkl", "GA-2"),
-        (None, "BC"),
+        ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
+        ("game/control/models/sac_final.zip", "SAC-F"),
+        ("game/control/models/sac_1023.zip", "SAC-1023"),
+        #("game/control/models/genetic2.pkl", "GA-2"),
+        #(None, "BC"),
         #("game/control/models/ppo_789.zip", "PPO-789"),
         #("game/control/models/ppo_849.zip", "PPO-849"),
     ]
@@ -214,10 +215,10 @@ def main():
     
     # Create environment with random tracks
     env = CarEnv(
-        track_file='tracks/martinsville.track',  # No fixed track (automatic random selection)
+        track_file='tracks/daytona.track',  # No fixed track (automatic random selection)
         num_cars=num_cars, 
         reset_on_lap=False, 
-        render_mode='human',
+        render_mode=None, #'human',
         discrete_action_space=False,
         car_names=car_names
     )
