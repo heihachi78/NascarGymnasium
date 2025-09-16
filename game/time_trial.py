@@ -188,27 +188,6 @@ def main():
                 print(f"   📊 Genome parameters: {genome_length}")
             else:
                 print(f"   ⚠ Using fallback genetic control")
-        elif "regression_models" in model_path.lower() and model_path.endswith(".pkl"):
-            print(f"   → Loading Regression model: {model_path}")
-            try:
-                # Extract model type from filename using split instead of os.path
-                model_filename = model_path.split('/')[-1]  # Get just the filename
-                model_type = model_filename.replace("_model.pkl", "")
-                controller = RegressionController(name=name, model_type=model_type)
-                success = controller.load_model(model_path)
-                controllers.append(controller)
-                if success:
-                    print(f"   ✓ Regression model loaded successfully")
-                    info = controller.get_info()
-                    print(f"   📊 Model type: {info.get('model_type', 'unknown')}")
-                else:
-                    print(f"   ⚠ Using fallback regression control")
-            except Exception as e:
-                print(f"   ❌ Failed to load regression model: {e}")
-                import traceback
-                traceback.print_exc()
-                # Fallback to BaseController
-                controllers.append(BaseController(name=f"Fallback_{name}"))
         else:
             controller = BaseController(model_path, name)
             controllers.append(controller)
