@@ -19,7 +19,7 @@ from game.control.ppo_control_class import PPOController
 from game.control.sac_control_class import SACController
 from game.control.a2c_control_class import A2CController
 from game.control.genetic_controller import GeneticController
-from game.control.regression_controller import RegressionController
+
 
 # Time trial configuration constants
 LAPS_PER_ATTEMPT = 2  # Number of laps in each attempt
