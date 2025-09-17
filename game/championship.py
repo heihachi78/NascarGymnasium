@@ -625,7 +625,7 @@ def main():
     model_configs = [
         ("game/control/models/sac_bm3.zip", "SAC-BM-3"),
         ("game/control/models/sac_final.zip", "SAC-F"),
-        ("game/control/models/sac_1083.zip", "SAC-1083"),
+        ("game/control/models/sac_1235.zip", "SAC-1235"),
         ("game/control/models/td3_n_1031.zip", "TD3-1031"),
         ("game/control/models/td3_n_1047.zip", "TD3-1047"),
         ("game/control/models/td3_n_1145.zip", "TD3-1145"),
